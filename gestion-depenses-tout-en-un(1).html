@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestion des dépenses — Dashboard</title>
+    <style>
+:root {
+  --bg: #0c1017;
+  --surface: #151c28;
+  --surface2: #1f2a3d;
+  --text: #e8eef6;
+  --muted: #8b9cb3;
+  --accent: #4aa8ff;
+  --accent2: #5ce1a6;
+  --warn: #e6b35c;
+  --danger: #f07178;
+  --radius: 12px;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --nav-h: 52px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Évite que le navigateur « recolle » le scroll quand Chart.js redimensionne le canvas */
+  overflow-anchor: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-anchor: none;
+  font-family: var(--font);
+  background: radial-gradient(1000px 500px at 0% 0%, #1a2f4d 0%, transparent 50%),
+    radial-gradient(900px 450px at 100% 10%, #153028 0%, transparent 45%), var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  background: rgba(12, 16, 23, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--surface2);
+}
+
+.app-nav button {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.app-nav button:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.app-nav button.active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+header {
+  padding: 1rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--surface2);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 1.5rem 1rem;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--surface2);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2a6cb5, var(--accent));
+  border-color: transparent;
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+main {
+  padding: 1rem 1.5rem 2.5rem;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+#page-comptes .table-wrap {
+  max-height: min(70vh, 560px);
+  overflow: auto;
+}
+
+#page-comptes .inp-solde-init {
+  width: 7.5rem;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+}
+
+.card span {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.card strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.card.warn strong {
+  color: var(--warn);
+}
+
+.card.danger strong {
+  color: var(--danger);
+}
+
+.alerts {
+  margin-bottom: 1rem;
+}
+
+.alert {
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+  border: 1px solid var(--danger);
+  background: rgba(240, 113, 120, 0.12);
+}
+
+.alert.warn {
+  border-color: var(--warn);
+  background: rgba(230, 179, 92, 0.12);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem;
+  align-items: end;
+  margin-bottom: 0.75rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.form-grid input,
+.form-grid select {
+  background: var(--bg);
+  border: 1px solid var(--surface2);
+  color: var(--text);
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-end;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.filters input,
+.filters select {
+  background: var(--bg);
+  border: 1px solid var(--surface2);
+  color: var(--text);
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  min-width: 130px;
+}
+
+.grid-charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid-charts.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1000px) {
+  .grid-charts.cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .grid-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-box {
+  position: relative;
+}
+
+/* Hauteur fixe : Chart.js (maintainAspectRatio: false) exige un parent dimensionné */
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 240px;
+}
+
+.chart-canvas-wrap--md {
+  height: 260px;
+}
+
+.chart-canvas-wrap--lg {
+  height: 280px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+thead {
+  background: var(--surface2);
+}
+
+th,
+td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--surface2);
+}
+
+th {
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+tbody tr:hover {
+  background: rgba(74, 168, 255, 0.06);
+}
+
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.12rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  background: var(--surface2);
+}
+
+.empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin: 0.35rem 0;
+}
+
+.success-hint {
+  color: var(--accent2);
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--surface2);
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+footer code {
+  background: var(--surface);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 800px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+input[type="file"] {
+  font-size: 0.75rem;
+  color: var(--muted);
+  max-width: 240px;
+}
+
+.progress-wrap { margin-bottom: 0.65rem; }
+.progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.25rem; color: var(--muted); }
+.progress-label strong { color: var(--text); }
+.progress-bar-bg { background: var(--surface2); border-radius: 99px; height: 10px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; background: var(--accent); }
+.progress-bar-fill.warn { background: var(--warn); }
+.progress-bar-fill.danger { background: var(--danger); }
+
+.op-credit { color: var(--accent2); font-weight: 600; }
+.op-debit { color: var(--danger); font-weight: 600; }
+
+hr.split {
+  border: none;
+  border-top: 1px solid var(--surface2);
+  margin: 1rem 0;
+}
+
+</style>
+    
+    
+  </head>
+  <body>
+    <nav class="app-nav" aria-label="Navigation principale">
+      <button type="button" class="active" data-page="dashboard">Tableau de bord</button>
+      <button type="button" data-page="depenses">Dépenses</button>
+      <button type="button" data-page="analyses">Analyses</button>
+      <button type="button" data-page="comptes">Comptes</button>
+      <button type="button" data-page="budgets">Budgets &amp; alertes</button>
+      <button type="button" data-page="referentiels">Personnes &amp; catégories</button>
+      <button type="button" data-page="fichiers">Fichiers (CSV / sauvegarde)</button>
+    </nav>
+
+    <header>
+      <h1>Gestion des dépenses</h1>
+      <p>Soldes par compte (TND), budgets mensuels, filtres par personne — données en local + export CSV base.</p>
+    </header>
+
+    <div class="toolbar">
+      <button type="button" class="btn btn-primary" id="btn-save-local">Enregistrer dans le navigateur</button>
+      <span id="save-hint" class="success-hint" style="display: none">Données enregistrées (local).</span>
+      <span id="csv-link-status" class="success-hint" style="margin-left: 0.5rem; opacity: 0.85"></span>
+    </div>
+
+    <main>
+      <p id="global-error" class="error" role="alert"></p>
+
+      <!-- Dashboard -->
+      <section id="page-dashboard" class="page active" aria-label="Tableau de bord">
+        <div id="alerts-dashboard" class="alerts"></div>
+        <div class="cards" id="dash-cards"></div>
+        <div id="budget-indicators" style="margin-bottom:1rem"></div>
+        <div class="two-col">
+          <div class="panel chart-box">
+            <h2>Dépenses du mois en cours par catégorie</h2>
+            <div class="chart-canvas-wrap"><canvas id="dash-chart-month-cat" aria-label="Graphique dépenses par catégorie"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>Soldes des comptes (après dépenses)</h2>
+            <div class="chart-canvas-wrap"><canvas id="dash-chart-comptes" aria-label="Graphique soldes par compte"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dépenses -->
+      <section id="page-depenses" class="page" aria-label="Dépenses">
+        <div class="panel">
+          <h2>Ajouter une dépense</h2>
+          <p class="success-hint" style="margin-top: 0">Le montant est débité du compte choisi.</p>
+          <div class="form-grid">
+            <label>Date <input type="date" id="add-date" required /></label>
+            <label>Montant (TND) <input type="number" id="add-montant" min="0" step="0.001" required /></label>
+            <label>Catégorie <select id="add-categorie"></select></label>
+            <label>Personne <select id="add-personne"></select></label>
+            <label>Compte débité <select id="add-compte"></select></label>
+            <label>Description <input type="text" id="add-desc" placeholder="Libellé" /></label>
+            <label>Moyen de paiement <input type="text" id="add-moyen" placeholder="Carte, virement…" /></label>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-add-depense">Ajouter</button>
+        </div>
+        <div class="panel">
+          <h2>Filtres</h2>
+          <div class="filters">
+            <label>Recherche <input type="search" id="f-text" placeholder="texte…" /></label>
+            <label>Catégorie <select id="f-cat"><option value="">Toutes</option></select></label>
+            <label>Personne <select id="f-pers"><option value="">Toutes</option></select></label>
+            <label>Du <input type="date" id="f-from" /></label>
+            <label>Au <input type="date" id="f-to" /></label>
+            <label>Prix min (TND) <input type="number" id="f-min" min="0" step="0.001" placeholder="0" /></label>
+            <label>Prix max (TND) <input type="number" id="f-max" min="0" step="0.001" placeholder="∞" /></label>
+            <button type="button" class="btn" id="btn-reset-filters" style="align-self:end">Réinitialiser</button>
+          </div>
+          <div id="filter-summary" style="font-size:0.78rem;color:var(--muted);margin-top:0.4rem"></div>
+        </div>
+        <div class="panel">
+          <h2>Liste</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Catégorie</th>
+                  <th>Personne</th>
+                  <th>Compte</th>
+                  <th>Description</th>
+                  <th>Montant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tbody-depenses"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analyses -->
+      <section id="page-analyses" class="page" aria-label="Analyses">
+        <div class="panel">
+          <h2>🔍 Filtre période</h2>
+          <div class="filters">
+            <label>Du <input type="date" id="ana-from" /></label>
+            <label>Au <input type="date" id="ana-to" /></label>
+          </div>
+        </div>
+        <div class="grid-charts">
+          <div class="panel chart-box">
+            <h2>📈 Total par mois</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-month-total"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>🍩 Répartition par catégorie</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cat-donut"></canvas></div>
+          </div>
+        </div>
+        <div class="grid-charts">
+          <div class="panel chart-box">
+            <h2>🏆 Top 10 catégories (total)</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-top-cats"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>📅 Moyenne journalière par mois</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-avg-daily"></canvas></div>
+          </div>
+        </div>
+        <div class="grid-charts cols-3">
+          <div class="panel chart-box">
+            <h2>📊 Empilé : mois × catégorie</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-stacked"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>👤 Par personne</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-person"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>💳 Par compte</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-compte"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Comptes -->
+      <section id="page-comptes" class="page" aria-label="Comptes">
+        <div class="panel">
+          <h2>Comptes (épargne, courant, espèces)</h2>
+          <p class="success-hint">Solde affiché = solde initial − somme des dépenses sur ce compte.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Type</th>
+                  <th>Solde initial</th>
+                  <th>Dépensé</th>
+                  <th>Solde restant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tbody-comptes"></tbody>
+            </table>
+          </div>
+          <hr class="split" />
+          <h2>Ajouter un compte</h2>
+          <div class="form-grid" style="max-width: 640px">
+            <label>Nom <input type="text" id="new-compte-nom" placeholder="ex. Livret A" /></label>
+            <label>Type <select id="new-compte-type">
+                <option value="courant">Courant</option>
+                <option value="epargne">Épargne</option>
+                <option value="especes">Espèces</option>
+              </select></label>
+            <label>Solde initial (TND) <input type="number" id="new-compte-solde" min="0" step="0.001" value="0" /></label>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-add-compte">Ajouter le compte</button>
+        </div>
+        <div class="panel">
+          <h2>💸 Opérations manuelles</h2>
+          <p class="success-hint">Ajoutez ou retirez un montant directement sur un compte (hors dépenses).</p>
+          <div class="form-grid" style="max-width:700px">
+            <label>Compte <select id="op-compte"></select></label>
+            <label>Opération <select id="op-type">
+              <option value="credit">+ Crédit (ajouter)</option>
+              <option value="debit">− Débit (retirer)</option>
+            </select></label>
+            <label>Montant (TND) <input type="number" id="op-montant" min="0.001" step="0.001" placeholder="0.000" /></label>
+            <label>Motif <input type="text" id="op-motif" placeholder="Virement, retrait…" /></label>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
+          <span id="op-hint" class="success-hint" style="display:none;margin-left:0.75rem"></span>
+        </div>
+        <div class="panel">
+          <h2>📋 Historique des opérations</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead>
+              <tbody id="tbody-operations"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Budgets -->
+      <section id="page-budgets" class="page" aria-label="Budgets">
+        <div class="panel">
+          <h2>Budget mensuel global</h2>
+          <p class="success-hint">0 = désactivé. Compare les dépenses du <strong>mois civil en cours</strong> à ce plafond.</p>
+          <label class="filters" style="align-items: center; flex-direction: row; gap: 0.5rem">
+            Plafond (TND / mois)
+            <input type="number" id="budget-global" min="0" step="1" style="width: 140px" />
+            <button type="button" class="btn" id="btn-save-budget-global">Appliquer</button>
+          </label>
+        </div>
+        <div class="panel">
+          <h2>Budgets par catégorie (mois en cours)</h2>
+          <p class="success-hint">Laissez vide pour ne pas plafonner une catégorie.</p>
+          <div id="budgets-par-cat"></div>
+        </div>
+        <div id="alerts-budget-page" class="alerts"></div>
+      </section>
+
+      <!-- Référentiels -->
+      <section id="page-referentiels" class="page" aria-label="Référentiels">
+        <div class="two-col">
+          <div class="panel">
+            <h2>Personnes</h2>
+            <div class="form-grid" style="grid-template-columns: 1fr auto">
+              <label>Nom <input type="text" id="new-personne-nom" placeholder="Prénom ou pseudo" /></label>
+              <button type="button" class="btn btn-primary" id="btn-add-personne" style="align-self: end">Ajouter</button>
+            </div>
+            <ul id="list-personnes" style="list-style: none; padding: 0; margin: 0.75rem 0 0"></ul>
+          </div>
+          <div class="panel">
+            <h2>Catégories</h2>
+            <div class="form-grid" style="grid-template-columns: 1fr auto">
+              <label>Nom <input type="text" id="new-cat-nom" placeholder="ex. Loisirs" /></label>
+              <button type="button" class="btn btn-primary" id="btn-add-categorie" style="align-self: end">Ajouter</button>
+            </div>
+            <ul id="list-categories" style="list-style: none; padding: 0; margin: 0.75rem 0 0"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Fichiers -->
+      <section id="page-fichiers" class="page" aria-label="Fichiers">
+        <div class="panel">
+          <h2>📥 Importer la base</h2>
+          <p class="success-hint">Importez un fichier <code>database.csv</code> exporté précédemment pour restaurer toutes vos données.</p>
+          <label class="btn btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.4rem">
+            📂 Charger database.csv
+            <input type="file" id="file-db-import" accept=".csv,text/csv" style="display:none" />
+          </label>
+          <span id="import-db-hint" class="success-hint" style="display:none;margin-left:0.75rem">✅ Base importée !</span>
+        </div>
+        <div class="panel">
+          <h2>📤 Exporter la base</h2>
+          <p class="success-hint">Télécharge un seul fichier avec toutes vos données : personnes, catégories, comptes, budgets et dépenses.</p>
+          <button type="button" class="btn btn-primary" id="btn-export-db">⬇️ Télécharger database.csv</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Persistance : <code>localStorage</code> + option fichier <code>database.csv</code> (API Fichiers, Chrome/Edge). Montants en dinar tunisien (TND). Fichier tout-en-un :
+      <code>gestion-depenses-tout-en-un.html</code>.
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+/* global Chart */
+(() => {
+  const STORAGE_KEY = "gestion_depenses_v2";
+  /** @type {FileSystemFileHandle|null} */
+  let csvFileHandle = null;
+
+  /** @typedef {{ id: string, nom: string }} Personne */
+  /** @typedef {{ id: string, nom: string }} Categorie */
+  /** @typedef {{ id: string, nom: string, type: 'courant'|'epargne'|'especes', soldeInitial: number }} Compte */
+  /** @typedef {{ id: string, date: string, categorieId: string, personneId: string, compteId: string, description: string, montant: number, moyen: string }} Depense */
+
+  function uid() {
+    return "id_" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+  }
+
+  function defaultState() {
+    return {
+      version: 2,
+      personnes: [
+        { id: uid(), nom: "Moi" },
+        { id: uid(), nom: "Famille" },
+      ],
+      categories: [
+        { id: uid(), nom: "Alimentation" },
+        { id: uid(), nom: "Transport" },
+        { id: uid(), nom: "Logement" },
+        { id: uid(), nom: "Loisirs" },
+        { id: uid(), nom: "Autre" },
+      ],
+      comptes: [
+        { id: uid(), nom: "Compte courant", type: "courant", soldeInitial: 2500 },
+        { id: uid(), nom: "Épargne", type: "epargne", soldeInitial: 8000 },
+        { id: uid(), nom: "Espèces", type: "especes", soldeInitial: 200 },
+      ],
+      budgetMensuelGlobal: 0,
+      budgetsCategorie: {},
+      depenses: [],
+      operations: [],
+    };
+  }
+
+  /** @type {ReturnType<typeof defaultState>} */
+  let state = defaultState();
+  const charts = {};
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        state = defaultState();
+        return;
+      }
+      const o = JSON.parse(raw);
+      if (o && o.version === 2 && Array.isArray(o.depenses)) state = o;
+      else state = defaultState();
+    } catch {
+      state = defaultState();
+    }
+  }
+
+  function buildDatabaseCsvText() {
+    const lines = [];
+    lines.push("##PERSONNES");
+    lines.push("id,nom");
+    state.personnes.forEach((p) => lines.push(`${p.id},${csvEsc(p.nom)}`));
+    lines.push("");
+    lines.push("##CATEGORIES");
+    lines.push("id,nom");
+    state.categories.forEach((c) => lines.push(`${c.id},${csvEsc(c.nom)}`));
+    lines.push("");
+    lines.push("##COMPTES");
+    lines.push("id,nom,type,solde_initial");
+    state.comptes.forEach((c) => lines.push(`${c.id},${csvEsc(c.nom)},${c.type},${c.soldeInitial}`));
+    lines.push("");
+    lines.push("##BUDGETS");
+    lines.push("type,clef,valeur");
+    lines.push(`global,,${state.budgetMensuelGlobal || 0}`);
+    Object.entries(state.budgetsCategorie || {}).forEach(([cid, v]) => {
+      lines.push(`categorie,${cid},${v}`);
+    });
+    lines.push("");
+    lines.push("##DEPENSES");
+    lines.push("id,date,categorieId,personneId,compteId,description,montant,moyen");
+    state.depenses.forEach((d) => {
+      lines.push(
+        `${d.id},${d.date},${d.categorieId},${d.personneId},${d.compteId},${csvEsc(d.description)},${d.montant},${csvEsc(d.moyen)}`
+      );
+    });
+    if (state.operations && state.operations.length) {
+      lines.push("");
+      lines.push("##OPERATIONS");
+      lines.push("id,date,compteId,type,montant,motif");
+      state.operations.forEach((o) => {
+        lines.push(`${o.id},${o.date},${o.compteId},${o.type},${o.montant},${csvEsc(o.motif||"")}`);
+      });
+    }
+    return "\ufeff" + lines.join("\n");
+  }
+
+  function updateCsvLinkStatus() {
+    const el = document.getElementById("csv-link-status");
+    if (!el) return;
+    el.textContent = csvFileHandle ? `Fichier CSV lié : ${csvFileHandle.name}` : "Aucun fichier CSV lié (écriture disque désactivée).";
+  }
+
+  async function writeLinkedCsvFile() {
+    if (!csvFileHandle) return;
+    const w = await csvFileHandle.createWritable();
+    await w.write(buildDatabaseCsvText());
+    await w.close();
+  }
+
+  let saveHintTimer;
+  async function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const hint = document.getElementById("save-hint");
+    hint.style.display = "inline";
+    clearTimeout(saveHintTimer);
+    if (csvFileHandle) {
+      try {
+        await writeLinkedCsvFile();
+        hint.textContent = "Enregistré : navigateur + fichier CSV.";
+      } catch (e) {
+        console.warn(e);
+        hint.textContent = "Navigateur OK — erreur d’écriture du fichier CSV.";
+      }
+    } else {
+      hint.textContent = "Enregistré dans le navigateur. Liez un fichier CSV (page Fichiers) pour écrire sur le disque.";
+    }
+    playSaveBeep();
+    saveHintTimer = setTimeout(() => {
+      hint.style.display = "none";
+    }, 2800);
+  }
+
+  async function chooseCsvFileForAutoSave() {
+    if (!window.showOpenFilePicker) {
+      alert("Lier un fichier : utilisez Chrome ou Edge à jour, en HTTPS ou sur localhost. Sinon « Télécharger database.csv ».");
+      return;
+    }
+    try {
+      const [h] = await window.showOpenFilePicker({
+        types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }],
+        multiple: false,
+      });
+      csvFileHandle = h;
+      updateCsvLinkStatus();
+      await saveState();
+    } catch (e) {
+      if (e && e.name !== "AbortError") console.warn(e);
+    }
+  }
+
+  async function pickNewCsvFileForAutoSave() {
+    if (!window.showSaveFilePicker) {
+      alert("Création de fichier : Chrome ou Edge récent requis. Sinon utilisez l’export manuel.");
+      return;
+    }
+    try {
+      csvFileHandle = await window.showSaveFilePicker({
+        suggestedName: "database.csv",
+        types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }],
+      });
+      updateCsvLinkStatus();
+      await saveState();
+    } catch (e) {
+      if (e && e.name !== "AbortError") console.warn(e);
+    }
+  }
+
+  function clearLinkedCsvFile() {
+    csvFileHandle = null;
+    updateCsvLinkStatus();
+  }
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function formatMoney(n) {
+    return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n);
+  }
+
+  function playSaveBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.08, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.15);
+    } catch {
+      /* silencieux si audio bloqué */
+    }
+  }
+
+  function nomPersonne(id) {
+    return state.personnes.find((p) => p.id === id)?.nom || "—";
+  }
+  function nomCategorie(id) {
+    return state.categories.find((c) => c.id === id)?.nom || "—";
+  }
+  function nomCompte(id) {
+    return state.comptes.find((c) => c.id === id)?.nom || "—";
+  }
+
+  function totalDepensesSurCompte(compteId) {
+    return state.depenses.filter((d) => d.compteId === compteId).reduce((s, d) => s + d.montant, 0);
+  }
+
+  function soldeCompte(c) {
+    const ops = (state.operations || []).filter(o => o.compteId === c.id);
+    const opsBalance = ops.reduce((s, o) => s + (o.type === 'credit' ? o.montant : -o.montant), 0);
+    return c.soldeInitial - totalDepensesSurCompte(c.id) + opsBalance;
+  }
+
+  function monthKeyFromIso(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function currentMonthKey() {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function depensesDuMois(moisCle) {
+    return state.depenses.filter((d) => monthKeyFromIso(d.date) === moisCle);
+  }
+
+  function findOrCreateCategorie(nom) {
+    const n = String(nom || "").trim();
+    if (!n) return state.categories[0]?.id;
+    let c = state.categories.find((x) => x.nom.toLowerCase() === n.toLowerCase());
+    if (!c) {
+      c = { id: uid(), nom: n };
+      state.categories.push(c);
+    }
+    return c.id;
+  }
+
+  function findOrCreatePersonne(nom) {
+    const n = String(nom || "").trim();
+    if (!n) return state.personnes[0]?.id;
+    let p = state.personnes.find((x) => x.nom.toLowerCase() === n.toLowerCase());
+    if (!p) {
+      p = { id: uid(), nom: n };
+      state.personnes.push(p);
+    }
+    return p.id;
+  }
+
+  function findOrCreateCompte(nom, typeHint) {
+    const n = String(nom || "").trim();
+    const type =
+      typeHint ||
+      (n.toLowerCase().includes("épargne") || n.toLowerCase().includes("epargne") ? "epargne" : null) ||
+      (n.toLowerCase().includes("espèce") || n.toLowerCase().includes("espece") ? "especes" : "courant");
+    let c = state.comptes.find((x) => x.nom.toLowerCase() === n.toLowerCase());
+    if (!c && n) {
+      c = { id: uid(), nom: n, type, soldeInitial: 0 };
+      state.comptes.push(c);
+    }
+    if (!c) return state.comptes.find((x) => x.type === "courant")?.id || state.comptes[0]?.id;
+    return c.id;
+  }
+
+  function destroyChart(key) {
+    if (charts[key]) {
+      charts[key].destroy();
+      charts[key] = null;
+    }
+  }
+
+  function resizeVisibleCharts() {
+    Object.keys(charts).forEach((k) => {
+      const ch = charts[k];
+      try {
+        if (ch && typeof ch.resize === "function") ch.resize();
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+
+  let resizeDebounce;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeDebounce);
+    resizeDebounce = setTimeout(() => requestAnimationFrame(resizeVisibleCharts), 120);
+  });
+
+  function computeAlerts() {
+    const alerts = [];
+    const mk = currentMonthKey();
+    const depMois = depensesDuMois(mk);
+    const totalMois = depMois.reduce((s, d) => s + d.montant, 0);
+
+    if (state.budgetMensuelGlobal > 0 && totalMois > state.budgetMensuelGlobal) {
+      alerts.push({
+        type: "danger",
+        text: `Dépassement du budget mensuel global : ${formatMoney(totalMois)} sur ${formatMoney(
+          state.budgetMensuelGlobal
+        )} (${mk}).`,
+      });
+    } else if (state.budgetMensuelGlobal > 0 && totalMois > state.budgetMensuelGlobal * 0.9) {
+      alerts.push({
+        type: "warn",
+        text: `Attention : vous avez déjà dépensé ${formatMoney(totalMois)} sur ${formatMoney(
+          state.budgetMensuelGlobal
+        )} ce mois (${mk}).`,
+      });
+    }
+
+    for (const [catId, plafond] of Object.entries(state.budgetsCategorie || {})) {
+      const max = Number(plafond);
+      if (!max || max <= 0) continue;
+      const sumCat = depMois.filter((d) => d.categorieId === catId).reduce((s, d) => s + d.montant, 0);
+      if (sumCat > max) {
+        alerts.push({
+          type: "danger",
+          text: `Dépassement budget « ${nomCategorie(catId)} » : ${formatMoney(sumCat)} / ${formatMoney(max)}.`,
+        });
+      } else if (sumCat > max * 0.9) {
+        alerts.push({
+          type: "warn",
+          text: `Proche du plafond « ${nomCategorie(catId)} » : ${formatMoney(sumCat)} / ${formatMoney(max)}.`,
+        });
+      }
+    }
+
+    state.comptes.forEach((c) => {
+      const rest = soldeCompte(c);
+      if (rest < 0) {
+        alerts.push({
+          type: "danger",
+          text: `Le compte « ${escapeHtml(c.nom)} » est à découvert : ${formatMoney(rest)}.`,
+        });
+      }
+    });
+
+    return alerts;
+  }
+
+  function renderAlerts(containerId) {
+    const el = byId(containerId);
+    if (!el) return;
+    const alerts = computeAlerts();
+    if (!alerts.length) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = alerts
+      .map((a) => `<div class="alert ${a.type === "warn" ? "warn" : ""}">${escapeHtml(a.text)}</div>`)
+      .join("");
+  }
+
+  function filteredDepensesListe() {
+    const q = byId("f-text").value.trim().toLowerCase();
+    const cat = byId("f-cat").value;
+    const pers = byId("f-pers").value;
+    const from = byId("f-from").value;
+    const to = byId("f-to").value;
+    const minP = parseFloat(byId("f-min").value) || 0;
+    const maxP = parseFloat(byId("f-max").value) || Infinity;
+    const dFrom = from ? new Date(from + "T00:00:00") : null;
+    const dTo = to ? new Date(to + "T23:59:59") : null;
+    return state.depenses.filter((d) => {
+      const dt = new Date(d.date);
+      if (cat && d.categorieId !== cat) return false;
+      if (pers && d.personneId !== pers) return false;
+      if (dFrom && dt < dFrom) return false;
+      if (dTo && dt > dTo) return false;
+      if (d.montant < minP) return false;
+      if (d.montant > maxP) return false;
+      if (q) {
+        const blob = `${nomCategorie(d.categorieId)} ${nomPersonne(d.personneId)} ${nomCompte(d.compteId)} ${d.description} ${d.moyen}`.toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function filteredDepensesAnalyses() {
+    const from = byId("ana-from").value;
+    const to = byId("ana-to").value;
+    const dFrom = from ? new Date(from + "T00:00:00") : null;
+    const dTo = to ? new Date(to + "T23:59:59") : null;
+    return state.depenses.filter((d) => {
+      const dt = new Date(d.date);
+      if (dFrom && dt < dFrom) return false;
+      if (dTo && dt > dTo) return false;
+      return true;
+    });
+  }
+
+  function fillSelect(sel, items, labelKey, valueKey, emptyLabel) {
+    const cur = sel.value;
+    sel.innerHTML = "";
+    if (emptyLabel) {
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = emptyLabel;
+      sel.appendChild(o);
+    }
+    items.forEach((it) => {
+      const o = document.createElement("option");
+      o.value = it[valueKey];
+      o.textContent = it[labelKey];
+      sel.appendChild(o);
+    });
+    if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+  }
+
+  function refreshSelects() {
+    fillSelect(byId("add-categorie"), state.categories, "nom", "id", false);
+    fillSelect(byId("add-personne"), state.personnes, "nom", "id", false);
+    fillSelect(byId("add-compte"), state.comptes, "nom", "id", false);
+    fillSelect(byId("f-cat"), state.categories, "nom", "id", "Toutes");
+    fillSelect(byId("f-pers"), state.personnes, "nom", "id", "Toutes");
+  }
+
+  function renderDashboard() {
+    renderAlerts("alerts-dashboard");
+    const mk = currentMonthKey();
+    const depMois = depensesDuMois(mk);
+    const totalMois = depMois.reduce((s, d) => s + d.montant, 0);
+    const totalAll = state.depenses.reduce((s, d) => s + d.montant, 0);
+
+    const cards = byId("dash-cards");
+    const bud = state.budgetMensuelGlobal > 0 ? formatMoney(state.budgetMensuelGlobal) : "—";
+    const pct =
+      state.budgetMensuelGlobal > 0 ? Math.min(100, Math.round((totalMois / state.budgetMensuelGlobal) * 100)) : null;
+
+    // Compte solde cards
+    const compteCards = state.comptes.map(c => {
+      const s = soldeCompte(c);
+      const cls = s < 0 ? "danger" : s < c.soldeInitial * 0.1 ? "warn" : "";
+      return `<div class="card ${cls}"><span>💳 ${escapeHtml(c.nom)}</span><strong>${formatMoney(s)}</strong></div>`;
+    }).join("");
+
+    cards.innerHTML = `
+      <div class="card"><span>📅 Mois en cours (${mk})</span><strong>${formatMoney(totalMois)}</strong></div>
+      <div class="card ${pct != null && pct > 100 ? "danger" : pct != null && pct > 90 ? "warn" : ""}"><span>🎯 % budget global</span><strong>${pct != null ? pct + " %" : "—"}</strong></div>
+      <div class="card"><span>📊 Budget / mois</span><strong>${bud}</strong></div>
+      <div class="card"><span>💰 Total (tout)</span><strong>${formatMoney(totalAll)}</strong></div>
+      <div class="card"><span>🧾 Dépenses ce mois</span><strong>${depMois.length}</strong></div>
+      ${compteCards}
+    `;
+
+    const byCat = {};
+    depMois.forEach((d) => {
+      const n = nomCategorie(d.categorieId);
+      byCat[n] = (byCat[n] || 0) + d.montant;
+    });
+    destroyChart("dashMc");
+    charts.dashMc = new Chart(byId("dash-chart-month-cat"), {
+      type: "bar",
+      data: {
+        labels: Object.keys(byCat),
+        datasets: [{ label: mk, data: Object.values(byCat), backgroundColor: "rgba(74,168,255,0.7)", borderRadius: 6 }],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+          y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+        },
+        maintainAspectRatio: false,
+      },
+    });
+
+    destroyChart("dashCo");
+    charts.dashCo = new Chart(byId("dash-chart-comptes"), {
+      type: "bar",
+      data: {
+        labels: state.comptes.map((c) => c.nom),
+        datasets: [
+          {
+            label: "Solde restant",
+            data: state.comptes.map((c) => soldeCompte(c)),
+            backgroundColor: state.comptes.map((c) =>
+              soldeCompte(c) < 0 ? "rgba(240,113,120,0.75)" : "rgba(92,225,166,0.65)"
+            ),
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#8b9cb3" } },
+          y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+        },
+        maintainAspectRatio: false,
+      },
+    });
+    requestAnimationFrame(() => {
+      charts.dashMc?.resize?.();
+      charts.dashCo?.resize?.();
+    });
+    renderBudgetIndicators();
+  }
+
+  function renderBudgetIndicators() {
+    const el = byId("budget-indicators");
+    if (!el) return;
+    const mk = currentMonthKey();
+    const depMois = depensesDuMois(mk);
+    const totalMois = depMois.reduce((s, d) => s + d.montant, 0);
+    let html = "";
+
+    // Global budget bar
+    if (state.budgetMensuelGlobal > 0) {
+      const pct = Math.min(100, (totalMois / state.budgetMensuelGlobal) * 100);
+      const cls = pct > 100 ? "danger" : pct > 90 ? "warn" : "";
+      html += `<div class="panel progress-wrap">
+        <div class="progress-label"><span>Budget global du mois (${mk})</span><strong>${formatMoney(totalMois)} / ${formatMoney(state.budgetMensuelGlobal)} — ${Math.round(pct)}%</strong></div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill ${cls}" style="width:${Math.min(100,pct)}%"></div></div>
+      </div>`;
+    }
+
+    // Per category bars
+    const catBars = Object.entries(state.budgetsCategorie || {})
+      .filter(([, v]) => Number(v) > 0)
+      .map(([cid, max]) => {
+        const spent = depMois.filter(d => d.categorieId === cid).reduce((s, d) => s + d.montant, 0);
+        const pct = Math.min(100, (spent / max) * 100);
+        const cls = pct > 100 ? "danger" : pct > 90 ? "warn" : "";
+        return `<div class="progress-wrap">
+          <div class="progress-label"><span>${escapeHtml(nomCategorie(cid))}</span><strong>${formatMoney(spent)} / ${formatMoney(Number(max))} — ${Math.round(pct)}%</strong></div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill ${cls}" style="width:${Math.min(100,pct)}%"></div></div>
+        </div>`;
+      }).join("");
+
+    if (catBars) {
+      html += `<div class="panel"><h2 style="margin-bottom:0.75rem;font-size:0.9rem">Budgets par catégorie</h2>${catBars}</div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function renderDepensesTable() {
+    const rows = filteredDepensesListe().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const tb = byId("tbody-depenses");
+    const summary = byId("filter-summary");
+    const totalFiltered = rows.reduce((s, d) => s + d.montant, 0);
+    if (summary) {
+      summary.textContent = rows.length
+        ? `${rows.length} dépense(s) — Total : ${formatMoney(totalFiltered)}`
+        : "";
+    }
+    if (!rows.length) {
+      tb.innerHTML = `<tr><td colspan="7" class="empty">Aucune dépense pour ces filtres.</td></tr>`;
+      return;
+    }
+    tb.innerHTML = rows
+      .map(
+        (d) => `
+      <tr>
+        <td>${escapeHtml(new Date(d.date).toLocaleDateString("fr-FR"))}</td>
+        <td><span class="badge">${escapeHtml(nomCategorie(d.categorieId))}</span></td>
+        <td>${escapeHtml(nomPersonne(d.personneId))}</td>
+        <td>${escapeHtml(nomCompte(d.compteId))}</td>
+        <td>${escapeHtml(d.description || "—")}</td>
+        <td class="num">${formatMoney(d.montant)}</td>
+        <td><button type="button" class="btn btn-sm btn-danger" data-del="${escapeHtml(d.id)}">Suppr.</button></td>
+      </tr>`
+      )
+      .join("");
+    tb.querySelectorAll("[data-del]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        state.depenses = state.depenses.filter((x) => x.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  function renderComptesTable() {
+    const tb = byId("tbody-comptes");
+    tb.innerHTML = state.comptes
+      .map((c) => {
+        const spent = totalDepensesSurCompte(c.id);
+        const rest = soldeCompte(c);
+        return `
+        <tr data-cid="${escapeHtml(c.id)}">
+          <td>${escapeHtml(c.nom)}</td>
+          <td>${escapeHtml(c.type)}</td>
+          <td class="num"><input type="number" class="inp-solde-init" data-cid="${escapeHtml(c.id)}" value="${c.soldeInitial}" step="0.001" style="width:100px;background:var(--bg);color:var(--text);border:1px solid var(--surface2);border-radius:6px;padding:0.25rem" /></td>
+          <td class="num">${formatMoney(spent)}</td>
+          <td class="num">${formatMoney(rest)}</td>
+          <td><button type="button" class="btn btn-sm btn-danger btn-del-compte" data-cid="${escapeHtml(c.id)}">Suppr.</button></td>
+        </tr>`;
+      })
+      .join("");
+
+    tb.querySelectorAll(".inp-solde-init").forEach((inp) => {
+      inp.addEventListener("change", () => {
+        const id = inp.getAttribute("data-cid");
+        const c = state.comptes.find((x) => x.id === id);
+        if (c) c.soldeInitial = Number(inp.value) || 0;
+        saveState();
+        renderAll();
+      });
+    });
+    tb.querySelectorAll(".btn-del-compte").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        if (state.depenses.some((d) => d.compteId === id)) {
+          alert("Impossible : des dépenses utilisent ce compte.");
+          return;
+        }
+        state.comptes = state.comptes.filter((c) => c.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+    // Fill op-compte select
+    fillSelect(byId("op-compte"), state.comptes, "nom", "id", false);
+    // Render operations history
+    renderOperationsTable();
+  }
+
+  function renderOperationsTable() {
+    const tb = byId("tbody-operations");
+    if (!tb) return;
+    const ops = (state.operations || []).slice().reverse();
+    if (!ops.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty">Aucune opération manuelle.</td></tr>`;
+      return;
+    }
+    tb.innerHTML = ops.map(o => `
+      <tr>
+        <td>${escapeHtml(new Date(o.date).toLocaleDateString("fr-FR"))}</td>
+        <td>${escapeHtml(nomCompte(o.compteId))}</td>
+        <td class="${o.type === 'credit' ? 'op-credit' : 'op-debit'}">${o.type === 'credit' ? '+ Crédit' : '− Débit'}</td>
+        <td class="num ${o.type === 'credit' ? 'op-credit' : 'op-debit'}">${formatMoney(o.montant)}</td>
+        <td>${escapeHtml(o.motif || '—')}</td>
+        <td><button type="button" class="btn btn-sm btn-danger" data-del-op="${escapeHtml(o.id)}">Suppr.</button></td>
+      </tr>`).join("");
+    tb.querySelectorAll("[data-del-op]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del-op");
+        state.operations = (state.operations || []).filter(x => x.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  function renderBudgetsPage() {
+    byId("budget-global").value = state.budgetMensuelGlobal || "";
+    const box = byId("budgets-par-cat");
+    box.innerHTML = state.categories
+      .map((c) => {
+        const v = state.budgetsCategorie[c.id] ?? "";
+        return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;flex-wrap:wrap">
+          <span style="min-width:140px">${escapeHtml(c.nom)}</span>
+          <input type="number" min="0" step="1" class="inp-budget-cat" data-cid="${escapeHtml(c.id)}" value="${v}" placeholder="Plafond TND" style="width:120px;background:var(--bg);color:var(--text);border:1px solid var(--surface2);border-radius:6px;padding:0.35rem" />
+          <button type="button" class="btn btn-sm btn-save-bcat" data-cid="${escapeHtml(c.id)}">Enregistrer</button>
+        </div>`;
+      })
+      .join("");
+    box.querySelectorAll(".btn-save-bcat").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        const inp = box.querySelector(`input.inp-budget-cat[data-cid="${id}"]`);
+        const n = Number(inp?.value);
+        if (!n || n <= 0) delete state.budgetsCategorie[id];
+        else state.budgetsCategorie[id] = n;
+        saveState();
+        renderAlerts("alerts-budget-page");
+        renderDashboard();
+      });
+    });
+    renderAlerts("alerts-budget-page");
+  }
+
+  function renderReferentiels() {
+    const lp = byId("list-personnes");
+    lp.innerHTML = state.personnes
+      .map(
+        (p) => `<li style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--surface2)">
+        <span>${escapeHtml(p.nom)}</span>
+        <button type="button" class="btn btn-sm btn-danger btn-del-p" data-pid="${escapeHtml(p.id)}">Suppr.</button>
+      </li>`
+      )
+      .join("");
+    lp.querySelectorAll(".btn-del-p").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-pid");
+        if (state.depenses.some((d) => d.personneId === id)) {
+          alert("Impossible : des dépenses référencent cette personne.");
+          return;
+        }
+        if (state.personnes.length <= 1) {
+          alert("Gardez au moins une personne.");
+          return;
+        }
+        state.personnes = state.personnes.filter((p) => p.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+
+    const lc = byId("list-categories");
+    lc.innerHTML = state.categories
+      .map(
+        (c) => `<li style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--surface2)">
+        <span>${escapeHtml(c.nom)}</span>
+        <button type="button" class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(c.id)}">Suppr.</button>
+      </li>`
+      )
+      .join("");
+    lc.querySelectorAll(".btn-del-c").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        if (state.depenses.some((d) => d.categorieId === id)) {
+          alert("Impossible : des dépenses utilisent cette catégorie.");
+          return;
+        }
+        delete state.budgetsCategorie[id];
+        state.categories = state.categories.filter((c) => c.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  function renderAnalysesCharts() {
+    const dep = filteredDepensesAnalyses();
+
+    const byMonth = {};
+    const byCat = {};
+    const byPerson = {};
+    const byCompte = {};
+    dep.forEach((d) => {
+      const mk = monthKeyFromIso(d.date);
+      if (mk) byMonth[mk] = (byMonth[mk] || 0) + d.montant;
+      const cn = nomCategorie(d.categorieId);
+      byCat[cn] = (byCat[cn] || 0) + d.montant;
+      const pn = nomPersonne(d.personneId);
+      byPerson[pn] = (byPerson[pn] || 0) + d.montant;
+      const acc = nomCompte(d.compteId);
+      byCompte[acc] = (byCompte[acc] || 0) + d.montant;
+    });
+
+    const months = Object.keys(byMonth).sort();
+    destroyChart("m1");
+    charts.m1 = new Chart(byId("ch-month-total"), {
+      type: "line",
+      data: {
+        labels: months,
+        datasets: [{ label: "Total", data: months.map((m) => byMonth[m]), borderColor: "#4aa8ff", tension: 0.2, fill: true, backgroundColor: "rgba(74,168,255,0.15)" }],
+      },
+      options: {
+        scales: {
+          x: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+          y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+        },
+        maintainAspectRatio: false,
+      },
+    });
+
+    const labelsC = Object.keys(byCat);
+    destroyChart("m2");
+    charts.m2 = new Chart(byId("ch-cat-donut"), {
+      type: "doughnut",
+      data: {
+        labels: labelsC,
+        datasets: [{ data: labelsC.map((k) => byCat[k]), backgroundColor: labelsC.map((_, i) => `hsl(${(i * 41) % 360} 60% 52%)`) }],
+      },
+      options: { plugins: { legend: { position: "right", labels: { color: "#c5d4e8" } } }, maintainAspectRatio: false },
+    });
+
+    const cats = [...new Set(dep.map((d) => d.categorieId))];
+    const catNames = cats.map((id) => nomCategorie(id));
+    const monthSet = [...new Set(dep.map((d) => monthKeyFromIso(d.date)).filter(Boolean))].sort();
+    const datasets = cats.map((cid, i) => ({
+      label: nomCategorie(cid),
+      data: monthSet.map((m) =>
+        dep.filter((d) => d.categorieId === cid && monthKeyFromIso(d.date) === m).reduce((s, d) => s + d.montant, 0)
+      ),
+      backgroundColor: `hsl(${(i * 47) % 360} 55% 48%)`,
+    }));
+    destroyChart("m3");
+    charts.m3 = new Chart(byId("ch-stacked"), {
+      type: "bar",
+      data: { labels: monthSet, datasets },
+      options: {
+        scales: {
+          x: { stacked: true, ticks: { color: "#8b9cb3" } },
+          y: { stacked: true, ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+        },
+        maintainAspectRatio: false,
+      },
+    });
+
+    const labelsP = Object.keys(byPerson);
+    destroyChart("m4");
+    charts.m4 = new Chart(byId("ch-person"), {
+      type: "polarArea",
+      data: {
+        labels: labelsP,
+        datasets: [{ data: labelsP.map((k) => byPerson[k]), backgroundColor: labelsP.map((_, i) => `hsla(${(i * 50) % 360},70%,55%,0.75)`) }],
+      },
+      options: { plugins: { legend: { position: "right", labels: { color: "#c5d4e8" } } }, maintainAspectRatio: false },
+    });
+
+    const labelsAcc = Object.keys(byCompte);
+    destroyChart("m5");
+    charts.m5 = new Chart(byId("ch-compte"), {
+      type: "pie",
+      data: {
+        labels: labelsAcc,
+        datasets: [{ data: labelsAcc.map((k) => byCompte[k]), backgroundColor: labelsAcc.map((_, i) => `hsl(${(i * 55) % 360} 58% 50%)`) }],
+      },
+      options: { plugins: { legend: { position: "right", labels: { color: "#c5d4e8" } } }, maintainAspectRatio: false },
+    });
+    // Top 10 categories chart
+    const catTotals = {};
+    dep.forEach(d => { const n = nomCategorie(d.categorieId); catTotals[n] = (catTotals[n]||0) + d.montant; });
+    const top10 = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    destroyChart("m6");
+    charts.m6 = new Chart(byId("ch-top-cats"), {
+      type: "bar",
+      data: {
+        labels: top10.map(([k])=>k),
+        datasets: [{ label: "Total", data: top10.map(([,v])=>v), backgroundColor: top10.map((_,i)=>`hsl(${(i*37)%360} 55% 52%)`), borderRadius: 6 }]
+      },
+      options: {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+          y: { ticks: { color: "#8b9cb3", font: { size: 11 } } }
+        },
+        maintainAspectRatio: false
+      }
+    });
+
+    // Average daily spending per month
+    const avgDaily = {};
+    months.forEach(m => {
+      const [yr, mo] = m.split("-").map(Number);
+      const daysInMonth = new Date(yr, mo, 0).getDate();
+      avgDaily[m] = (byMonth[m] || 0) / daysInMonth;
+    });
+    destroyChart("m7");
+    charts.m7 = new Chart(byId("ch-avg-daily"), {
+      type: "line",
+      data: {
+        labels: months,
+        datasets: [{ label: "Moy/jour", data: months.map(m=>avgDaily[m]), borderColor: "#5ce1a6", tension: 0.3, fill: true, backgroundColor: "rgba(92,225,166,0.1)", pointBackgroundColor: "#5ce1a6" }]
+      },
+      options: {
+        scales: {
+          x: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } },
+          y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.06)" } }
+        },
+        maintainAspectRatio: false
+      }
+    });
+
+    requestAnimationFrame(() => {
+      ["m1", "m2", "m3", "m4", "m5", "m6", "m7"].forEach((k) => charts[k]?.resize?.());
+    });
+  }
+
+  function renderAll() {
+    refreshSelects();
+    const today = new Date().toISOString().slice(0, 10);
+    if (!byId("add-date").value) byId("add-date").value = today;
+
+    const activeId = document.querySelector(".page.active")?.id || "page-dashboard";
+    if (activeId === "page-dashboard") renderDashboard();
+    if (activeId === "page-analyses") renderAnalysesCharts();
+
+    renderDepensesTable();
+    renderComptesTable();
+    renderBudgetsPage();
+    renderReferentiels();
+  }
+
+  function showPage(name) {
+    window.scrollTo(0, 0);
+    document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+    document.querySelectorAll(".app-nav button").forEach((b) => b.classList.remove("active"));
+    const page = byId("page-" + name);
+    if (page) page.classList.add("active");
+    const nav = document.querySelector(`.app-nav button[data-page="${name}"]`);
+    if (nav) nav.classList.add("active");
+    if (name === "analyses") renderAnalysesCharts();
+    if (name === "dashboard") renderDashboard();
+    requestAnimationFrame(() => resizeVisibleCharts());
+  }
+
+  /* ---------- CSV ---------- */
+  function normalizeHeader(h) {
+    return h
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_");
+  }
+
+  const COL = {
+    date: ["date", "jour"],
+    categorie: ["categorie", "category", "type_depense", "type"],
+    description: ["description", "libelle", "detail", "notes"],
+    montant: ["montant", "amount", "cout", "valeur"],
+    personne: ["personne", "auteur", "qui", "user"],
+    compte: ["compte", "compte_debite", "account"],
+    moyen: ["moyen_paiement", "moyen", "paiement", "mode"],
+  };
+
+  function mapHeaders(headers) {
+    const norm = headers.map(normalizeHeader);
+    const idx = {};
+    for (const [key, aliases] of Object.entries(COL)) {
+      for (const a of aliases) {
+        const na = normalizeHeader(a);
+        const i = norm.indexOf(na);
+        if (i >= 0) {
+          idx[key] = i;
+          break;
+        }
+      }
+    }
+    return idx;
+  }
+
+  function parseCSV(text) {
+    const rows = [];
+    let i = 0;
+    let field = "";
+    let row = [];
+    let inQuotes = false;
+    while (i < text.length) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') {
+            field += '"';
+            i += 2;
+            continue;
+          }
+          inQuotes = false;
+          i++;
+          continue;
+        }
+        field += c;
+        i++;
+        continue;
+      }
+      if (c === '"') {
+        inQuotes = true;
+        i++;
+        continue;
+      }
+      if (c === ",") {
+        row.push(field);
+        field = "";
+        i++;
+        continue;
+      }
+      if (c === "\r") {
+        i++;
+        continue;
+      }
+      if (c === "\n") {
+        row.push(field);
+        if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+        row = [];
+        field = "";
+        i++;
+        continue;
+      }
+      field += c;
+      i++;
+    }
+    if (field.length || row.length) {
+      row.push(field);
+      if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+    }
+    return rows;
+  }
+
+  function parseMontant(s) {
+    if (s == null) return NaN;
+    let t = String(s).trim().replace(/\s/g, "").replace(",", ".");
+    t = t.replace(/[^\d.-]/g, "");
+    return parseFloat(t);
+  }
+
+  function parseDateCell(s) {
+    if (!s) return new Date().toISOString();
+    const t = String(s).trim();
+    const d = new Date(t);
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+    const fr = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (fr) {
+      let [, day, month, year] = fr;
+      if (year.length === 2) year = "20" + year;
+      const d2 = new Date(Number(year), Number(month) - 1, Number(day));
+      if (!Number.isNaN(d2.getTime())) return d2.toISOString();
+    }
+    return new Date().toISOString();
+  }
+
+  function importDepensesCsv(text) {
+    const matrix = parseCSV(text);
+    if (!matrix.length) return;
+    const idx = mapHeaders(matrix[0]);
+    if (idx.montant === undefined) {
+      byId("global-error").textContent = "CSV dépenses : colonne montant introuvable.";
+      return;
+    }
+    byId("global-error").textContent = "";
+    const defPers = state.personnes[0]?.id;
+    const defCompte = state.comptes.find((c) => c.type === "courant")?.id || state.comptes[0]?.id;
+    for (let r = 1; r < matrix.length; r++) {
+      const line = matrix[r];
+      if (!line?.length) continue;
+      const m = parseMontant(line[idx.montant]);
+      if (Number.isNaN(m) || m < 0) continue;
+      const dateIso = idx.date !== undefined ? parseDateCell(line[idx.date]) : new Date().toISOString();
+      const catNom = idx.categorie !== undefined ? line[idx.categorie] : "Autre";
+      const persNom = idx.personne !== undefined ? line[idx.personne] : "";
+      const compteNom = idx.compte !== undefined ? line[idx.compte] : "";
+      const desc = idx.description !== undefined ? String(line[idx.description] || "") : "";
+      const moy = idx.moyen !== undefined ? String(line[idx.moyen] || "") : "";
+      state.depenses.push({
+        id: uid(),
+        date: dateIso,
+        categorieId: findOrCreateCategorie(catNom),
+        personneId: persNom ? findOrCreatePersonne(persNom) : defPers,
+        compteId: compteNom ? findOrCreateCompte(compteNom) : defCompte,
+        description: desc,
+        montant: m,
+        moyen: moy,
+      });
+    }
+    saveState();
+    renderAll();
+  }
+
+  function exportDatabaseCsv() {
+    const blob = new Blob([buildDatabaseCsvText()], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "database.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function csvEsc(s) {
+    const t = String(s ?? "");
+    if (/[",\n]/.test(t)) return `"${t.replace(/"/g, '""')}"`;
+    return t;
+  }
+
+  function importDatabaseCsv(text) {
+    const raw = text.replace(/^\uFEFF/, "");
+    const lines = raw.split(/\r?\n/);
+    let mode = null;
+    const personnes = [];
+    const categories = [];
+    const comptes = [];
+    const budgetsCat = {};
+    let budgetGlobal = 0;
+    const depenses = [];
+
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      if (t.startsWith("##")) {
+        mode = t.slice(2).toUpperCase();
+        continue;
+      }
+      if (
+        t.toLowerCase() === "id,nom" ||
+        t.toLowerCase() === "id,nom,type,solde_initial" ||
+        t.toLowerCase() === "type,clef,valeur" ||
+        t.toLowerCase() === "id,date,categorieid,personneid,compteid,description,montant,moyen"
+      ) {
+        continue;
+      }
+
+      if (mode === "PERSONNES") {
+        const [id, nom] = splitCsvLine(line);
+        if (id && nom) personnes.push({ id, nom });
+      } else if (mode === "CATEGORIES") {
+        const [id, nom] = splitCsvLine(line);
+        if (id && nom) categories.push({ id, nom });
+      } else if (mode === "COMPTES") {
+        const parts = splitCsvLineFull(line);
+        if (parts.length >= 4) comptes.push({ id: parts[0], nom: parts[1], type: parts[2], soldeInitial: Number(parts[3]) || 0 });
+      } else if (mode === "BUDGETS") {
+        const parts = splitCsvLineFull(line);
+        if (parts[0] === "type") continue;
+        if (parts[0] === "global" && parts.length >= 3) budgetGlobal = Number(parts[2]) || 0;
+        if (parts[0] === "categorie" && parts.length >= 3) budgetsCat[parts[1]] = Number(parts[2]) || 0;
+      } else if (mode === "DEPENSES") {
+        const p = splitCsvLineFull(line);
+        if (p.length >= 8 && p[0] !== "id")
+          depenses.push({
+            id: p[0],
+            date: p[1],
+            categorieId: p[2],
+            personneId: p[3],
+            compteId: p[4],
+            description: p[5],
+            montant: Number(p[6]) || 0,
+            moyen: p[7] || "",
+          });
+      }
+    }
+
+    // parse OPERATIONS if present
+    const operations = [];
+    let inOps = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (t === "##OPERATIONS") { inOps = true; continue; }
+      if (inOps) {
+        if (t.startsWith("##")) { inOps = false; continue; }
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 5 && p[0] !== "id")
+          operations.push({ id: p[0], date: p[1], compteId: p[2], type: p[3], montant: Number(p[4])||0, motif: p[5]||"" });
+      }
+    }
+
+    if (personnes.length) state.personnes = personnes;
+    if (categories.length) state.categories = categories;
+    if (comptes.length) state.comptes = comptes;
+    state.budgetMensuelGlobal = budgetGlobal;
+    state.budgetsCategorie = budgetsCat;
+    if (depenses.length) state.depenses = depenses;
+    if (operations.length) state.operations = operations;
+    state.version = 2;
+    saveState();
+    byId("global-error").textContent = "";
+    const hint = byId("import-db-hint");
+    if (hint) { hint.style.display = "inline"; setTimeout(()=>hint.style.display="none", 3000); }
+    renderAll();
+  }
+
+  function splitCsvLine(line) {
+    const p = splitCsvLineFull(line);
+    return [p[0] || "", p[1] || ""];
+  }
+
+  function splitCsvLineFull(line) {
+    const out = [];
+    let cur = "";
+    let q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c === '"') {
+          if (line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else q = false;
+        } else cur += c;
+      } else {
+        if (c === '"') q = true;
+        else if (c === ",") {
+          out.push(cur);
+          cur = "";
+        } else cur += c;
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  /* ---------- init ---------- */
+  document.querySelectorAll(".app-nav button").forEach((btn) => {
+    btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
+  });
+
+  byId("btn-save-local").addEventListener("click", () => saveState());
+
+  // Reset filters
+  byId("btn-reset-filters").addEventListener("click", () => {
+    ["f-text","f-cat","f-pers","f-from","f-to","f-min","f-max"].forEach(id => {
+      const el = byId(id);
+      if (el) el.value = "";
+    });
+    renderDepensesTable();
+  });
+
+  byId("btn-add-depense").addEventListener("click", () => {
+    const montant = Number(byId("add-montant").value);
+    if (!montant || montant <= 0) return;
+    state.depenses.push({
+      id: uid(),
+      date: new Date(byId("add-date").value + "T12:00:00").toISOString(),
+      categorieId: byId("add-categorie").value,
+      personneId: byId("add-personne").value,
+      compteId: byId("add-compte").value,
+      description: byId("add-desc").value.trim(),
+      montant,
+      moyen: byId("add-moyen").value.trim(),
+    });
+    byId("add-montant").value = "";
+    byId("add-desc").value = "";
+    saveState();
+    renderAll();
+  });
+
+  byId("btn-add-personne").addEventListener("click", () => {
+    const n = byId("new-personne-nom").value.trim();
+    if (!n) return;
+    if (state.personnes.some((p) => p.nom.toLowerCase() === n.toLowerCase())) return;
+    state.personnes.push({ id: uid(), nom: n });
+    byId("new-personne-nom").value = "";
+    saveState();
+    renderAll();
+  });
+
+  byId("btn-add-categorie").addEventListener("click", () => {
+    const n = byId("new-cat-nom").value.trim();
+    if (!n) return;
+    if (state.categories.some((c) => c.nom.toLowerCase() === n.toLowerCase())) return;
+    state.categories.push({ id: uid(), nom: n });
+    byId("new-cat-nom").value = "";
+    saveState();
+    renderAll();
+  });
+
+  byId("btn-add-compte").addEventListener("click", () => {
+    const nom = byId("new-compte-nom").value.trim();
+    if (!nom) return;
+    const type = byId("new-compte-type").value;
+    const solde = Number(byId("new-compte-solde").value) || 0;
+    state.comptes.push({ id: uid(), nom, type, soldeInitial: solde });
+    byId("new-compte-nom").value = "";
+    saveState();
+    renderAll();
+  });
+
+  byId("btn-save-budget-global").addEventListener("click", () => {
+    state.budgetMensuelGlobal = Number(byId("budget-global").value) || 0;
+    saveState();
+    renderAll();
+  });
+
+  byId("btn-export-db").addEventListener("click", () => exportDatabaseCsv());
+
+  byId("file-db-import").addEventListener("change", async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    importDatabaseCsv(await f.text());
+    e.target.value = "";
+  });
+
+  // Manual account operations
+  byId("btn-apply-operation").addEventListener("click", () => {
+    const compteId = byId("op-compte").value;
+    const type = byId("op-type").value;
+    const montant = parseFloat(byId("op-montant").value);
+    const motif = byId("op-motif").value.trim();
+    if (!compteId || !montant || montant <= 0) return;
+    if (!state.operations) state.operations = [];
+    state.operations.push({ id: uid(), date: new Date().toISOString(), compteId, type, montant, motif });
+    byId("op-montant").value = "";
+    byId("op-motif").value = "";
+    const hint = byId("op-hint");
+    const nomC = state.comptes.find(c=>c.id===compteId)?.nom || "";
+    hint.textContent = `✅ ${type === "credit" ? "+" : "−"}${formatMoney(montant)} sur « ${nomC} »`;
+    hint.style.display = "inline";
+    setTimeout(() => hint.style.display = "none", 3000);
+    saveState();
+    renderAll();
+  });
+
+  ["f-text", "f-cat", "f-pers", "f-from", "f-to", "f-min", "f-max"].forEach((id) => {
+    const el = byId(id);
+    if (el) {
+      el.addEventListener("input", () => renderDepensesTable());
+      el.addEventListener("change", () => renderDepensesTable());
+    }
+  });
+
+  ["ana-from", "ana-to"].forEach((id) => {
+    byId(id).addEventListener("change", () => renderAnalysesCharts());
+  });
+
+  loadState();
+  renderAll();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      resizeVisibleCharts();
+    });
+  });
+})();
+
+    </script>
+  </body>
+</html>
