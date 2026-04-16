@@ -434,19 +434,79 @@ hr.split {
   margin: 1rem 0;
 }
 
+
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .app-nav { padding: 4px 6px 0; gap: 1px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+    .app-nav::-webkit-scrollbar { display: none; }
+    .app-nav button { font-size: 0.7rem; padding: 6px 8px 8px; white-space: nowrap; }
+    .main-wrap { padding: 0.5rem; }
+    .panel { padding: 0.75rem; }
+    .form-grid { grid-template-columns: 1fr !important; }
+    .two-col { grid-template-columns: 1fr !important; }
+    .grid-charts, .grid-charts.cols-3 { grid-template-columns: 1fr !important; }
+    .cards { grid-template-columns: repeat(2,1fr) !important; }
+    .table-wrap { font-size: 0.72rem; overflow-x: auto; }
+    .table-wrap th, .table-wrap td { padding: 0.3rem 0.4rem; }
+    h2 { font-size: 0.95rem; }
+    .filters { flex-direction: column; gap: 0.5rem; }
+    .filters label { width: 100%; }
+  }
+
+  /* ── MODAL ──────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; padding: 1rem;
+  }
+  .modal-backdrop.hidden { display: none; }
+  .modal-box {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 1.5rem; width: 100%; max-width: 540px;
+    border: 1px solid var(--surface2); max-height: 90vh; overflow-y: auto;
+  }
+  .modal-box h3 { margin: 0 0 1rem; color: var(--accent); font-size: 1rem; }
+  .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+
+  /* ── TAGS ───────────────────────────────────────────── */
+  .tag { display:inline-block; background: var(--surface2); color: var(--muted);
+    font-size: 0.7rem; padding: 2px 7px; border-radius: 99px; margin: 2px; }
+  .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    border: 1px solid var(--surface2); border-radius: var(--radius); padding: 4px 8px; background: var(--surface2); }
+  .tag-input-wrap input { background: none; border: none; color: var(--text); outline: none; min-width: 80px; font-size: 0.85rem; }
+  .tag span.remove { cursor: pointer; margin-left: 4px; color: var(--danger); }
+
+  /* ── RECURRING BADGE ────────────────────────────────── */
+  .badge-rec { background: rgba(74,168,255,0.15); color: var(--accent); font-size: 0.68rem;
+    padding: 1px 6px; border-radius: 99px; margin-left: 4px; }
+
+  /* ── INLINE EDIT ────────────────────────────────────── */
+  .btn-edit { background: rgba(74,168,255,0.12); color: var(--accent); border: 1px solid rgba(74,168,255,0.25); }
+  .btn-edit:hover { background: rgba(74,168,255,0.22); }
+
+  /* ── CONFIRMATION DIALOG ────────────────────────────── */
+  .confirm-box {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .confirm-box.hidden { display: none; }
+  .confirm-inner { background: var(--surface); border: 1px solid var(--surface2);
+    border-radius: var(--radius); padding: 1.5rem; max-width: 360px; width: 90%; text-align: center; }
+  .confirm-inner p { margin: 0 0 1.25rem; color: var(--text); font-size: 0.9rem; }
+  .confirm-inner .confirm-btns { display: flex; gap: 0.5rem; justify-content: center; }
 </style>
     
     
   </head>
   <body>
     <nav class="app-nav" aria-label="Navigation principale">
-      <button type="button" class="active" data-page="dashboard">Tableau de bord</button>
-      <button type="button" data-page="depenses">Dépenses</button>
-      <button type="button" data-page="analyses">Analyses</button>
-      <button type="button" data-page="comptes">Comptes</button>
-      <button type="button" data-page="budgets">Budgets &amp; alertes</button>
-      <button type="button" data-page="referentiels">Personnes &amp; catégories</button>
-      <button type="button" data-page="fichiers">Fichiers (CSV / sauvegarde)</button>
+      <button type="button" class="active" data-page="dashboard">🏠 Dashboard</button>
+      <button type="button" data-page="depenses">💸 Dépenses</button>
+      <button type="button" data-page="analyses">📊 Analyses</button>
+      <button type="button" data-page="comptes">💳 Comptes</button>
+      <button type="button" data-page="budgets">🎯 Budgets</button>
+      <button type="button" data-page="referentiels">👥 Référentiels</button>
+      <button type="button" data-page="fichiers">📁 Fichiers</button>
     </nav>
 
     <header>
@@ -493,6 +553,13 @@ hr.split {
             <label>Compte débité <select id="add-compte"></select></label>
             <label>Description <input type="text" id="add-desc" placeholder="Libellé" /></label>
             <label>Moyen de paiement <input type="text" id="add-moyen" placeholder="Carte, virement…" /></label>
+            <label>Tags <div class="tag-input-wrap" id="add-tags-wrap">
+              <input type="text" id="add-tags-input" placeholder="tag1, tag2…" />
+            </div></label>
+            <label style="display:flex;align-items:center;gap:0.5rem;align-self:end">
+              <input type="checkbox" id="add-recurrent" style="width:auto" />
+              Récurrente (mensuelle)
+            </label>
           </div>
           <button type="button" class="btn btn-primary" id="btn-add-depense">Ajouter</button>
         </div>
@@ -512,16 +579,27 @@ hr.split {
         </div>
         <div class="panel">
           <h2>Liste</h2>
+          <div id="dep-pagination-top" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+            <span style="font-size:0.8rem;color:var(--muted)">Lignes par page :</span>
+            <select id="dep-per-page" style="width:auto;padding:4px 8px;font-size:0.8rem">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="9999">Tout</option>
+            </select>
+            <span id="dep-page-info" style="font-size:0.8rem;color:var(--muted);margin-left:auto"></span>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Catégorie</th>
+                  <th class="th-sort" data-col="date">Date <span class="sort-icon" id="si-date"></span></th>
+                  <th class="th-sort" data-col="categorie">Catégorie <span class="sort-icon" id="si-categorie"></span></th>
                   <th>Personne</th>
                   <th>Compte</th>
                   <th>Description</th>
-                  <th>Montant</th>
+                  <th>Tags</th>
+                  <th class="th-sort" data-col="montant">Montant <span class="sort-icon" id="si-montant"></span></th>
                   <th></th>
                 </tr>
               </thead>
@@ -572,6 +650,17 @@ hr.split {
           <div class="panel chart-box">
             <h2>💳 Par compte</h2>
             <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-compte"></canvas></div>
+          </div>
+        </div>
+        <div id="prevision-panel"></div>
+        <div class="panel chart-box">
+          <h2>📈 Courbe du solde total dans le temps</h2>
+          <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-solde-curve"></canvas></div>
+        </div>
+        <div id="comparison-panel">
+          <div class="panel chart-box">
+            <h2>📊 Comparaison mois par catégorie (8 derniers mois)</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-comparison"></canvas></div>
           </div>
         </div>
       </section>
@@ -693,6 +782,7 @@ hr.split {
           <button type="button" class="btn btn-primary" id="btn-export-db">⬇️ Télécharger database.csv</button>
         </div>
       </section>
+
     </main>
 
     <footer>
@@ -702,7 +792,7 @@ hr.split {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
 /* global Chart */
-(() => {
+document.addEventListener("DOMContentLoaded", () => {
   const STORAGE_KEY = "gestion_depenses_v2";
   /** @type {FileSystemFileHandle|null} */
   let csvFileHandle = null;
@@ -739,6 +829,7 @@ hr.split {
       budgetsCategorie: {},
       depenses: [],
       operations: [],
+      recurringDue: [],
     };
   }
 
@@ -783,10 +874,10 @@ hr.split {
     });
     lines.push("");
     lines.push("##DEPENSES");
-    lines.push("id,date,categorieId,personneId,compteId,description,montant,moyen");
+    lines.push("id,date,categorieId,personneId,compteId,description,montant,moyen,tags,recurrent,sourceRecurring");
     state.depenses.forEach((d) => {
       lines.push(
-        `${d.id},${d.date},${d.categorieId},${d.personneId},${d.compteId},${csvEsc(d.description)},${d.montant},${csvEsc(d.moyen)}`
+        `${d.id},${d.date},${d.categorieId},${d.personneId},${d.compteId},${csvEsc(d.description)},${d.montant},${csvEsc(d.moyen)},${csvEsc((d.tags||[]).join("|"))},${d.recurrent?1:0},${d.sourceRecurring||""}`
       );
     });
     if (state.operations && state.operations.length) {
@@ -1255,41 +1346,134 @@ hr.split {
     el.innerHTML = html;
   }
 
+  // ── SORT + PAGINATION STATE ──────────────────────────────────────────
+  let _depSort = { col: "date", dir: "desc" };
+  let _depPage = 1;
+
+  function sortedDepenses() {
+    const rows = filteredDepensesListe();
+    const { col, dir } = _depSort;
+    rows.sort((a, b) => {
+      let va, vb;
+      if (col === "date")      { va = new Date(a.date); vb = new Date(b.date); }
+      else if (col === "montant") { va = a.montant; vb = b.montant; }
+      else if (col === "categorie") { va = nomCategorie(a.categorieId).toLowerCase(); vb = nomCategorie(b.categorieId).toLowerCase(); }
+      else { va = 0; vb = 0; }
+      if (va < vb) return dir === "asc" ? -1 : 1;
+      if (va > vb) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return rows;
+  }
+
+  function renderSortIcons() {
+    ["date","montant","categorie"].forEach(col => {
+      const el = byId("si-" + col);
+      if (!el) return;
+      const th = el.closest("th");
+      if (_depSort.col === col) {
+        el.textContent = _depSort.dir === "asc" ? "▲" : "▼";
+        th.classList.add("active");
+      } else {
+        el.textContent = "⇅";
+        th.classList.remove("active");
+      }
+    });
+  }
+
+  function renderPaginationNav(total, perPage) {
+    const nav = byId("dep-pagination-nav");
+    const info = byId("dep-page-info");
+    if (!nav) return;
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    if (_depPage > totalPages) _depPage = totalPages;
+
+    const start = (_depPage - 1) * perPage + 1;
+    const end = Math.min(_depPage * perPage, total);
+    if (info) info.textContent = total ? `Page ${_depPage} / ${totalPages} — ${start}–${end} sur ${total}` : "";
+
+    // Build page buttons (show max 7)
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (_depPage > 3) pages.push("…");
+      for (let i = Math.max(2, _depPage - 1); i <= Math.min(totalPages - 1, _depPage + 1); i++) pages.push(i);
+      if (_depPage < totalPages - 2) pages.push("…");
+      pages.push(totalPages);
+    }
+
+    nav.innerHTML = `
+      <button class="page-btn" id="btn-prev-page" ${_depPage === 1 ? "disabled" : ""}>‹</button>
+      ${pages.map(p => p === "…"
+        ? `<span style="color:var(--muted);padding:0 4px">…</span>`
+        : `<button class="page-btn ${p === _depPage ? "active" : ""}" data-pg="${p}">${p}</button>`
+      ).join("")}
+      <button class="page-btn" id="btn-next-page" ${_depPage === totalPages ? "disabled" : ""}>›</button>
+    `;
+
+    nav.querySelectorAll("[data-pg]").forEach(btn => {
+      btn.addEventListener("click", () => { _depPage = Number(btn.getAttribute("data-pg")); renderDepensesTable(); });
+    });
+    const prev = byId("btn-prev-page");
+    const next = byId("btn-next-page");
+    if (prev) prev.addEventListener("click", () => { if (_depPage > 1) { _depPage--; renderDepensesTable(); } });
+    if (next) next.addEventListener("click", () => { if (_depPage < totalPages) { _depPage++; renderDepensesTable(); } });
+  }
+
   function renderDepensesTable() {
-    const rows = filteredDepensesListe().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const allRows = sortedDepenses();
+    const perPageEl = byId("dep-per-page");
+    const perPage = perPageEl ? parseInt(perPageEl.value) || 50 : 50;
     const tb = byId("tbody-depenses");
     const summary = byId("filter-summary");
-    const totalFiltered = rows.reduce((s, d) => s + d.montant, 0);
+    const totalFiltered = allRows.reduce((s, d) => s + d.montant, 0);
+
     if (summary) {
-      summary.textContent = rows.length
-        ? `${rows.length} dépense(s) — Total : ${formatMoney(totalFiltered)}`
+      summary.textContent = allRows.length
+        ? `${allRows.length} dépense(s) — Total : ${formatMoney(totalFiltered)}`
         : "";
     }
+
+    renderSortIcons();
+    renderPaginationNav(allRows.length, perPage);
+
+    const start = (_depPage - 1) * perPage;
+    const rows = allRows.slice(start, start + perPage);
+
     if (!rows.length) {
-      tb.innerHTML = `<tr><td colspan="7" class="empty">Aucune dépense pour ces filtres.</td></tr>`;
+      tb.innerHTML = `<tr><td colspan="8" class="empty">Aucune dépense pour ces filtres.</td></tr>`;
       return;
     }
-    tb.innerHTML = rows
-      .map(
-        (d) => `
-      <tr>
+    tb.innerHTML = rows.map((d) => {
+      const tags = (d.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+      const recBadge = d.recurrent ? `<span class="badge-rec">🔁</span>` : "";
+      return `<tr>
         <td>${escapeHtml(new Date(d.date).toLocaleDateString("fr-FR"))}</td>
         <td><span class="badge">${escapeHtml(nomCategorie(d.categorieId))}</span></td>
         <td>${escapeHtml(nomPersonne(d.personneId))}</td>
         <td>${escapeHtml(nomCompte(d.compteId))}</td>
-        <td>${escapeHtml(d.description || "—")}</td>
+        <td>${escapeHtml(d.description || "—")}${recBadge}</td>
+        <td>${tags || "—"}</td>
         <td class="num">${formatMoney(d.montant)}</td>
-        <td><button type="button" class="btn btn-sm btn-danger" data-del="${escapeHtml(d.id)}">Suppr.</button></td>
-      </tr>`
-      )
-      .join("");
+        <td style="display:flex;gap:4px">
+          <button type="button" class="btn btn-sm btn-edit" data-edit="${escapeHtml(d.id)}">✏️</button>
+          <button type="button" class="btn btn-sm btn-danger" data-del="${escapeHtml(d.id)}">🗑️</button>
+        </td>
+      </tr>`;
+    }).join("");
+
     tb.querySelectorAll("[data-del]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-del");
-        state.depenses = state.depenses.filter((x) => x.id !== id);
-        saveState();
-        renderAll();
+        confirmAction("Supprimer cette dépense ?", () => {
+          state.depenses = state.depenses.filter((x) => x.id !== btn.getAttribute("data-del"));
+          saveState(); renderAll();
+        });
       });
+    });
+    tb.querySelectorAll("[data-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => openEditDepense(btn.getAttribute("data-edit")));
     });
   }
 
@@ -1323,13 +1507,29 @@ hr.split {
     tb.querySelectorAll(".btn-del-compte").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-cid");
-        if (state.depenses.some((d) => d.compteId === id)) {
-          alert("Impossible : des dépenses utilisent ce compte.");
-          return;
-        }
-        state.comptes = state.comptes.filter((c) => c.id !== id);
-        saveState();
-        renderAll();
+        if (state.depenses.some((d) => d.compteId === id)) { alert("Impossible : des dépenses utilisent ce compte."); return; }
+        confirmAction("Supprimer ce compte ?", () => {
+          state.comptes = state.comptes.filter((c) => c.id !== id);
+          saveState(); renderAll();
+        });
+      });
+    });
+    tb.querySelectorAll(".btn-edit-compte").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        const cpt = state.comptes.find(x => x.id === id);
+        if (!cpt) return;
+        byId("edit-compte-nom").value = cpt.nom;
+        byId("edit-compte-type").value = cpt.type || "courant";
+        byId("edit-compte-solde").value = cpt.soldeInitial;
+        byId("modal-edit-compte").classList.remove("hidden");
+        byId("btn-edit-compte-save").onclick = () => {
+          cpt.nom = byId("edit-compte-nom").value.trim() || cpt.nom;
+          cpt.type = byId("edit-compte-type").value;
+          cpt.soldeInitial = parseFloat(byId("edit-compte-solde").value) || cpt.soldeInitial;
+          saveState(); renderAll();
+          byId("modal-edit-compte").classList.add("hidden");
+        };
       });
     });
     // Fill op-compte select
@@ -1394,52 +1594,79 @@ hr.split {
   }
 
   function renderReferentiels() {
+    const liStyle = `display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--surface2);gap:0.4rem`;
+
     const lp = byId("list-personnes");
-    lp.innerHTML = state.personnes
-      .map(
-        (p) => `<li style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--surface2)">
+    lp.innerHTML = state.personnes.map((p) =>
+      `<li style="${liStyle}">
         <span>${escapeHtml(p.nom)}</span>
-        <button type="button" class="btn btn-sm btn-danger btn-del-p" data-pid="${escapeHtml(p.id)}">Suppr.</button>
-      </li>`
-      )
-      .join("");
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-edit btn-edit-p" data-pid="${escapeHtml(p.id)}" data-nom="${escapeHtml(p.nom)}">✏️</button>
+          <button class="btn btn-sm btn-danger btn-del-p" data-pid="${escapeHtml(p.id)}">🗑️</button>
+        </div>
+      </li>`).join("");
+
     lp.querySelectorAll(".btn-del-p").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-pid");
-        if (state.depenses.some((d) => d.personneId === id)) {
-          alert("Impossible : des dépenses référencent cette personne.");
-          return;
-        }
-        if (state.personnes.length <= 1) {
-          alert("Gardez au moins une personne.");
-          return;
-        }
-        state.personnes = state.personnes.filter((p) => p.id !== id);
-        saveState();
-        renderAll();
+        if (state.depenses.some((d) => d.personneId === id)) { alert("Impossible : des dépenses référencent cette personne."); return; }
+        if (state.personnes.length <= 1) { alert("Gardez au moins une personne."); return; }
+        confirmAction("Supprimer cette personne ?", () => {
+          state.personnes = state.personnes.filter((p) => p.id !== id);
+          saveState(); renderAll();
+        });
+      });
+    });
+    lp.querySelectorAll(".btn-edit-p").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-pid");
+        byId("edit-personne-nom").value = btn.getAttribute("data-nom");
+        byId("modal-edit-personne").classList.remove("hidden");
+        byId("btn-edit-personne-save").onclick = () => {
+          const nom = byId("edit-personne-nom").value.trim();
+          if (!nom) return;
+          const p = state.personnes.find(x => x.id === id);
+          if (p) p.nom = nom;
+          saveState(); renderAll();
+          byId("modal-edit-personne").classList.add("hidden");
+        };
       });
     });
 
     const lc = byId("list-categories");
-    lc.innerHTML = state.categories
-      .map(
-        (c) => `<li style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--surface2)">
-        <span>${escapeHtml(c.nom)}</span>
-        <button type="button" class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(c.id)}">Suppr.</button>
-      </li>`
-      )
-      .join("");
+    lc.innerHTML = state.categories.map((cat) =>
+      `<li style="${liStyle}">
+        <span>${escapeHtml(cat.nom)}</span>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-edit btn-edit-c" data-cid="${escapeHtml(cat.id)}" data-nom="${escapeHtml(cat.nom)}">✏️</button>
+          <button class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(cat.id)}">🗑️</button>
+        </div>
+      </li>`).join("");
+
     lc.querySelectorAll(".btn-del-c").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-cid");
-        if (state.depenses.some((d) => d.categorieId === id)) {
-          alert("Impossible : des dépenses utilisent cette catégorie.");
-          return;
-        }
-        delete state.budgetsCategorie[id];
-        state.categories = state.categories.filter((c) => c.id !== id);
-        saveState();
-        renderAll();
+        if (state.depenses.some((d) => d.categorieId === id)) { alert("Impossible : des dépenses utilisent cette catégorie."); return; }
+        confirmAction("Supprimer cette catégorie ?", () => {
+          delete state.budgetsCategorie[id];
+          state.categories = state.categories.filter((c) => c.id !== id);
+          saveState(); renderAll();
+        });
+      });
+    });
+    lc.querySelectorAll(".btn-edit-c").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        byId("edit-categorie-nom").value = btn.getAttribute("data-nom");
+        byId("modal-edit-categorie").classList.remove("hidden");
+        byId("btn-edit-categorie-save").onclick = () => {
+          const nom = byId("edit-categorie-nom").value.trim();
+          if (!nom) return;
+          const cat = state.categories.find(x => x.id === id);
+          if (cat) cat.nom = nom;
+          saveState(); renderAll();
+          byId("modal-edit-categorie").classList.add("hidden");
+        };
       });
     });
   }
@@ -1801,7 +2028,8 @@ hr.split {
         t.toLowerCase() === "id,nom" ||
         t.toLowerCase() === "id,nom,type,solde_initial" ||
         t.toLowerCase() === "type,clef,valeur" ||
-        t.toLowerCase() === "id,date,categorieid,personneid,compteid,description,montant,moyen"
+        t.toLowerCase() === "id,date,categorieid,personneid,compteid,description,montant,moyen" ||
+        t.toLowerCase().startsWith("id,date,categorieid,personneid,compteid")
       ) {
         continue;
       }
@@ -1822,7 +2050,7 @@ hr.split {
         if (parts[0] === "categorie" && parts.length >= 3) budgetsCat[parts[1]] = Number(parts[2]) || 0;
       } else if (mode === "DEPENSES") {
         const p = splitCsvLineFull(line);
-        if (p.length >= 8 && p[0] !== "id")
+        if (p.length >= 7 && p[0] !== "id")
           depenses.push({
             id: p[0],
             date: p[1],
@@ -1832,6 +2060,9 @@ hr.split {
             description: p[5],
             montant: Number(p[6]) || 0,
             moyen: p[7] || "",
+            tags: p[8] ? p[8].split("|").filter(Boolean) : [],
+            recurrent: p[9] === "1",
+            sourceRecurring: p[10] || "",
           });
       }
     }
@@ -1851,13 +2082,14 @@ hr.split {
       }
     }
 
-    if (personnes.length) state.personnes = personnes;
-    if (categories.length) state.categories = categories;
-    if (comptes.length) state.comptes = comptes;
+    // Remplace TOUT — on écrase toutes les données existantes
+    state.personnes = personnes.length ? personnes : [];
+    state.categories = categories.length ? categories : [];
+    state.comptes = comptes.length ? comptes : [];
     state.budgetMensuelGlobal = budgetGlobal;
     state.budgetsCategorie = budgetsCat;
-    if (depenses.length) state.depenses = depenses;
-    if (operations.length) state.operations = operations;
+    state.depenses = depenses;
+    state.operations = operations;
     state.version = 2;
     saveState();
     byId("global-error").textContent = "";
@@ -1909,6 +2141,7 @@ hr.split {
       const el = byId(id);
       if (el) el.value = "";
     });
+    _depPage = 1;
     renderDepensesTable();
   });
 
@@ -2000,10 +2233,31 @@ hr.split {
   ["f-text", "f-cat", "f-pers", "f-from", "f-to", "f-min", "f-max"].forEach((id) => {
     const el = byId(id);
     if (el) {
-      el.addEventListener("input", () => renderDepensesTable());
-      el.addEventListener("change", () => renderDepensesTable());
+      el.addEventListener("input", () => { _depPage = 1; renderDepensesTable(); });
+      el.addEventListener("change", () => { _depPage = 1; renderDepensesTable(); });
     }
   });
+
+  // Sort headers
+  document.querySelectorAll(".th-sort").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.getAttribute("data-col");
+      if (_depSort.col === col) {
+        _depSort.dir = _depSort.dir === "asc" ? "desc" : "asc";
+      } else {
+        _depSort.col = col;
+        _depSort.dir = col === "montant" ? "desc" : (col === "date" ? "desc" : "asc");
+      }
+      _depPage = 1;
+      renderDepensesTable();
+    });
+  });
+
+  // Per-page selector
+  const perPageEl = byId("dep-per-page");
+  if (perPageEl) {
+    perPageEl.addEventListener("change", () => { _depPage = 1; renderDepensesTable(); });
+  }
 
   ["ana-from", "ana-to"].forEach((id) => {
     byId(id).addEventListener("change", () => renderAnalysesCharts());
@@ -2017,8 +2271,363 @@ hr.split {
       resizeVisibleCharts();
     });
   });
-})();
 
-    </script>
-  </body>
+  // ── CONFIRM DIALOG ──────────────────────────────────────────────────────
+  let _confirmCb = null;
+  function confirmAction(msg, cb) {
+    byId("confirm-msg").textContent = msg;
+    byId("confirm-box").classList.remove("hidden");
+    _confirmCb = cb;
+  }
+  byId("btn-confirm-ok").addEventListener("click", () => {
+    byId("confirm-box").classList.add("hidden");
+    if (_confirmCb) { _confirmCb(); _confirmCb = null; }
+  });
+  byId("btn-confirm-cancel").addEventListener("click", () => {
+    byId("confirm-box").classList.add("hidden");
+    _confirmCb = null;
+  });
+
+  // ── TAGS SYSTEM ──────────────────────────────────────────────────────────
+  function renderTagsInWrap(wrapId, tags) {
+    const wrap = byId(wrapId);
+    const input = wrap.querySelector("input");
+    wrap.querySelectorAll(".tag").forEach(t => t.remove());
+    tags.forEach(tag => {
+      const span = document.createElement("span");
+      span.className = "tag";
+      span.innerHTML = `${escapeHtml(tag)} <span class="remove" data-tag="${escapeHtml(tag)}">×</span>`;
+      span.querySelector(".remove").addEventListener("click", () => {
+        const idx = tags.indexOf(tag);
+        if (idx > -1) { tags.splice(idx, 1); renderTagsInWrap(wrapId, tags); }
+      });
+      wrap.insertBefore(span, input);
+    });
+  }
+
+  let _addTags = [];
+  byId("add-tags-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = e.target.value.trim().replace(/,/g,"");
+      if (val && !_addTags.includes(val)) { _addTags.push(val); renderTagsInWrap("add-tags-wrap", _addTags); }
+      e.target.value = "";
+    }
+  });
+
+  let _editTags = [];
+  byId("edit-tags-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = e.target.value.trim().replace(/,/g,"");
+      if (val && !_editTags.includes(val)) { _editTags.push(val); renderTagsInWrap("edit-tags-wrap", _editTags); }
+      e.target.value = "";
+    }
+  });
+
+  // ── EDIT DEPENSE MODAL ───────────────────────────────────────────────────
+  let _editDepId = null;
+  function openEditDepense(id) {
+    const d = state.depenses.find(x => x.id === id);
+    if (!d) return;
+    _editDepId = id;
+    byId("edit-date").value = d.date ? d.date.slice(0,10) : "";
+    byId("edit-montant").value = d.montant;
+    byId("edit-desc").value = d.description || "";
+    byId("edit-moyen").value = d.moyen || "";
+    byId("edit-recurrent").checked = !!d.recurrent;
+    fillSelect(byId("edit-categorie"), state.categories, "nom", "id", false);
+    fillSelect(byId("edit-personne"), state.personnes, "nom", "id", false);
+    fillSelect(byId("edit-compte"), state.comptes, "nom", "id", false);
+    byId("edit-categorie").value = d.categorieId;
+    byId("edit-personne").value = d.personneId;
+    byId("edit-compte").value = d.compteId;
+    _editTags = [...(d.tags || [])];
+    renderTagsInWrap("edit-tags-wrap", _editTags);
+    byId("modal-edit-depense").classList.remove("hidden");
+  }
+
+  byId("btn-edit-save").addEventListener("click", () => {
+    const d = state.depenses.find(x => x.id === _editDepId);
+    if (!d) return;
+    d.date = new Date(byId("edit-date").value + "T12:00:00").toISOString();
+    d.montant = parseFloat(byId("edit-montant").value) || d.montant;
+    d.categorieId = byId("edit-categorie").value;
+    d.personneId = byId("edit-personne").value;
+    d.compteId = byId("edit-compte").value;
+    d.description = byId("edit-desc").value.trim();
+    d.moyen = byId("edit-moyen").value.trim();
+    d.recurrent = byId("edit-recurrent").checked;
+    d.tags = [..._editTags];
+    saveState(); renderAll();
+    byId("modal-edit-depense").classList.add("hidden");
+  });
+  byId("btn-edit-cancel").addEventListener("click", () => byId("modal-edit-depense").classList.add("hidden"));
+
+  // ── MODAL CANCEL BUTTONS ─────────────────────────────────────────────────
+  byId("btn-edit-personne-cancel").addEventListener("click", () => byId("modal-edit-personne").classList.add("hidden"));
+  byId("btn-edit-categorie-cancel").addEventListener("click", () => byId("modal-edit-categorie").classList.add("hidden"));
+  byId("btn-edit-compte-cancel").addEventListener("click", () => byId("modal-edit-compte").classList.add("hidden"));
+
+  // Close modals on backdrop click
+  ["modal-edit-depense","modal-edit-personne","modal-edit-categorie","modal-edit-compte"].forEach(id => {
+    byId(id).addEventListener("click", (e) => { if (e.target === byId(id)) byId(id).classList.add("hidden"); });
+  });
+
+  // ── UPDATE btn-add-depense TO INCLUDE TAGS + RECURRENT ───────────────────
+  // Patch existing listener: we need to intercept the original
+  // We'll replace the handler by cloning button
+  (function patchAddDepense() {
+    const oldBtn = byId("btn-add-depense");
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.replaceWith(newBtn);
+    newBtn.addEventListener("click", () => {
+      const montant = Number(byId("add-montant").value);
+      if (!montant || montant <= 0) return;
+      const dep = {
+        id: uid(),
+        date: new Date(byId("add-date").value + "T12:00:00").toISOString(),
+        categorieId: byId("add-categorie").value,
+        personneId: byId("add-personne").value,
+        compteId: byId("add-compte").value,
+        description: byId("add-desc").value.trim(),
+        montant,
+        moyen: byId("add-moyen").value.trim(),
+        tags: [..._addTags],
+        recurrent: byId("add-recurrent").checked,
+      };
+      state.depenses.push(dep);
+      byId("add-montant").value = "";
+      byId("add-desc").value = "";
+      byId("add-moyen").value = "";
+      byId("add-recurrent").checked = false;
+      _addTags = [];
+      renderTagsInWrap("add-tags-wrap", _addTags);
+      saveState(); renderAll();
+    });
+  })();
+
+  // ── ANALYSES: COMPARISON MONTH N vs N-1 + SOLDE CURVE + PREVISION ────────
+  (function patchAnalyses() {
+    const origRender = renderAnalysesCharts;
+    renderAnalysesCharts = function() {
+      origRender();
+
+      const from = byId("ana-from").value;
+      const to = byId("ana-to").value;
+      const dFrom = from ? new Date(from + "T00:00:00") : null;
+      const dTo = to ? new Date(to + "T23:59:59") : null;
+      const dep = state.depenses.filter(d => {
+        const dt = new Date(d.date);
+        if (dFrom && dt < dFrom) return false;
+        if (dTo && dt > dTo) return false;
+        return true;
+      });
+
+      // ── Solde curve (all comptes, cumulated over time) ──────────────────
+      const sorted = dep.slice().sort((a,b) => new Date(a.date)-new Date(b.date));
+      const totalInitial = state.comptes.reduce((s,c) => s + c.soldeInitial, 0);
+      let running = totalInitial;
+      const soldeLabels = [];
+      const soldeData = [];
+      sorted.forEach(d => {
+        running -= d.montant;
+        soldeLabels.push(new Date(d.date).toLocaleDateString("fr-FR"));
+        soldeData.push(parseFloat(running.toFixed(3)));
+      });
+      // Add operations
+      const opsS = (state.operations||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+      opsS.forEach(o => {
+        running += o.type === "credit" ? o.montant : -o.montant;
+        soldeLabels.push(new Date(o.date).toLocaleDateString("fr-FR")+" (op)");
+        soldeData.push(parseFloat(running.toFixed(3)));
+      });
+
+      const cSolde = byId("ch-solde-curve");
+      if (cSolde) {
+        destroyChart("mSolde");
+        charts.mSolde = new Chart(cSolde, {
+          type: "line",
+          data: { labels: soldeLabels, datasets: [{ label: "Solde total", data: soldeData,
+            borderColor: "#4aa8ff", backgroundColor: "rgba(74,168,255,0.08)", tension: 0.2, fill: true,
+            pointRadius: 0, pointHoverRadius: 4 }] },
+          options: {
+            scales: {
+              x: { ticks: { color: "#8b9cb3", maxRotation: 45, maxTicksLimit: 12 }, grid: { color: "rgba(255,255,255,.04)" } },
+              y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.04)" } }
+            }, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#8b9cb3" } } }
+          }
+        });
+      }
+
+      // ── Prévision fin de mois ───────────────────────────────────────────
+      const prevEl = byId("prevision-panel");
+      if (prevEl) {
+        const mk = currentMonthKey();
+        const now = new Date();
+        const dayOfMonth = now.getDate();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        const depMois = state.depenses.filter(d => monthKeyFromIso(d.date) === mk);
+        const totalSoFar = depMois.reduce((s,d) => s+d.montant, 0);
+        const avgPerDay = totalSoFar / dayOfMonth;
+        const predicted = avgPerDay * daysInMonth;
+        const bud = state.budgetMensuelGlobal || 0;
+        const diff = bud ? bud - predicted : null;
+        const color = diff !== null ? (diff < 0 ? "var(--danger)" : "var(--accent2)") : "var(--text)";
+        prevEl.innerHTML = `
+          <div class="panel">
+            <h2>🔮 Prévision fin de mois (${mk})</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center">
+              <div><div style="color:var(--muted);font-size:0.78rem">Dépensé jusqu'ici</div><strong style="font-size:1.1rem">${formatMoney(totalSoFar)}</strong></div>
+              <div><div style="color:var(--muted);font-size:0.78rem">Moy. / jour</div><strong>${formatMoney(avgPerDay)}</strong></div>
+              <div><div style="color:var(--muted);font-size:0.78rem">Prévision fin de mois</div><strong style="font-size:1.2rem;color:${color}">${formatMoney(predicted)}</strong></div>
+              ${diff !== null ? `<div><div style="color:var(--muted);font-size:0.78rem">Écart vs budget</div><strong style="color:${color}">${diff >= 0 ? "+" : ""}${formatMoney(diff)}</strong></div>` : ""}
+            </div>
+          </div>`;
+      }
+
+      // ── Comparaison N vs N-1 ────────────────────────────────────────────
+      const compEl = byId("comparison-panel");
+      if (compEl) {
+        const allMonths = [...new Set(state.depenses.map(d => monthKeyFromIso(d.date)))].sort();
+        const recentMonths = allMonths.slice(-8);
+        const cats = state.categories.slice(0,5);
+        const datasets = cats.map((cat, i) => ({
+          label: cat.nom,
+          data: recentMonths.map(m => state.depenses.filter(d => monthKeyFromIso(d.date)===m && d.categorieId===cat.id).reduce((s,d)=>s+d.montant,0)),
+          backgroundColor: `hsl(${i*65} 55% 52%)`,
+          borderRadius: 4
+        }));
+        destroyChart("mComp");
+        const cvs = compEl.querySelector("canvas");
+        if (cvs) {
+          charts.mComp = new Chart(cvs, {
+            type: "bar",
+            data: { labels: recentMonths, datasets },
+            options: {
+              scales: {
+                x: { stacked: false, ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.04)" } },
+                y: { ticks: { color: "#8b9cb3" }, grid: { color: "rgba(255,255,255,.04)" } }
+              },
+              plugins: { legend: { labels: { color: "#8b9cb3", font: { size: 11 } } } },
+              maintainAspectRatio: false
+            }
+          });
+        }
+      }
+    };
+  });
+
+  // ── RECURRING: check on load ─────────────────────────────────────────────
+  function checkRecurring() {
+    const mk = currentMonthKey();
+    const already = state.depenses.filter(d => d.recurrent && d.sourceRecurring && monthKeyFromIso(d.date) === mk).map(d => d.sourceRecurring);
+    const templates = state.depenses.filter(d => d.recurrent && !d.sourceRecurring);
+    const due = templates.filter(t => !already.includes(t.id));
+    if (!due.length) return;
+    const list = due.map(d => `• ${d.description || nomCategorie(d.categorieId)} — ${formatMoney(d.montant)}`).join("\n");
+    if (confirm(`${due.length} dépense(s) récurrente(s) à ajouter ce mois (${mk}) :\n${list}\n\nAjouter maintenant ?`)) {
+      const now = new Date(); now.setDate(1);
+      due.forEach(t => {
+        state.depenses.push({ ...t, id: uid(), date: now.toISOString(), sourceRecurring: t.id, recurrent: false });
+      });
+      saveState(); renderAll();
+    }
+  }
+  checkRecurring();
+
+});
+
+    
+</script>
+  
+</body>
 </html>
+
+</body>
+</html>
+
+  <!-- Edit Depense Modal -->
+  <div id="modal-edit-depense" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <h3>✏️ Modifier la dépense</h3>
+      <div class="form-grid">
+        <label>Date <input type="date" id="edit-date" /></label>
+        <label>Montant (TND) <input type="number" id="edit-montant" min="0" step="0.001" /></label>
+        <label>Catégorie <select id="edit-categorie"></select></label>
+        <label>Personne <select id="edit-personne"></select></label>
+        <label>Compte <select id="edit-compte"></select></label>
+        <label>Description <input type="text" id="edit-desc" /></label>
+        <label>Moyen <input type="text" id="edit-moyen" /></label>
+        <label>Tags <div class="tag-input-wrap" id="edit-tags-wrap">
+          <input type="text" id="edit-tags-input" placeholder="Ajouter tag…" />
+        </div></label>
+        <label style="display:flex;align-items:center;gap:0.5rem">
+          <input type="checkbox" id="edit-recurrent" style="width:auto" />
+          Dépense récurrente (mensuelle)
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-edit-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-edit-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Personne Modal -->
+  <div id="modal-edit-personne" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <h3>✏️ Modifier la personne</h3>
+      <label>Nom <input type="text" id="edit-personne-nom" /></label>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-edit-personne-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-edit-personne-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Categorie Modal -->
+  <div id="modal-edit-categorie" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <h3>✏️ Modifier la catégorie</h3>
+      <label>Nom <input type="text" id="edit-categorie-nom" /></label>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-edit-categorie-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-edit-categorie-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Compte Modal -->
+  <div id="modal-edit-compte" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <h3>✏️ Modifier le compte</h3>
+      <div class="form-grid">
+        <label>Nom <input type="text" id="edit-compte-nom" /></label>
+        <label>Type <select id="edit-compte-type">
+          <option value="courant">Courant</option>
+          <option value="epargne">Épargne</option>
+          <option value="especes">Espèces</option>
+          <option value="autre">Autre</option>
+        </select></label>
+        <label>Solde initial (TND) <input type="number" id="edit-compte-solde" step="0.001" /></label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-edit-compte-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-edit-compte-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div id="confirm-box" class="confirm-box hidden">
+    <div class="confirm-inner">
+      <p id="confirm-msg">Confirmer la suppression ?</p>
+      <div class="confirm-btns">
+        <button type="button" class="btn" id="btn-confirm-cancel">Annuler</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-ok">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
