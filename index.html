@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" type="image/png" href="./money.avif">
     <title>Gestion des dépenses — Dashboard</title>
     <style>
 :root {
@@ -185,6 +184,28 @@ main {
   font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
 }
+
+.card .card-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  display: block;
+}
+
+.card .card-trend {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 0.15rem;
+  display: block;
+}
+.card .card-trend.up   { color: var(--danger); }
+.card .card-trend.down { color: var(--accent2); }
+.card .card-trend.flat { color: var(--muted); }
+
+.card .card-bar-bg { background: var(--surface2); border-radius: 99px; height: 5px; margin-top: 0.5rem; overflow: hidden; }
+.card .card-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s; }
+.card .card-bar-fill.warn { background: var(--warn); }
+.card .card-bar-fill.danger { background: var(--danger); }
 
 .card.warn strong {
   color: var(--warn);
@@ -613,11 +634,45 @@ hr.split {
       <!-- Analyses -->
       <section id="page-analyses" class="page" aria-label="Analyses">
         <div class="panel">
-          <h2>🔍 Filtre période</h2>
-          <div class="filters">
+          <h2>🔍 Filtre période & granularité</h2>
+          <div class="filters" style="flex-wrap:wrap;gap:0.75rem">
             <label>Du <input type="date" id="ana-from" /></label>
             <label>Au <input type="date" id="ana-to" /></label>
+            <label>Vue
+              <select id="ana-granularity">
+                <option value="day">Par jour</option>
+                <option value="month" selected>Par mois</option>
+                <option value="6months">Par 6 mois</option>
+              </select>
+            </label>
           </div>
+        </div>
+
+        <!-- Cashflow section -->
+        <div class="panel">
+          <h2>💰 Tableau de flux journalier / mensuel</h2>
+          <div class="table-wrap" id="cashflow-table-wrap">
+            <table id="cashflow-table">
+              <thead id="cashflow-thead"></thead>
+              <tbody id="cashflow-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid-charts">
+          <div class="panel chart-box">
+            <h2>📊 Dépenses totales par période</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-dep"></canvas></div>
+          </div>
+          <div class="panel chart-box">
+            <h2>💳 Solde par compte par période</h2>
+            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-comptes"></canvas></div>
+          </div>
+        </div>
+
+        <div class="panel chart-box">
+          <h2>📈 Solde total de tous les comptes par période</h2>
+          <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-total"></canvas></div>
         </div>
         <div class="grid-charts">
           <div class="panel chart-box">
@@ -1229,43 +1284,157 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderDashboard() {
     renderAlerts("alerts-dashboard");
+    const now = new Date();
     const mk = currentMonthKey();
+    const prevMk = (() => { const d = new Date(now.getFullYear(), now.getMonth()-1, 1); return d.toISOString().slice(0,7); })();
+
     const depMois = depensesDuMois(mk);
+    const depPrevMois = depensesDuMois(prevMk);
     const totalMois = depMois.reduce((s, d) => s + d.montant, 0);
+    const totalPrevMois = depPrevMois.reduce((s, d) => s + d.montant, 0);
     const totalAll = state.depenses.reduce((s, d) => s + d.montant, 0);
 
-    const cards = byId("dash-cards");
-    const bud = state.budgetMensuelGlobal > 0 ? formatMoney(state.budgetMensuelGlobal) : "—";
-    const pct =
-      state.budgetMensuelGlobal > 0 ? Math.min(100, Math.round((totalMois / state.budgetMensuelGlobal) * 100)) : null;
+    // Today
+    const todayStr = now.toISOString().slice(0,10);
+    const depAujourd = state.depenses.filter(d => d.date.slice(0,10) === todayStr);
+    const totalAujourd = depAujourd.reduce((s,d) => s+d.montant, 0);
 
-    // Compte solde cards
-    const compteCards = state.comptes.map(c => {
-      const s = soldeCompte(c);
-      const cls = s < 0 ? "danger" : s < c.soldeInitial * 0.1 ? "warn" : "";
-      return `<div class="card ${cls}"><span>💳 ${escapeHtml(c.nom)}</span><strong>${formatMoney(s)}</strong></div>`;
+    // This week (Mon-Sun)
+    const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - dayOfWeek); weekStart.setHours(0,0,0,0);
+    const depSemaine = state.depenses.filter(d => new Date(d.date) >= weekStart);
+    const totalSemaine = depSemaine.reduce((s,d) => s+d.montant, 0);
+
+    // Day avg this month
+    const dayOfMonth = now.getDate();
+    const avgParJour = dayOfMonth > 0 ? totalMois / dayOfMonth : 0;
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const prevision = avgParJour * daysInMonth;
+
+    // Evolution vs prev month
+    let evoPct = null, evoCls = "flat", evoSign = "";
+    if (totalPrevMois > 0) {
+      evoPct = Math.round(((totalMois - totalPrevMois) / totalPrevMois) * 100);
+      evoCls = evoPct > 5 ? "up" : evoPct < -5 ? "down" : "flat";
+      evoSign = evoPct > 0 ? "+" : "";
+    }
+
+    // Top category this month
+    const byCat = {};
+    depMois.forEach(d => { const n = nomCategorie(d.categorieId); byCat[n] = (byCat[n]||0) + d.montant; });
+    const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+
+    // Top person this month
+    const byPers = {};
+    depMois.forEach(d => { const n = nomPersonne(d.personneId); byPers[n] = (byPers[n]||0) + d.montant; });
+    const topPers = Object.entries(byPers).sort((a,b)=>b[1]-a[1])[0];
+
+    // Max single depense this month
+    const maxDep = depMois.reduce((max, d) => d.montant > (max?.montant||0) ? d : max, null);
+
+    // Budget
+    const bud = state.budgetMensuelGlobal > 0 ? state.budgetMensuelGlobal : null;
+    const budPct = bud ? Math.min(110, Math.round((totalMois / bud) * 100)) : null;
+    const budCls = budPct > 100 ? "danger" : budPct > 90 ? "warn" : "";
+
+    // Budget depassé categories
+    const budWarnCats = Object.entries(state.budgetsCategorie||{})
+      .filter(([cid, max]) => {
+        const spent = depMois.filter(d=>d.categorieId===cid).reduce((s,d)=>s+d.montant,0);
+        return Number(max) > 0 && spent >= Number(max) * 0.9;
+      }).map(([cid, max]) => {
+        const spent = depMois.filter(d=>d.categorieId===cid).reduce((s,d)=>s+d.montant,0);
+        const pOver = Math.round((spent/Number(max))*100);
+        return `${nomCategorie(cid)} (${pOver}%)`;
+      });
+
+    // Recurring count
+    const recCount = state.depenses.filter(d => d.recurrent).length;
+
+    // Comptes
+    const compteCards = state.comptes.map(cc => {
+      const s = soldeCompte(cc);
+      const cls = s < 0 ? "danger" : (cc.soldeInitial > 0 && s < cc.soldeInitial * 0.1) ? "warn" : "";
+      return `<div class="card ${cls}">
+        <span>💳 ${escapeHtml(cc.nom)}</span>
+        <strong>${formatMoney(s)}</strong>
+        <span class="card-sub">Initial : ${formatMoney(cc.soldeInitial)}</span>
+      </div>`;
     }).join("");
 
+    const cards = byId("dash-cards");
     cards.innerHTML = `
-      <div class="card"><span>📅 Mois en cours (${mk})</span><strong>${formatMoney(totalMois)}</strong></div>
-      <div class="card ${pct != null && pct > 100 ? "danger" : pct != null && pct > 90 ? "warn" : ""}"><span>🎯 % budget global</span><strong>${pct != null ? pct + " %" : "—"}</strong></div>
-      <div class="card"><span>📊 Budget / mois</span><strong>${bud}</strong></div>
-      <div class="card"><span>💰 Total (tout)</span><strong>${formatMoney(totalAll)}</strong></div>
-      <div class="card"><span>🧾 Dépenses ce mois</span><strong>${depMois.length}</strong></div>
+      <div class="card">
+        <span>📅 Aujourd'hui</span>
+        <strong>${formatMoney(totalAujourd)}</strong>
+        <span class="card-sub">${depAujourd.length} dépense(s)</span>
+      </div>
+      <div class="card">
+        <span>📅 Cette semaine</span>
+        <strong>${formatMoney(totalSemaine)}</strong>
+        <span class="card-sub">${depSemaine.length} dépense(s)</span>
+      </div>
+      <div class="card">
+        <span>📅 Ce mois (${mk})</span>
+        <strong>${formatMoney(totalMois)}</strong>
+        <span class="card-sub">${depMois.length} dépense(s)</span>
+        ${evoPct !== null ? `<span class="card-trend ${evoCls}">${evoSign}${evoPct}% vs mois préc.</span>` : ""}
+      </div>
+      <div class="card">
+        <span>📊 Moy. par jour</span>
+        <strong>${formatMoney(avgParJour)}</strong>
+        <span class="card-sub">Jour ${dayOfMonth}/${daysInMonth}</span>
+      </div>
+      <div class="card">
+        <span>🔮 Prévision fin de mois</span>
+        <strong style="color:${prevision > (bud||Infinity) ? 'var(--danger)' : 'var(--text)'}">${formatMoney(prevision)}</strong>
+        ${bud ? `<span class="card-sub">Budget : ${formatMoney(bud)}</span>` : ""}
+      </div>
+      <div class="card ${budCls}">
+        <span>🎯 Budget global</span>
+        <strong>${budPct !== null ? budPct + " %" : "—"}</strong>
+        ${bud ? `<div class="card-bar-bg"><div class="card-bar-fill ${budCls}" style="width:${Math.min(100,budPct||0)}%"></div></div>` : ""}
+        ${bud ? `<span class="card-sub">${formatMoney(totalMois)} / ${formatMoney(bud)}</span>` : ""}
+      </div>
+      <div class="card">
+        <span>🏆 Top catégorie</span>
+        <strong style="font-size:1rem">${topCat ? escapeHtml(topCat[0]) : "—"}</strong>
+        <span class="card-sub">${topCat ? formatMoney(topCat[1]) : ""}</span>
+      </div>
+      <div class="card">
+        <span>👤 Qui dépense le plus</span>
+        <strong style="font-size:1rem">${topPers ? escapeHtml(topPers[0]) : "—"}</strong>
+        <span class="card-sub">${topPers ? formatMoney(topPers[1]) : ""}</span>
+      </div>
+      <div class="card">
+        <span>💸 Plus grosse dépense</span>
+        <strong>${maxDep ? formatMoney(maxDep.montant) : "—"}</strong>
+        <span class="card-sub">${maxDep ? escapeHtml(maxDep.description || nomCategorie(maxDep.categorieId)) : ""}</span>
+      </div>
+      ${budWarnCats.length ? `<div class="card warn">
+        <span>⚠️ Budgets en danger</span>
+        <strong style="font-size:0.85rem">${budWarnCats.length} catégorie(s)</strong>
+        <span class="card-sub">${escapeHtml(budWarnCats.slice(0,2).join(", "))}${budWarnCats.length>2?" …":""}</span>
+      </div>` : ""}
+      ${recCount ? `<div class="card">
+        <span>🔁 Dépenses récurrentes</span>
+        <strong>${recCount}</strong>
+        <span class="card-sub">actives</span>
+      </div>` : ""}
       ${compteCards}
     `;
 
-    const byCat = {};
+    const byCatChart = {};
     depMois.forEach((d) => {
       const n = nomCategorie(d.categorieId);
-      byCat[n] = (byCat[n] || 0) + d.montant;
+      byCatChart[n] = (byCatChart[n] || 0) + d.montant;
     });
     destroyChart("dashMc");
     charts.dashMc = new Chart(byId("dash-chart-month-cat"), {
       type: "bar",
       data: {
-        labels: Object.keys(byCat),
-        datasets: [{ label: mk, data: Object.values(byCat), backgroundColor: "rgba(74,168,255,0.7)", borderRadius: 6 }],
+        labels: Object.keys(byCatChart),
+        datasets: [{ label: mk, data: Object.values(byCatChart), backgroundColor: "rgba(74,168,255,0.7)", borderRadius: 6 }],
       },
       options: {
         plugins: { legend: { display: false } },
@@ -2263,6 +2432,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ["ana-from", "ana-to"].forEach((id) => {
     byId(id).addEventListener("change", () => renderAnalysesCharts());
   });
+  const granEl = byId("ana-granularity");
+  if (granEl) granEl.addEventListener("change", () => renderAnalysesCharts());
 
   loadState();
   renderAll();
@@ -2517,8 +2688,183 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
       }
+      // ── Cashflow charts ─────────────────────────────────────────────
+      renderCashflow();
     };
   });
+
+  // ── CASHFLOW ENGINE ──────────────────────────────────────────────────────
+  function getGranularity() {
+    const el = byId("ana-granularity");
+    return el ? el.value : "month";
+  }
+
+  function periodKey(isoDate, gran) {
+    const d = new Date(isoDate);
+    if (gran === "day") return d.toISOString().slice(0, 10);
+    if (gran === "month") return d.toISOString().slice(0, 7);
+    const half = d.getMonth() < 6 ? "S1" : "S2";
+    return `${d.getFullYear()}-${half}`;
+  }
+
+  function labelPeriod(key, gran) {
+    if (gran === "day") { const [y,m,d] = key.split("-"); return `${d}/${m}/${y}`; }
+    if (gran === "month") {
+      const [y,m] = key.split("-");
+      const names = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+      return `${names[parseInt(m)-1]} ${y}`;
+    }
+    return key.replace("-S1"," S1").replace("-S2"," S2");
+  }
+
+  function renderCashflow() {
+    const gran = getGranularity();
+    const from = byId("ana-from").value;
+    const to   = byId("ana-to").value;
+    const dFrom = from ? new Date(from + "T00:00:00") : null;
+    const dTo   = to   ? new Date(to   + "T23:59:59") : null;
+
+    const deps = state.depenses.filter(d => {
+      const dt = new Date(d.date);
+      if (dFrom && dt < dFrom) return false;
+      if (dTo   && dt > dTo)   return false;
+      return true;
+    });
+    const ops = (state.operations || []).filter(o => {
+      const dt = new Date(o.date);
+      if (dFrom && dt < dFrom) return false;
+      if (dTo   && dt > dTo)   return false;
+      return true;
+    });
+
+    const periodSet = new Set();
+    deps.forEach(d => periodSet.add(periodKey(d.date, gran)));
+    ops.forEach(o  => periodSet.add(periodKey(o.date, gran)));
+    const periods = [...periodSet].sort();
+
+    const thead = byId("cashflow-thead");
+    const tbody = byId("cashflow-tbody");
+    if (!thead || !tbody) return;
+
+    if (!periods.length) {
+      thead.innerHTML = "";
+      tbody.innerHTML = `<tr><td class="empty">Aucune donnée pour cette période.</td></tr>`;
+      ["cfDep","cfComptes","cfTotal"].forEach(k => destroyChart(k));
+      return;
+    }
+
+    const labels = periods.map(p => labelPeriod(p, gran));
+    const allCompteIds = state.comptes.map(cc => cc.id);
+    const depTotal = {};
+    const opsByCompte = {};
+
+    periods.forEach(p => { depTotal[p] = 0; });
+    allCompteIds.forEach(cid => {
+      opsByCompte[cid] = {};
+      periods.forEach(p => { opsByCompte[cid][p] = { credit: 0, debit: 0, depenses: 0 }; });
+    });
+
+    deps.forEach(d => {
+      const p = periodKey(d.date, gran);
+      if (depTotal[p] !== undefined) depTotal[p] += d.montant;
+      if (d.compteId && opsByCompte[d.compteId]?.[p] !== undefined)
+        opsByCompte[d.compteId][p].depenses += d.montant;
+    });
+    ops.forEach(o => {
+      const p = periodKey(o.date, gran);
+      if (o.compteId && opsByCompte[o.compteId]?.[p] !== undefined) {
+        if (o.type === "credit") opsByCompte[o.compteId][p].credit += o.montant;
+        else opsByCompte[o.compteId][p].debit += o.montant;
+      }
+    });
+
+    // Running solde per compte
+    const soldeCumul = {};
+    allCompteIds.forEach(cid => {
+      let running = state.comptes.find(cc => cc.id === cid)?.soldeInitial || 0;
+      soldeCumul[cid] = {};
+      periods.forEach(p => {
+        const sl = opsByCompte[cid][p];
+        running += sl.credit - sl.debit - sl.depenses;
+        soldeCumul[cid][p] = parseFloat(running.toFixed(3));
+      });
+    });
+
+    const totalSolde = {};
+    periods.forEach(p => {
+      totalSolde[p] = parseFloat(allCompteIds.reduce((s, cid) => s + (soldeCumul[cid]?.[p] || 0), 0).toFixed(3));
+    });
+
+    // ── Table ───────────────────────────────────────────────────────────
+    thead.innerHTML = `<tr><th>Ligne</th>${labels.map(l => `<th>${l}</th>`).join("")}</tr>`;
+
+    function fmtCell(val) {
+      if (Math.abs(val) < 0.001) return `<span class="cell-zero">—</span>`;
+      return `<span class="${val > 0 ? "cell-pos" : "cell-neg"}">${val > 0 ? "+" : ""}${formatMoney(val)}</span>`;
+    }
+    function fmtNeg(val) {
+      if (Math.abs(val) < 0.001) return `<span class="cell-zero">—</span>`;
+      return `<span class="cell-neg">-${formatMoney(val)}</span>`;
+    }
+
+    let rows = "";
+    rows += `<tr class="cf-section-header"><td colspan="${periods.length+1}">📤 DÉPENSES</td></tr>`;
+    rows += `<tr><td>Total dépenses</td>${periods.map(p => `<td>${fmtNeg(depTotal[p])}</td>`).join("")}</tr>`;
+
+    allCompteIds.forEach((cid, i) => {
+      const cpt = state.comptes.find(cc => cc.id === cid);
+      if (!cpt) return;
+      const hasData = periods.some(p => {
+        const sl = opsByCompte[cid][p];
+        return sl.credit > 0 || sl.debit > 0 || sl.depenses > 0;
+      });
+      if (!hasData) return;
+      rows += `<tr class="cf-section-header"><td colspan="${periods.length+1}">💳 ${escapeHtml(cpt.nom).toUpperCase()}</td></tr>`;
+      rows += `<tr><td>+ Ajouts</td>${periods.map(p => `<td>${fmtCell(opsByCompte[cid][p].credit)}</td>`).join("")}</tr>`;
+      rows += `<tr><td>− Retraits</td>${periods.map(p => `<td>${fmtNeg(opsByCompte[cid][p].debit)}</td>`).join("")}</tr>`;
+      rows += `<tr><td>− Dépenses</td>${periods.map(p => `<td>${fmtNeg(opsByCompte[cid][p].depenses)}</td>`).join("")}</tr>`;
+      rows += `<tr class="row-total"><td>Solde ${escapeHtml(cpt.nom)}</td>${periods.map(p => `<td>${fmtCell(soldeCumul[cid][p])}</td>`).join("")}</tr>`;
+    });
+
+    rows += `<tr class="cf-section-header"><td colspan="${periods.length+1}">💰 SOLDE TOTAL TOUS COMPTES</td></tr>`;
+    rows += `<tr class="row-total"><td>Solde total</td>${periods.map(p => `<td>${fmtCell(totalSolde[p])}</td>`).join("")}</tr>`;
+    tbody.innerHTML = rows;
+
+    // ── Charts ──────────────────────────────────────────────────────────
+    const COLORS = ["#4aa8ff","#5ce1a6","#f4c542","#f47a42","#c084fc","#60a5fa","#34d399","#fb923c"];
+    const chartOpts = { x: { ticks: { color:"#8b9cb3", maxRotation:45 }, grid:{ color:"rgba(255,255,255,.04)" } }, y: { ticks:{ color:"#8b9cb3" }, grid:{ color:"rgba(255,255,255,.04)" } } };
+
+    destroyChart("cfDep");
+    const cvsDep = byId("ch-cashflow-dep");
+    if (cvsDep) charts.cfDep = new Chart(cvsDep, { type:"bar",
+      data:{ labels, datasets:[{ label:"Dépenses", data:periods.map(p=>depTotal[p]), backgroundColor:"#f47a42", borderRadius:5 }] },
+      options:{ scales:chartOpts, plugins:{ legend:{display:false} }, maintainAspectRatio:false }
+    });
+
+    destroyChart("cfComptes");
+    const cvsComptes = byId("ch-cashflow-comptes");
+    if (cvsComptes) {
+      const datasets = allCompteIds.map((cid, i) => {
+        const cpt = state.comptes.find(cc => cc.id === cid);
+        if (periods.every(p => Math.abs(soldeCumul[cid]?.[p]||0) < 0.001)) return null;
+        return { label: cpt?.nom||cid, data: periods.map(p=>soldeCumul[cid][p]),
+          borderColor: COLORS[i%COLORS.length], backgroundColor: COLORS[i%COLORS.length]+"22",
+          tension:0.3, fill:false, pointRadius:3 };
+      }).filter(Boolean);
+      charts.cfComptes = new Chart(cvsComptes, { type:"line",
+        data:{ labels, datasets },
+        options:{ scales:chartOpts, plugins:{ legend:{ labels:{ color:"#8b9cb3", font:{size:11} } } }, maintainAspectRatio:false }
+      });
+    }
+
+    destroyChart("cfTotal");
+    const cvsTotal = byId("ch-cashflow-total");
+    if (cvsTotal) charts.cfTotal = new Chart(cvsTotal, { type:"line",
+      data:{ labels, datasets:[{ label:"Solde total", data:periods.map(p=>totalSolde[p]),
+        borderColor:"#5ce1a6", backgroundColor:"rgba(92,225,166,0.1)", tension:0.3, fill:true, pointRadius:3, pointBackgroundColor:"#5ce1a6" }] },
+      options:{ scales:chartOpts, plugins:{ legend:{display:false} }, maintainAspectRatio:false }
+    });
+  }
 
   // ── RECURRING: check on load ─────────────────────────────────────────────
   function checkRecurring() {
