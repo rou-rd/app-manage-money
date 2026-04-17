@@ -1,852 +1,628 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gestion des dépenses — Dashboard</title>
-    <style>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FinTrack — Gestion des dépenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
 :root {
-  --bg: #0c1017;
-  --surface: #151c28;
-  --surface2: #1f2a3d;
-  --text: #e8eef6;
-  --muted: #8b9cb3;
-  --accent: #4aa8ff;
-  --accent2: #5ce1a6;
-  --warn: #e6b35c;
-  --danger: #f07178;
-  --radius: 12px;
-  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
-  --nav-h: 52px;
+  --bg: #080b12; --s0: #0d1220; --s1: #111827; --s2: #192035; --s3: #1e2840;
+  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.11); --border3: rgba(255,255,255,0.18);
+  --text: #dde4f0; --muted: #5a6a85; --muted2: #8292aa;
+  --accent: #4f8fff; --accent2: #6366f1;
+  --green: #10d9a0; --amber: #f59e0b; --red: #f43f5e; --purple: #a78bfa; --cyan: #22d3ee;
+  --accent-d: rgba(79,143,255,0.12); --green-d: rgba(16,217,160,0.10);
+  --amber-d: rgba(245,158,11,0.12); --red-d: rgba(244,63,94,0.10); --purple-d: rgba(167,139,250,0.12);
+  --font: 'DM Sans', system-ui, sans-serif; --mono: 'DM Mono', monospace;
+  --r: 8px; --r2: 12px; --r3: 16px; --nav-w: 230px; --ease: cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-anchor:none;font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;line-height:1.55;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--s3);border-radius:99px}
+
+/* NAV */
+.nav{width:var(--nav-w);min-height:100vh;background:var(--s0);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .22s var(--ease);overflow:hidden}
+.nav-header{display:flex;align-items:center;gap:10px;padding:20px 18px 14px;border-bottom:1px solid var(--border);min-height:62px;flex-shrink:0}
+.nav-logo-icon{width:34px;height:34px;flex-shrink:0;border-radius:9px;background:linear-gradient(140deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;letter-spacing:-1px}
+.nav-logo-text{font-size:15px;font-weight:600;letter-spacing:-.3px;white-space:nowrap;overflow:hidden}
+.nav-logo-text em{color:var(--accent);font-style:normal}
+.nav-body{flex:1;padding:10px 8px;overflow-y:auto;overflow-x:hidden}
+.nav-section{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:10px 10px 4px;white-space:nowrap;overflow:hidden}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;border-radius:var(--r);background:none;color:var(--muted2);font-family:var(--font);font-size:13px;font-weight:400;cursor:pointer;text-align:left;transition:background .15s,color .15s;white-space:nowrap;overflow:hidden}
+.nav-btn:hover{background:var(--s2);color:var(--text)}
+.nav-btn.active{background:var(--accent-d);color:var(--accent);font-weight:500}
+.nav-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0}
+.nav-label{overflow:hidden;text-overflow:ellipsis}
+.nav-footer{padding:12px 8px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-save-nav{width:100%;padding:9px 12px;background:var(--accent);border:none;border-radius:var(--r);color:#fff;font-family:var(--font);font-size:12.5px;font-weight:500;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;overflow:hidden}
+.btn-save-nav:hover{opacity:.88}
+#save-status{font-size:11px;color:var(--green);text-align:center;padding:5px 4px 0;min-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overlay-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.overlay-backdrop.show{display:block}
+
+/* MAIN */
+.main{margin-left:var(--nav-w);flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;background:rgba(8,11,18,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.topbar-title{font-size:16px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
+.topbar-desc{font-size:11.5px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.hamburger{display:none;border:none;background:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px;line-height:1}
+.content{padding:24px 28px 60px;max-width:1440px;width:100%}
+.page{display:none}.page.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);font-family:var(--font);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--s2);color:var(--muted2)}
+.btn:hover{border-color:var(--accent);color:var(--text)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.88;border-color:var(--accent);color:#fff}
+.btn-danger{border-color:var(--red);color:var(--red);background:transparent}
+.btn-danger:hover{background:var(--red-d)}
+.btn-sm{padding:4px 8px;font-size:11.5px}
+.btn-edit{background:var(--accent-d);color:var(--accent);border-color:rgba(79,143,255,.25)}
+
+/* PANELS */
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:18px}
+.panel-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel-title .icon{font-size:16px}
+.hint{font-size:11.5px;color:var(--muted2);margin-bottom:10px}
+hr.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:16px;position:relative;overflow:hidden;transition:border-color .15s,transform .15s;cursor:default}
+.kpi:hover{border-color:var(--border2);transform:translateY(-1px)}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--accent));opacity:.6}
+.kpi-icon{font-size:18px;margin-bottom:8px;display:block}
+.kpi-label{font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px}
+.kpi-value{font-size:19px;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums;display:block}
+.kpi-sub{font-size:11px;color:var(--muted2);display:block;margin-top:3px}
+.kpi-trend{font-size:11.5px;font-weight:500;display:block;margin-top:2px}
+.kpi-trend.up{color:var(--red)}.kpi-trend.down{color:var(--green)}.kpi-trend.flat{color:var(--muted2)}
+.kpi-bar{background:var(--s3);border-radius:99px;height:4px;margin-top:8px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:99px;background:var(--kc,var(--accent));transition:width .5s var(--ease)}
+.kpi.danger{--kc:var(--red)}.kpi.danger .kpi-value{color:var(--red)}
+.kpi.warn{--kc:var(--amber)}.kpi.warn .kpi-value{color:var(--amber)}
+.kpi.green{--kc:var(--green)}
+
+/* ALERTS */
+.alerts{margin-bottom:16px}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:var(--r2);margin-bottom:8px;font-size:13px;border:1px solid var(--red);background:var(--red-d);animation:slideIn .25s var(--ease)}
+.alert.warn{border-color:var(--amber);background:var(--amber-d)}
+.alert-icon{flex-shrink:0;font-size:14px;margin-top:1px}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* CHARTS */
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:18px}
+.chart-grid.cols3{grid-template-columns:repeat(3,1fr)}
+.chart-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:18px;margin-bottom:0}
+.chart-box h3{font-size:13px;font-weight:500;color:var(--muted2);margin-bottom:14px}
+.chart-wrap{position:relative;width:100%}
+.chart-wrap.h220{height:220px}.chart-wrap.h260{height:260px}.chart-wrap.h280{height:280px}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px;margin-bottom:14px;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.field>label{font-size:11px;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea,input[type=date],input[type=number],input[type=text],input[type=search],input[type=url],select{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:var(--r);font-family:var(--font);font-size:13px;transition:border-color .15s;width:100%;outline:none}
+.field input:focus,.field select:focus,input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-d)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.field-check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding-top:22px}
+
+/* FILTERS */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px 18px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:14px}
+.filters .field label{color:var(--muted)}
+.filter-summary{font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:8px}
+.filter-badge{background:var(--accent-d);color:var(--accent);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--s2)}
+th{padding:10px 12px;text-align:left;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;user-select:none}
+th.th-sort{cursor:pointer;transition:color .15s}th.th-sort:hover{color:var(--text)}th.th-sort.active{color:var(--accent)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr{transition:background .12s}tbody tr:hover{background:rgba(79,143,255,.04)}tbody tr:last-child td{border-bottom:none}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+.empty-row td{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+/* BADGES & TAGS */
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:500;background:var(--s3);color:var(--muted2)}
+.badge-accent{background:var(--accent-d);color:var(--accent)}
+.badge-green{background:var(--green-d);color:var(--green)}
+.badge-rec{background:var(--accent-d);color:var(--accent);font-size:10px;padding:1px 5px;border-radius:99px;margin-left:4px}
+.tag{display:inline-flex;align-items:center;gap:3px;background:var(--s3);color:var(--muted2);font-size:11px;padding:2px 7px;border-radius:99px;margin:2px}
+.tag .remove{cursor:pointer;color:var(--red);font-size:13px;line-height:1;margin-left:1px}
+.tag-input-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:36px;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:4px 8px;transition:border-color .15s;cursor:text}
+.tag-input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-d)}
+.tag-input-wrap input{background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:13px;min-width:80px;padding:2px 0;box-shadow:none!important;width:auto}
+
+/* PAGINATION */
+.pag-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:12px 0 0}
+.pag-bar .page-btn{min-width:32px;height:30px;padding:0 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--s1);color:var(--muted2);font-family:var(--font);font-size:12.5px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;justify-content:center}
+.pag-bar .page-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pag-bar .page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.pag-bar .page-btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* PROGRESS */
+.prog-wrap{margin-bottom:12px}
+.prog-labels{display:flex;justify-content:space-between;margin-bottom:5px}
+.prog-labels span{font-size:12.5px;color:var(--muted2)}.prog-labels strong{font-size:12.5px;font-variant-numeric:tabular-nums}
+.prog-bg{background:var(--s3);border-radius:99px;height:8px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .5s var(--ease)}
+.prog-fill.warn{background:var(--amber)}.prog-fill.danger{background:var(--red)}
+
+/* MODALS */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;animation:fadeIn .15s ease}
+.modal-backdrop.hidden{display:none}
+.modal-box{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r3);padding:24px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;animation:modalIn .2s var(--ease)}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-header h3{font-size:15px;font-weight:600}
+.modal-close{border:none;background:none;color:var(--muted2);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:var(--r);transition:background .15s,color .15s;line-height:1}
+.modal-close:hover{background:var(--s3);color:var(--text)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* CONFIRM */
+.confirm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:300;animation:fadeIn .15s ease}
+.confirm-backdrop.hidden{display:none}
+.confirm-box{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r3);padding:28px 24px;max-width:360px;width:90%;text-align:center;animation:modalIn .18s var(--ease)}
+.confirm-box p{font-size:14px;color:var(--muted2);margin-bottom:20px;line-height:1.6}
+.confirm-box p strong{color:var(--text)}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+
+/* CASHFLOW */
+.cf-section-header td{background:var(--s2);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:7px 12px}
+.row-total td{font-weight:600;font-family:var(--mono);font-size:12px}
+.cell-pos{color:var(--green)}.cell-neg{color:var(--red)}.cell-zero{color:var(--muted)}
+.op-credit{color:var(--green);font-weight:600}.op-debit{color:var(--red);font-weight:600}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* REF LISTS */
+.ref-list{list-style:none;margin-top:10px}
+.ref-item{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid var(--border);gap:8px}
+.ref-item:last-child{border-bottom:none}
+.ref-item span{font-size:13.5px}
+.ref-actions{display:flex;gap:5px;flex-shrink:0}
+
+/* COMPTES */
+.inp-solde-init{width:110px;text-align:right;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12.5px;font-family:var(--mono)}
+.inp-solde-init:focus{border-color:var(--accent);outline:none}
+
+/* FILE IMPORT */
+.file-drop-area{border:2px dashed var(--border2);border-radius:var(--r2);padding:28px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;display:block}
+.file-drop-area:hover{border-color:var(--accent);background:var(--accent-d)}
+.drop-icon{font-size:32px;display:block;margin-bottom:8px}
+.drop-label{font-size:13px;color:var(--muted2)}
+.drop-hint{font-size:11px;color:var(--muted);margin-top:4px}
+input[type=file]{display:none}
+.danger-zone{border-color:rgba(244,63,94,.25)!important}
+.danger-zone .panel-title{color:var(--red)}
+
+/* BUDGET ROWS */
+.budget-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.budget-row:last-child{border-bottom:none}
+.budget-row-name{min-width:150px;font-size:13.5px}
+.budget-row .field{margin:0}
+.budget-row input{width:130px}
+
+/* MISC */
+.error-msg{color:var(--red);font-size:12px;margin:4px 0}
+.success-msg{color:var(--green);font-size:12px;margin:4px 0}
+.text-green{color:var(--green)}.text-red{color:var(--red)}.text-amber{color:var(--amber)}
+.mono{font-family:var(--mono)}
+
+/* RESPONSIVE */
+@media(max-width:900px){.chart-grid,.chart-grid.cols3,.two-col{grid-template-columns:1fr}}
+@media(max-width:720px){
+  .nav{transform:translateX(-100%);width:240px}
+  .nav.open{transform:none}
+  .main{margin-left:0}
+  .hamburger{display:flex}
+  .content{padding:16px 14px 48px}
+  .topbar{padding:0 14px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+  .filters{flex-direction:column}
+  .filters .field input,.filters .field select{width:100%}
+  th,td{padding:8px 8px}
+  .table-wrap{font-size:12px}
 }
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  /* Évite que le navigateur « recolle » le scroll quand Chart.js redimensionne le canvas */
-  overflow-anchor: none;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  overflow-anchor: none;
-  font-family: var(--font);
-  background: radial-gradient(1000px 500px at 0% 0%, #1a2f4d 0%, transparent 50%),
-    radial-gradient(900px 450px at 100% 10%, #153028 0%, transparent 45%), var(--bg);
-  color: var(--text);
-  line-height: 1.5;
-}
-
-.app-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.5rem 1rem;
-  background: rgba(12, 16, 23, 0.92);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--surface2);
-}
-
-.app-nav button {
-  appearance: none;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted);
-  padding: 0.45rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.app-nav button:hover {
-  color: var(--text);
-  background: var(--surface2);
-}
-
-.app-nav button.active {
-  color: var(--text);
-  background: var(--surface);
-  border-color: var(--accent);
-}
-
-header {
-  padding: 1rem 1.5rem 0.75rem;
-  border-bottom: 1px solid var(--surface2);
-}
-
-header h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 650;
-}
-
-header p {
-  margin: 0.25rem 0 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.75rem 1.5rem 1rem;
-}
-
-.btn {
-  appearance: none;
-  border: 1px solid var(--surface2);
-  background: var(--surface);
-  color: var(--text);
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  cursor: pointer;
-}
-
-.btn:hover {
-  border-color: var(--accent);
-  background: var(--surface2);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #2a6cb5, var(--accent));
-  border-color: transparent;
-}
-
-.btn-danger {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-main {
-  padding: 1rem 1.5rem 2.5rem;
-  max-width: 1320px;
-  margin: 0 auto;
-}
-
-.page {
-  display: none;
-}
-
-.page.active {
-  display: block;
-}
-
-#page-comptes .table-wrap {
-  max-height: min(70vh, 560px);
-  overflow: auto;
-}
-
-#page-comptes .inp-solde-init {
-  width: 7.5rem;
-  max-width: 100%;
-  vertical-align: middle;
-}
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.85rem;
-  margin-bottom: 1rem;
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--surface2);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
-}
-
-.card span {
-  display: block;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.card strong {
-  font-size: 1.2rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.card .card-sub {
-  font-size: 0.7rem;
-  color: var(--muted);
-  margin-top: 0.2rem;
-  display: block;
-}
-
-.card .card-trend {
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-top: 0.15rem;
-  display: block;
-}
-.card .card-trend.up   { color: var(--danger); }
-.card .card-trend.down { color: var(--accent2); }
-.card .card-trend.flat { color: var(--muted); }
-
-.card .card-bar-bg { background: var(--surface2); border-radius: 99px; height: 5px; margin-top: 0.5rem; overflow: hidden; }
-.card .card-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.4s; }
-.card .card-bar-fill.warn { background: var(--warn); }
-.card .card-bar-fill.danger { background: var(--danger); }
-
-.card.warn strong {
-  color: var(--warn);
-}
-
-.card.danger strong {
-  color: var(--danger);
-}
-
-.alerts {
-  margin-bottom: 1rem;
-}
-
-.alert {
-  padding: 0.65rem 1rem;
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
-  font-size: 0.88rem;
-  border: 1px solid var(--danger);
-  background: rgba(240, 113, 120, 0.12);
-}
-
-.alert.warn {
-  border-color: var(--warn);
-  background: rgba(230, 179, 92, 0.12);
-}
-
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--surface2);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.panel h2 {
-  margin: 0 0 0.65rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.65rem;
-  align-items: end;
-  margin-bottom: 0.75rem;
-}
-
-.form-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.form-grid input,
-.form-grid select {
-  background: var(--bg);
-  border: 1px solid var(--surface2);
-  color: var(--text);
-  padding: 0.45rem 0.55rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  align-items: flex-end;
-}
-
-.filters label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.filters input,
-.filters select {
-  background: var(--bg);
-  border: 1px solid var(--surface2);
-  color: var(--text);
-  padding: 0.4rem 0.55rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  min-width: 130px;
-}
-
-.grid-charts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.grid-charts.cols-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-@media (max-width: 1000px) {
-  .grid-charts.cols-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 800px) {
-  .grid-charts {
-    grid-template-columns: 1fr;
-  }
-}
-
-.chart-box {
-  position: relative;
-}
-
-/* Hauteur fixe : Chart.js (maintainAspectRatio: false) exige un parent dimensionné */
-.chart-canvas-wrap {
-  position: relative;
-  width: 100%;
-  height: 240px;
-}
-
-.chart-canvas-wrap--md {
-  height: 260px;
-}
-
-.chart-canvas-wrap--lg {
-  height: 280px;
-}
-
-.table-wrap {
-  overflow-x: auto;
-  border-radius: var(--radius);
-  border: 1px solid var(--surface2);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-thead {
-  background: var(--surface2);
-}
-
-th,
-td {
-  padding: 0.5rem 0.65rem;
-  text-align: left;
-  border-bottom: 1px solid var(--surface2);
-}
-
-th {
-  font-weight: 600;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-tbody tr:hover {
-  background: rgba(74, 168, 255, 0.06);
-}
-
-td.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.12rem 0.4rem;
-  border-radius: 6px;
-  font-size: 0.68rem;
-  background: var(--surface2);
-}
-
-.empty {
-  text-align: center;
-  padding: 1.5rem;
-  color: var(--muted);
-}
-
-.error {
-  color: var(--danger);
-  font-size: 0.82rem;
-  margin: 0.35rem 0;
-}
-
-.success-hint {
-  color: var(--accent2);
-  font-size: 0.8rem;
-  margin-top: 0.35rem;
-}
-
-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface2);
-  font-size: 0.75rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-footer code {
-  background: var(--surface);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-}
-
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-@media (max-width: 800px) {
-  .two-col {
-    grid-template-columns: 1fr;
-  }
-}
-
-input[type="file"] {
-  font-size: 0.75rem;
-  color: var(--muted);
-  max-width: 240px;
-}
-
-.progress-wrap { margin-bottom: 0.65rem; }
-.progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.25rem; color: var(--muted); }
-.progress-label strong { color: var(--text); }
-.progress-bar-bg { background: var(--surface2); border-radius: 99px; height: 10px; overflow: hidden; }
-.progress-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; background: var(--accent); }
-.progress-bar-fill.warn { background: var(--warn); }
-.progress-bar-fill.danger { background: var(--danger); }
-
-.op-credit { color: var(--accent2); font-weight: 600; }
-.op-debit { color: var(--danger); font-weight: 600; }
-
-hr.split {
-  border: none;
-  border-top: 1px solid var(--surface2);
-  margin: 1rem 0;
-}
-
-
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media (max-width: 700px) {
-    .app-nav { padding: 4px 6px 0; gap: 1px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
-    .app-nav::-webkit-scrollbar { display: none; }
-    .app-nav button { font-size: 0.7rem; padding: 6px 8px 8px; white-space: nowrap; }
-    .main-wrap { padding: 0.5rem; }
-    .panel { padding: 0.75rem; }
-    .form-grid { grid-template-columns: 1fr !important; }
-    .two-col { grid-template-columns: 1fr !important; }
-    .grid-charts, .grid-charts.cols-3 { grid-template-columns: 1fr !important; }
-    .cards { grid-template-columns: repeat(2,1fr) !important; }
-    .table-wrap { font-size: 0.72rem; overflow-x: auto; }
-    .table-wrap th, .table-wrap td { padding: 0.3rem 0.4rem; }
-    h2 { font-size: 0.95rem; }
-    .filters { flex-direction: column; gap: 0.5rem; }
-    .filters label { width: 100%; }
-  }
-
-  /* ── MODAL ──────────────────────────────────────────── */
-  .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 999; padding: 1rem;
-  }
-  .modal-backdrop.hidden { display: none; }
-  .modal-box {
-    background: var(--surface); border-radius: var(--radius);
-    padding: 1.5rem; width: 100%; max-width: 540px;
-    border: 1px solid var(--surface2); max-height: 90vh; overflow-y: auto;
-  }
-  .modal-box h3 { margin: 0 0 1rem; color: var(--accent); font-size: 1rem; }
-  .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
-
-  /* ── TAGS ───────────────────────────────────────────── */
-  .tag { display:inline-block; background: var(--surface2); color: var(--muted);
-    font-size: 0.7rem; padding: 2px 7px; border-radius: 99px; margin: 2px; }
-  .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-    border: 1px solid var(--surface2); border-radius: var(--radius); padding: 4px 8px; background: var(--surface2); }
-  .tag-input-wrap input { background: none; border: none; color: var(--text); outline: none; min-width: 80px; font-size: 0.85rem; }
-  .tag span.remove { cursor: pointer; margin-left: 4px; color: var(--danger); }
-
-  /* ── RECURRING BADGE ────────────────────────────────── */
-  .badge-rec { background: rgba(74,168,255,0.15); color: var(--accent); font-size: 0.68rem;
-    padding: 1px 6px; border-radius: 99px; margin-left: 4px; }
-
-  /* ── INLINE EDIT ────────────────────────────────────── */
-  .btn-edit { background: rgba(74,168,255,0.12); color: var(--accent); border: 1px solid rgba(74,168,255,0.25); }
-  .btn-edit:hover { background: rgba(74,168,255,0.22); }
-
-  /* ── CONFIRMATION DIALOG ────────────────────────────── */
-  .confirm-box {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-    display: flex; align-items: center; justify-content: center; z-index: 1000;
-  }
-  .confirm-box.hidden { display: none; }
-  .confirm-inner { background: var(--surface); border: 1px solid var(--surface2);
-    border-radius: var(--radius); padding: 1.5rem; max-width: 360px; width: 90%; text-align: center; }
-  .confirm-inner p { margin: 0 0 1.25rem; color: var(--text); font-size: 0.9rem; }
-  .confirm-inner .confirm-btns { display: flex; gap: 0.5rem; justify-content: center; }
 </style>
-    
-    
-  </head>
-  <body>
-    <nav class="app-nav" aria-label="Navigation principale">
-      <button type="button" class="active" data-page="dashboard">🏠 Dashboard</button>
-      <button type="button" data-page="depenses">💸 Dépenses</button>
-      <button type="button" data-page="analyses">📊 Analyses</button>
-      <button type="button" data-page="comptes">💳 Comptes</button>
-      <button type="button" data-page="budgets">🎯 Budgets</button>
-      <button type="button" data-page="referentiels">👥 Référentiels</button>
-      <button type="button" data-page="fichiers">📁 Fichiers</button>
-    </nav>
+</head>
+<body>
 
-    <header>
-      <h1>Gestion des dépenses</h1>
-      <p>Soldes par compte (TND), budgets mensuels, filtres par personne — données en local + export CSV base.</p>
-    </header>
+<div class="overlay-backdrop" id="nav-overlay"></div>
 
-    <div class="toolbar">
-      <button type="button" class="btn btn-primary" id="btn-save-local">Enregistrer dans le navigateur</button>
-      <span id="save-hint" class="success-hint" style="display: none">Données enregistrées (local).</span>
-      <span id="csv-link-status" class="success-hint" style="margin-left: 0.5rem; opacity: 0.85"></span>
+<nav class="nav" id="sidebar">
+  <div class="nav-header">
+    <div class="nav-logo-icon">FT</div>
+    <div class="nav-logo-text">Fin<em>Track</em></div>
+  </div>
+  <div class="nav-body">
+    <div class="nav-section">Principal</div>
+    <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></button>
+    <button class="nav-btn" data-page="depenses"><span class="nav-icon">💸</span><span class="nav-label">Dépenses</span></button>
+    <button class="nav-btn" data-page="analyses"><span class="nav-icon">📊</span><span class="nav-label">Analyses</span></button>
+    <div class="nav-section">Gestion</div>
+    <button class="nav-btn" data-page="comptes"><span class="nav-icon">💳</span><span class="nav-label">Comptes</span></button>
+    <button class="nav-btn" data-page="budgets"><span class="nav-icon">🎯</span><span class="nav-label">Budgets</span></button>
+    <button class="nav-btn" data-page="referentiels"><span class="nav-icon">👥</span><span class="nav-label">Référentiels</span></button>
+    <div class="nav-section">Données</div>
+    <button class="nav-btn" data-page="fichiers"><span class="nav-icon">📁</span><span class="nav-label">Fichiers & Import</span></button>
+  </div>
+  <div class="nav-footer">
+    <button class="btn-save-nav" id="btn-save-local"><span class="nav-icon">💾</span><span class="nav-label">Enregistrer</span></button>
+    <div id="save-status"></div>
+  </div>
+</nav>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="btn-hamburger">☰</button>
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-desc" id="topbar-desc">Vue d'ensemble de vos finances</div>
+      </div>
     </div>
+    <div class="topbar-right">
+      <span id="csv-link-status" style="font-size:11.5px;color:var(--muted2)"></span>
+    </div>
+  </header>
 
-    <main>
-      <p id="global-error" class="error" role="alert"></p>
+  <div class="content">
+    <p id="global-error" class="error-msg" role="alert"></p>
 
-      <!-- Dashboard -->
-      <section id="page-dashboard" class="page active" aria-label="Tableau de bord">
-        <div id="alerts-dashboard" class="alerts"></div>
-        <div class="cards" id="dash-cards"></div>
-        <div id="budget-indicators" style="margin-bottom:1rem"></div>
-        <div class="two-col">
-          <div class="panel chart-box">
-            <h2>Dépenses du mois en cours par catégorie</h2>
-            <div class="chart-canvas-wrap"><canvas id="dash-chart-month-cat" aria-label="Graphique dépenses par catégorie"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>Soldes des comptes (après dépenses)</h2>
-            <div class="chart-canvas-wrap"><canvas id="dash-chart-comptes" aria-label="Graphique soldes par compte"></canvas></div>
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page active">
+      <div id="alerts-dashboard" class="alerts"></div>
+      <div class="kpi-grid" id="dash-cards"></div>
+      <div id="budget-indicators"></div>
+      <div class="chart-grid">
+        <div class="chart-box"><h3>Dépenses du mois par catégorie</h3><div class="chart-wrap h220"><canvas id="dash-chart-month-cat"></canvas></div></div>
+        <div class="chart-box"><h3>Soldes des comptes</h3><div class="chart-wrap h220"><canvas id="dash-chart-comptes"></canvas></div></div>
+      </div>
+    </section>
+
+    <!-- DEPENSES -->
+    <section id="page-depenses" class="page">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">➕</span> Ajouter une dépense</div>
+        <p class="hint">Le montant est débité du compte sélectionné.</p>
+        <div class="form-grid">
+          <div class="field"><label>Date</label><input type="date" id="add-date" required/></div>
+          <div class="field"><label>Montant (TND)</label><input type="number" id="add-montant" min="0" step="0.001" placeholder="0.000" required/></div>
+          <div class="field"><label>Catégorie</label><select id="add-categorie"></select></div>
+          <div class="field"><label>Personne</label><select id="add-personne"></select></div>
+          <div class="field"><label>Compte débité</label><select id="add-compte"></select></div>
+          <div class="field"><label>Description</label><input type="text" id="add-desc" placeholder="Libellé"/></div>
+          <div class="field"><label>Moyen de paiement</label><input type="text" id="add-moyen" placeholder="Carte, virement…"/></div>
+          <div class="field"><label>Tags</label><div class="tag-input-wrap" id="add-tags-wrap"><input type="text" id="add-tags-input" placeholder="tag + Entrée"/></div></div>
+          <div class="field-check"><input type="checkbox" id="add-recurrent"/><label for="add-recurrent" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted2)">Récurrente mensuelle</label></div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-depense">Ajouter la dépense</button>
+      </div>
+      <div class="filters">
+        <div class="field"><label>Recherche</label><input type="search" id="f-text" placeholder="texte, catégorie…"/></div>
+        <div class="field"><label>Catégorie</label><select id="f-cat"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Personne</label><select id="f-pers"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Du</label><input type="date" id="f-from"/></div>
+        <div class="field"><label>Au</label><input type="date" id="f-to"/></div>
+        <div class="field"><label>Min TND</label><input type="number" id="f-min" min="0" step="0.001" placeholder="0"/></div>
+        <div class="field"><label>Max TND</label><input type="number" id="f-max" min="0" step="0.001" placeholder="∞"/></div>
+        <div class="field" style="align-self:flex-end"><button class="btn" id="btn-reset-filters">Réinitialiser</button></div>
+      </div>
+      <div class="panel" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div class="filter-summary" id="filter-summary"></div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--muted)">Lignes/page :</span>
+            <select id="dep-per-page" style="width:auto;padding:5px 8px;font-size:12px"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="9999">Tout</option></select>
           </div>
         </div>
-      </section>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th class="th-sort" data-col="date">Date <span id="si-date"></span></th>
+              <th class="th-sort" data-col="categorie">Catégorie <span id="si-categorie"></span></th>
+              <th>Personne</th><th>Compte</th><th>Description</th><th>Tags</th>
+              <th class="th-sort" data-col="montant">Montant <span id="si-montant"></span></th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tbody-depenses"></tbody>
+          </table>
+        </div>
+        <div class="pag-bar" id="dep-pagination-nav"></div>
+        <div style="font-size:11.5px;color:var(--muted);text-align:right;margin-top:4px" id="dep-page-info"></div>
+      </div>
+    </section>
 
-      <!-- Dépenses -->
-      <section id="page-depenses" class="page" aria-label="Dépenses">
+    <!-- ANALYSES -->
+    <section id="page-analyses" class="page">
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-title"><span class="icon">🔍</span> Période & granularité</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+          <div class="field"><label>Du</label><input type="date" id="ana-from"/></div>
+          <div class="field"><label>Au</label><input type="date" id="ana-to"/></div>
+          <div class="field"><label>Granularité</label><select id="ana-granularity"><option value="day">Par jour</option><option value="month" selected>Par mois</option><option value="6months">Par semestre</option></select></div>
+        </div>
+      </div>
+      <div class="panel"><div class="panel-title"><span class="icon">💰</span> Tableau de flux par période</div>
+        <div class="table-wrap" style="max-height:340px;overflow:auto"><table id="cashflow-table"><thead id="cashflow-thead"></thead><tbody id="cashflow-tbody"></tbody></table></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box"><h3>Dépenses totales par période</h3><div class="chart-wrap h260"><canvas id="ch-cashflow-dep"></canvas></div></div>
+        <div class="chart-box"><h3>Solde par compte par période</h3><div class="chart-wrap h260"><canvas id="ch-cashflow-comptes"></canvas></div></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px"><h3>Solde total de tous les comptes par période</h3><div class="chart-wrap h260"><canvas id="ch-cashflow-total"></canvas></div></div>
+      <div class="chart-grid">
+        <div class="chart-box"><h3>Total par mois</h3><div class="chart-wrap h260"><canvas id="ch-month-total"></canvas></div></div>
+        <div class="chart-box"><h3>Répartition par catégorie</h3><div class="chart-wrap h260"><canvas id="ch-cat-donut"></canvas></div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box"><h3>Top 10 catégories</h3><div class="chart-wrap h260"><canvas id="ch-top-cats"></canvas></div></div>
+        <div class="chart-box"><h3>Moyenne journalière par mois</h3><div class="chart-wrap h260"><canvas id="ch-avg-daily"></canvas></div></div>
+      </div>
+      <div class="chart-grid cols3">
+        <div class="chart-box"><h3>Empilé : mois × catégorie</h3><div class="chart-wrap h280"><canvas id="ch-stacked"></canvas></div></div>
+        <div class="chart-box"><h3>Par personne</h3><div class="chart-wrap h280"><canvas id="ch-person"></canvas></div></div>
+        <div class="chart-box"><h3>Par compte</h3><div class="chart-wrap h280"><canvas id="ch-compte"></canvas></div></div>
+      </div>
+      <div id="prevision-panel"></div>
+      <div class="chart-box" style="margin-bottom:16px"><h3>Courbe du solde total dans le temps</h3><div class="chart-wrap h280"><canvas id="ch-solde-curve"></canvas></div></div>
+      <div id="comparison-panel"><div class="chart-box"><h3>Comparaison mois par catégorie (8 derniers mois)</h3><div class="chart-wrap h280"><canvas id="ch-comparison"></canvas></div></div></div>
+    </section>
+
+    <!-- COMPTES -->
+    <section id="page-comptes" class="page">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">💳</span> Comptes</div>
+        <p class="hint">Solde = solde initial − dépenses + opérations manuelles</p>
+        <div class="table-wrap">
+          <table><thead><tr><th>Nom</th><th>Type</th><th>Solde initial</th><th>Dépensé</th><th>Solde restant</th><th></th></tr></thead>
+          <tbody id="tbody-comptes"></tbody></table>
+        </div>
+        <hr class="sep"/>
+        <div class="panel-title" style="margin-bottom:12px"><span class="icon">➕</span> Nouveau compte</div>
+        <div class="form-grid" style="max-width:600px">
+          <div class="field"><label>Nom</label><input type="text" id="new-compte-nom" placeholder="ex. Livret A"/></div>
+          <div class="field"><label>Type</label><select id="new-compte-type"><option value="courant">Courant</option><option value="epargne">Épargne</option><option value="especes">Espèces</option></select></div>
+          <div class="field"><label>Solde initial (TND)</label><input type="number" id="new-compte-solde" min="0" step="0.001" value="0"/></div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-compte">Ajouter le compte</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🔄</span> Opérations manuelles</div>
+        <p class="hint">Créditez ou débitez un compte directement (hors dépenses).</p>
+        <div class="form-grid" style="max-width:700px">
+          <div class="field"><label>Compte</label><select id="op-compte"></select></div>
+          <div class="field"><label>Type</label><select id="op-type"><option value="credit">+ Crédit (ajouter)</option><option value="debit">− Débit (retirer)</option></select></div>
+          <div class="field"><label>Montant (TND)</label><input type="number" id="op-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
+          <div class="field"><label>Motif</label><input type="text" id="op-motif" placeholder="Virement, retrait…"/></div>
+        </div>
+        <button class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
+        <span id="op-hint" class="success-msg" style="display:none;margin-left:12px"></span>
+      </div>
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-title"><span class="icon">📋</span> Historique des opérations</div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-operations"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- BUDGETS -->
+    <section id="page-budgets" class="page">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🌍</span> Budget mensuel global</div>
+        <p class="hint">Compare les dépenses du mois civil en cours à ce plafond. Laissez 0 pour désactiver.</p>
+        <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+          <div class="field" style="max-width:200px"><label>Plafond (TND / mois)</label><input type="number" id="budget-global" min="0" step="1"/></div>
+          <button class="btn btn-primary" id="btn-save-budget-global">Appliquer</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🎯</span> Budgets par catégorie (mois en cours)</div>
+        <p class="hint">Laissez vide pour ne pas plafonner une catégorie.</p>
+        <div id="budgets-par-cat"></div>
+      </div>
+      <div id="alerts-budget-page" class="alerts"></div>
+    </section>
+
+    <!-- REFERENTIELS -->
+    <section id="page-referentiels" class="page">
+      <div class="two-col">
         <div class="panel">
-          <h2>Ajouter une dépense</h2>
-          <p class="success-hint" style="margin-top: 0">Le montant est débité du compte choisi.</p>
-          <div class="form-grid">
-            <label>Date <input type="date" id="add-date" required /></label>
-            <label>Montant (TND) <input type="number" id="add-montant" min="0" step="0.001" required /></label>
-            <label>Catégorie <select id="add-categorie"></select></label>
-            <label>Personne <select id="add-personne"></select></label>
-            <label>Compte débité <select id="add-compte"></select></label>
-            <label>Description <input type="text" id="add-desc" placeholder="Libellé" /></label>
-            <label>Moyen de paiement <input type="text" id="add-moyen" placeholder="Carte, virement…" /></label>
-            <label>Tags <div class="tag-input-wrap" id="add-tags-wrap">
-              <input type="text" id="add-tags-input" placeholder="tag1, tag2…" />
-            </div></label>
-            <label style="display:flex;align-items:center;gap:0.5rem;align-self:end">
-              <input type="checkbox" id="add-recurrent" style="width:auto" />
-              Récurrente (mensuelle)
-            </label>
+          <div class="panel-title"><span class="icon">👤</span> Personnes</div>
+          <div class="form-grid" style="grid-template-columns:1fr auto">
+            <div class="field"><label>Nom</label><input type="text" id="new-personne-nom" placeholder="Prénom ou pseudo"/></div>
+            <button class="btn btn-primary" id="btn-add-personne" style="align-self:flex-end">Ajouter</button>
           </div>
-          <button type="button" class="btn btn-primary" id="btn-add-depense">Ajouter</button>
-        </div>
-        <div class="panel">
-          <h2>Filtres</h2>
-          <div class="filters">
-            <label>Recherche <input type="search" id="f-text" placeholder="texte…" /></label>
-            <label>Catégorie <select id="f-cat"><option value="">Toutes</option></select></label>
-            <label>Personne <select id="f-pers"><option value="">Toutes</option></select></label>
-            <label>Du <input type="date" id="f-from" /></label>
-            <label>Au <input type="date" id="f-to" /></label>
-            <label>Prix min (TND) <input type="number" id="f-min" min="0" step="0.001" placeholder="0" /></label>
-            <label>Prix max (TND) <input type="number" id="f-max" min="0" step="0.001" placeholder="∞" /></label>
-            <button type="button" class="btn" id="btn-reset-filters" style="align-self:end">Réinitialiser</button>
-          </div>
-          <div id="filter-summary" style="font-size:0.78rem;color:var(--muted);margin-top:0.4rem"></div>
-        </div>
-        <div class="panel">
-          <h2>Liste</h2>
-          <div id="dep-pagination-top" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-            <span style="font-size:0.8rem;color:var(--muted)">Lignes par page :</span>
-            <select id="dep-per-page" style="width:auto;padding:4px 8px;font-size:0.8rem">
-              <option value="25">25</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-              <option value="9999">Tout</option>
-            </select>
-            <span id="dep-page-info" style="font-size:0.8rem;color:var(--muted);margin-left:auto"></span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th class="th-sort" data-col="date">Date <span class="sort-icon" id="si-date"></span></th>
-                  <th class="th-sort" data-col="categorie">Catégorie <span class="sort-icon" id="si-categorie"></span></th>
-                  <th>Personne</th>
-                  <th>Compte</th>
-                  <th>Description</th>
-                  <th>Tags</th>
-                  <th class="th-sort" data-col="montant">Montant <span class="sort-icon" id="si-montant"></span></th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="tbody-depenses"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Analyses -->
-      <section id="page-analyses" class="page" aria-label="Analyses">
-        <div class="panel">
-          <h2>🔍 Filtre période & granularité</h2>
-          <div class="filters" style="flex-wrap:wrap;gap:0.75rem">
-            <label>Du <input type="date" id="ana-from" /></label>
-            <label>Au <input type="date" id="ana-to" /></label>
-            <label>Vue
-              <select id="ana-granularity">
-                <option value="day">Par jour</option>
-                <option value="month" selected>Par mois</option>
-                <option value="6months">Par 6 mois</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <!-- Cashflow section -->
-        <div class="panel">
-          <h2>💰 Tableau de flux journalier / mensuel</h2>
-          <div class="table-wrap" id="cashflow-table-wrap">
-            <table id="cashflow-table">
-              <thead id="cashflow-thead"></thead>
-              <tbody id="cashflow-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="grid-charts">
-          <div class="panel chart-box">
-            <h2>📊 Dépenses totales par période</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-dep"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>💳 Solde par compte par période</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-comptes"></canvas></div>
-          </div>
-        </div>
-
-        <div class="panel chart-box">
-          <h2>📈 Solde total de tous les comptes par période</h2>
-          <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cashflow-total"></canvas></div>
-        </div>
-        <div class="grid-charts">
-          <div class="panel chart-box">
-            <h2>📈 Total par mois</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-month-total"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>🍩 Répartition par catégorie</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-cat-donut"></canvas></div>
-          </div>
-        </div>
-        <div class="grid-charts">
-          <div class="panel chart-box">
-            <h2>🏆 Top 10 catégories (total)</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-top-cats"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>📅 Moyenne journalière par mois</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--md"><canvas id="ch-avg-daily"></canvas></div>
-          </div>
-        </div>
-        <div class="grid-charts cols-3">
-          <div class="panel chart-box">
-            <h2>📊 Empilé : mois × catégorie</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-stacked"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>👤 Par personne</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-person"></canvas></div>
-          </div>
-          <div class="panel chart-box">
-            <h2>💳 Par compte</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-compte"></canvas></div>
-          </div>
-        </div>
-        <div id="prevision-panel"></div>
-        <div class="panel chart-box">
-          <h2>📈 Courbe du solde total dans le temps</h2>
-          <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-solde-curve"></canvas></div>
-        </div>
-        <div id="comparison-panel">
-          <div class="panel chart-box">
-            <h2>📊 Comparaison mois par catégorie (8 derniers mois)</h2>
-            <div class="chart-canvas-wrap chart-canvas-wrap--lg"><canvas id="ch-comparison"></canvas></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Comptes -->
-      <section id="page-comptes" class="page" aria-label="Comptes">
-        <div class="panel">
-          <h2>Comptes (épargne, courant, espèces)</h2>
-          <p class="success-hint">Solde affiché = solde initial − somme des dépenses sur ce compte.</p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Type</th>
-                  <th>Solde initial</th>
-                  <th>Dépensé</th>
-                  <th>Solde restant</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="tbody-comptes"></tbody>
-            </table>
-          </div>
-          <hr class="split" />
-          <h2>Ajouter un compte</h2>
-          <div class="form-grid" style="max-width: 640px">
-            <label>Nom <input type="text" id="new-compte-nom" placeholder="ex. Livret A" /></label>
-            <label>Type <select id="new-compte-type">
-                <option value="courant">Courant</option>
-                <option value="epargne">Épargne</option>
-                <option value="especes">Espèces</option>
-              </select></label>
-            <label>Solde initial (TND) <input type="number" id="new-compte-solde" min="0" step="0.001" value="0" /></label>
-          </div>
-          <button type="button" class="btn btn-primary" id="btn-add-compte">Ajouter le compte</button>
+          <ul class="ref-list" id="list-personnes"></ul>
         </div>
         <div class="panel">
-          <h2>💸 Opérations manuelles</h2>
-          <p class="success-hint">Ajoutez ou retirez un montant directement sur un compte (hors dépenses).</p>
-          <div class="form-grid" style="max-width:700px">
-            <label>Compte <select id="op-compte"></select></label>
-            <label>Opération <select id="op-type">
-              <option value="credit">+ Crédit (ajouter)</option>
-              <option value="debit">− Débit (retirer)</option>
-            </select></label>
-            <label>Montant (TND) <input type="number" id="op-montant" min="0.001" step="0.001" placeholder="0.000" /></label>
-            <label>Motif <input type="text" id="op-motif" placeholder="Virement, retrait…" /></label>
+          <div class="panel-title"><span class="icon">🏷️</span> Catégories</div>
+          <div class="form-grid" style="grid-template-columns:1fr auto">
+            <div class="field"><label>Nom</label><input type="text" id="new-cat-nom" placeholder="ex. Loisirs"/></div>
+            <button class="btn btn-primary" id="btn-add-categorie" style="align-self:flex-end">Ajouter</button>
           </div>
-          <button type="button" class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
-          <span id="op-hint" class="success-hint" style="display:none;margin-left:0.75rem"></span>
+          <ul class="ref-list" id="list-categories"></ul>
         </div>
-        <div class="panel">
-          <h2>📋 Historique des opérations</h2>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead>
-              <tbody id="tbody-operations"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Budgets -->
-      <section id="page-budgets" class="page" aria-label="Budgets">
-        <div class="panel">
-          <h2>Budget mensuel global</h2>
-          <p class="success-hint">0 = désactivé. Compare les dépenses du <strong>mois civil en cours</strong> à ce plafond.</p>
-          <label class="filters" style="align-items: center; flex-direction: row; gap: 0.5rem">
-            Plafond (TND / mois)
-            <input type="number" id="budget-global" min="0" step="1" style="width: 140px" />
-            <button type="button" class="btn" id="btn-save-budget-global">Appliquer</button>
-          </label>
+    <!-- FICHIERS -->
+    <section id="page-fichiers" class="page">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">📥</span> Importer la base</div>
+        <p class="hint">Importez un fichier <code style="background:var(--s3);padding:1px 5px;border-radius:4px">database.csv</code> exporté précédemment pour restaurer toutes vos données.</p>
+        <label class="file-drop-area" for="file-db-import">
+          <span class="drop-icon">📂</span>
+          <div class="drop-label">Cliquez ou déposez database.csv ici</div>
+          <div class="drop-hint">Format CSV complet avec sections ##DEPENSES, ##CATEGORIES, etc.</div>
+          <input type="file" id="file-db-import" accept=".csv,text/csv"/>
+        </label>
+        <span id="import-db-hint" class="success-msg" style="display:none;margin-top:8px">✅ Base importée avec succès !</span>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🔗</span> Importer depuis Google Sheets</div>
+        <p class="hint">Publiez votre feuille : <strong>Fichier → Partager → Publier sur le web → CSV</strong></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+          <div class="field" style="flex:1;min-width:260px"><label>URL de publication CSV</label><input type="url" id="gsheet-url" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv"/></div>
+          <button class="btn btn-primary" id="btn-import-gsheet">Importer</button>
         </div>
-        <div class="panel">
-          <h2>Budgets par catégorie (mois en cours)</h2>
-          <p class="success-hint">Laissez vide pour ne pas plafonner une catégorie.</p>
-          <div id="budgets-par-cat"></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Ou par ID de feuille :</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="flex:1;min-width:200px"><label>ID de la feuille</label><input type="text" id="gsheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"/></div>
+          <div class="field"><label>Onglet</label><select id="gsheet-sheet" style="width:auto"><option value="">Feuille 1 (défaut)</option><option value="Sheet2">Sheet2</option><option value="Sheet3">Sheet3</option></select></div>
+          <button class="btn btn-primary" id="btn-import-gsheet-id">Importer par ID</button>
         </div>
-        <div id="alerts-budget-page" class="alerts"></div>
-      </section>
+        <div id="gsheet-hint" style="margin-top:8px;font-size:12.5px"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">📤</span> Exporter la base</div>
+        <p class="hint">Télécharge un fichier CSV complet avec toutes vos données.</p>
+        <button class="btn btn-primary" id="btn-export-db">⬇️ Télécharger database.csv</button>
+      </div>
+      <div class="panel danger-zone">
+        <div class="panel-title"><span class="icon">🗑️</span> Supprimer toutes les données</div>
+        <p class="hint">Efface définitivement toutes les dépenses, opérations, personnes, catégories et comptes. <strong style="color:var(--red)">Irréversible.</strong></p>
+        <button class="btn btn-danger" id="btn-delete-all">Tout supprimer</button>
+        <span id="delete-all-hint" style="display:none;margin-left:12px;font-size:12px;color:var(--red)">✅ Données effacées.</span>
+      </div>
+    </section>
 
-      <!-- Référentiels -->
-      <section id="page-referentiels" class="page" aria-label="Référentiels">
-        <div class="two-col">
-          <div class="panel">
-            <h2>Personnes</h2>
-            <div class="form-grid" style="grid-template-columns: 1fr auto">
-              <label>Nom <input type="text" id="new-personne-nom" placeholder="Prénom ou pseudo" /></label>
-              <button type="button" class="btn btn-primary" id="btn-add-personne" style="align-self: end">Ajouter</button>
-            </div>
-            <ul id="list-personnes" style="list-style: none; padding: 0; margin: 0.75rem 0 0"></ul>
-          </div>
-          <div class="panel">
-            <h2>Catégories</h2>
-            <div class="form-grid" style="grid-template-columns: 1fr auto">
-              <label>Nom <input type="text" id="new-cat-nom" placeholder="ex. Loisirs" /></label>
-              <button type="button" class="btn btn-primary" id="btn-add-categorie" style="align-self: end">Ajouter</button>
-            </div>
-            <ul id="list-categories" style="list-style: none; padding: 0; margin: 0.75rem 0 0"></ul>
-          </div>
-        </div>
-      </section>
+  </div>
+</div>
 
-      <!-- Fichiers -->
-      <section id="page-fichiers" class="page" aria-label="Fichiers">
-        <div class="panel">
-          <h2>📥 Importer la base</h2>
-          <p class="success-hint">Importez un fichier <code>database.csv</code> exporté précédemment pour restaurer toutes vos données.</p>
-          <label class="btn btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.4rem">
-            📂 Charger database.csv
-            <input type="file" id="file-db-import" accept=".csv,text/csv" style="display:none" />
-          </label>
-          <span id="import-db-hint" class="success-hint" style="display:none;margin-left:0.75rem">✅ Base importée !</span>
-        </div>
-        <div class="panel">
-          <h2>📤 Exporter la base</h2>
-          <p class="success-hint">Télécharge un seul fichier avec toutes vos données : personnes, catégories, comptes, budgets et dépenses.</p>
-          <button type="button" class="btn btn-primary" id="btn-export-db">⬇️ Télécharger database.csv</button>
-        </div>
-      </section>
+</body>
 
-    </main>
+</html>
 
-    <footer>
-      Persistance : <code>localStorage</code> + option fichier <code>database.csv</code> (API Fichiers, Chrome/Edge). Montants en dinar tunisien (TND). Fichier tout-en-un :
-      <code>gestion-depenses-tout-en-un.html</code>.
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
+<!-- ═══ MODAL: Edit Dépense ═══ -->
+<div id="modal-edit-depense" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>✏️ Modifier la dépense</h3>
+      <button class="modal-close" id="btn-edit-cancel">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input type="date" id="edit-date"/></div>
+      <div class="field"><label>Montant (TND)</label><input type="number" id="edit-montant" min="0" step="0.001"/></div>
+      <div class="field"><label>Catégorie</label><select id="edit-categorie"></select></div>
+      <div class="field"><label>Personne</label><select id="edit-personne"></select></div>
+      <div class="field"><label>Compte</label><select id="edit-compte"></select></div>
+      <div class="field"><label>Description</label><input type="text" id="edit-desc"/></div>
+      <div class="field"><label>Moyen</label><input type="text" id="edit-moyen"/></div>
+      <div class="field"><label>Tags</label><div class="tag-input-wrap" id="edit-tags-wrap"><input type="text" id="edit-tags-input" placeholder="Ajouter tag…"/></div></div>
+      <div class="field-check"><input type="checkbox" id="edit-recurrent"/><label for="edit-recurrent" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted2)">Récurrente mensuelle</label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="btn-edit-cancel2">Annuler</button>
+      <button class="btn btn-primary" id="btn-edit-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Edit Personne ═══ -->
+<div id="modal-edit-personne" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header"><h3>✏️ Modifier la personne</h3><button class="modal-close" id="btn-edit-personne-cancel">×</button></div>
+    <div class="field"><label>Nom</label><input type="text" id="edit-personne-nom"/></div>
+    <div class="modal-footer"><button class="btn" id="btn-edit-personne-cancel2">Annuler</button><button class="btn btn-primary" id="btn-edit-personne-save">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Edit Catégorie ═══ -->
+<div id="modal-edit-categorie" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header"><h3>✏️ Modifier la catégorie</h3><button class="modal-close" id="btn-edit-categorie-cancel">×</button></div>
+    <div class="field"><label>Nom</label><input type="text" id="edit-categorie-nom"/></div>
+    <div class="modal-footer"><button class="btn" id="btn-edit-categorie-cancel2">Annuler</button><button class="btn btn-primary" id="btn-edit-categorie-save">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Edit Compte ═══ -->
+<div id="modal-edit-compte" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header"><h3>✏️ Modifier le compte</h3><button class="modal-close" id="btn-edit-compte-cancel">×</button></div>
+    <div class="form-grid">
+      <div class="field"><label>Nom</label><input type="text" id="edit-compte-nom"/></div>
+      <div class="field"><label>Type</label><select id="edit-compte-type"><option value="courant">Courant</option><option value="epargne">Épargne</option><option value="especes">Espèces</option></select></div>
+      <div class="field"><label>Solde initial (TND)</label><input type="number" id="edit-compte-solde" step="0.001"/></div>
+    </div>
+    <div class="modal-footer"><button class="btn" id="btn-edit-compte-cancel2">Annuler</button><button class="btn btn-primary" id="btn-edit-compte-save">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- ═══ CONFIRM ═══ -->
+<div id="confirm-box" class="confirm-backdrop hidden">
+  <div class="confirm-box">
+    <p id="confirm-msg">Confirmer ?</p>
+    <div class="confirm-btns">
+      <button class="btn" id="btn-confirm-cancel">Annuler</button>
+      <button class="btn btn-danger" id="btn-confirm-ok">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<span id="save-hint" style="display:none"></span>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Mobile hamburger
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("nav-overlay");
+  document.getElementById("btn-hamburger").addEventListener("click", () => {
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("show");
+  });
+  overlay.addEventListener("click", () => {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
+  });
+
+  // Page navigation
+  const PAGE_META = {
+    dashboard:    ["Dashboard",         "Vue d\'ensemble de vos finances"],
+    depenses:     ["Dépenses",           "Gestion et historique de toutes les dépenses"],
+    analyses:     ["Analyses",           "Graphiques, tendances et cashflow"],
+    comptes:      ["Comptes",            "Soldes, opérations manuelles et historique"],
+    budgets:      ["Budgets",            "Plafonds mensuels globaux et par catégorie"],
+    referentiels: ["Référentiels",       "Gestion des personnes et catégories"],
+    fichiers:     ["Fichiers & Import",  "Import/export CSV et synchronisation"],
+  };
+
+  function showPage(name) {
+    window.scrollTo(0, 0);
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-btn[data-page]").forEach(b => b.classList.remove("active"));
+    const page = document.getElementById("page-" + name);
+    if (page) page.classList.add("active");
+    const nav = document.querySelector(`.nav-btn[data-page="${name}"]`);
+    if (nav) nav.classList.add("active");
+    const [title, desc] = PAGE_META[name] || [name, ""];
+    document.getElementById("topbar-title").textContent = title;
+    document.getElementById("topbar-desc").textContent = desc;
+    // Trigger renders if needed
+    if (name === "analyses") { try { renderAnalysesCharts(); } catch(e) {} }
+    if (name === "dashboard") { try { renderDashboard(); } catch(e) {} }
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+
+  document.querySelectorAll(".nav-btn[data-page]").forEach(btn => {
+    btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
+  });
+});
+
+
 /* global Chart */
 document.addEventListener("DOMContentLoaded", () => {
   const STORAGE_KEY = "gestion_depenses_v2";
@@ -950,7 +726,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateCsvLinkStatus() {
     const el = document.getElementById("csv-link-status");
     if (!el) return;
-    el.textContent = csvFileHandle ? `Fichier CSV lié : ${csvFileHandle.name}` : "Aucun fichier CSV lié (écriture disque désactivée).";
+    el.textContent = csvFileHandle ? `📎 ${csvFileHandle.name}` : "";
   }
 
   async function writeLinkedCsvFile() {
@@ -963,24 +739,21 @@ document.addEventListener("DOMContentLoaded", () => {
   let saveHintTimer;
   async function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const hint = document.getElementById("save-hint");
-    hint.style.display = "inline";
+    const statusEl = document.getElementById("save-status");
     clearTimeout(saveHintTimer);
     if (csvFileHandle) {
       try {
         await writeLinkedCsvFile();
-        hint.textContent = "Enregistré : navigateur + fichier CSV.";
+        if (statusEl) statusEl.textContent = "✓ Navigateur + CSV";
       } catch (e) {
         console.warn(e);
-        hint.textContent = "Navigateur OK — erreur d’écriture du fichier CSV.";
+        if (statusEl) statusEl.textContent = "✓ Navigateur (erreur CSV)";
       }
     } else {
-      hint.textContent = "Enregistré dans le navigateur. Liez un fichier CSV (page Fichiers) pour écrire sur le disque.";
+      if (statusEl) statusEl.textContent = "✓ Enregistré";
     }
     playSaveBeep();
-    saveHintTimer = setTimeout(() => {
-      hint.style.display = "none";
-    }, 2800);
+    saveHintTimer = setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 2800);
   }
 
   async function chooseCsvFileForAutoSave() {
@@ -1387,7 +1160,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
       <div class="card">
         <span>🔮 Prévision fin de mois</span>
-        <strong style="color:${prevision > (bud||Infinity) ? 'var(--danger)' : 'var(--text)'}">${formatMoney(prevision)}</strong>
+        <strong style="color:${prevision > (bud||Infinity) ? 'var(--red)' : 'var(--text)'}">${formatMoney(prevision)}</strong>
         ${bud ? `<span class="card-sub">Budget : ${formatMoney(bud)}</span>` : ""}
       </div>
       <div class="card ${budCls}">
@@ -1999,14 +1772,19 @@ document.addEventListener("DOMContentLoaded", () => {
   function showPage(name) {
     window.scrollTo(0, 0);
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
-    document.querySelectorAll(".app-nav button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".nav-btn[data-page]").forEach((b) => b.classList.remove("active"));
     const page = byId("page-" + name);
     if (page) page.classList.add("active");
-    const nav = document.querySelector(`.app-nav button[data-page="${name}"]`);
+    const nav = document.querySelector(`.nav-btn[data-page="${name}"]`);
     if (nav) nav.classList.add("active");
     if (name === "analyses") renderAnalysesCharts();
     if (name === "dashboard") renderDashboard();
     requestAnimationFrame(() => resizeVisibleCharts());
+    // close mobile nav
+    const sb = document.getElementById("sidebar");
+    const ov = document.getElementById("nav-overlay");
+    if (sb) sb.classList.remove("open");
+    if (ov) ov.classList.remove("show");
   }
 
   /* ---------- CSV ---------- */
@@ -2299,9 +2077,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ---------- init ---------- */
-  document.querySelectorAll(".app-nav button").forEach((btn) => {
-    btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
-  });
+  // nav buttons bound by wrapper above
 
   byId("btn-save-local").addEventListener("click", () => saveState());
 
@@ -2646,7 +2422,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const predicted = avgPerDay * daysInMonth;
         const bud = state.budgetMensuelGlobal || 0;
         const diff = bud ? bud - predicted : null;
-        const color = diff !== null ? (diff < 0 ? "var(--danger)" : "var(--accent2)") : "var(--text)";
+        const color = diff !== null ? (diff < 0 ? "var(--red)" : "var(--green)") : "var(--text)";
         prevEl.innerHTML = `
           <div class="panel">
             <h2>🔮 Prévision fin de mois (${mk})</h2>
@@ -2691,7 +2467,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // ── Cashflow charts ─────────────────────────────────────────────
       renderCashflow();
     };
-  });
+  })();
 
   // ── CASHFLOW ENGINE ──────────────────────────────────────────────────────
   function getGranularity() {
@@ -2884,97 +2660,100 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   checkRecurring();
 
+  // ── GOOGLE SHEETS IMPORT ─────────────────────────────────────────────
+  async function importFromGSheetUrl(url) {
+    const hint = byId("gsheet-hint");
+    hint.style.color = "var(--muted)";
+    hint.textContent = "⏳ Téléchargement en cours…";
+
+    // Clean URL - remove trailing slash if present
+    url = url.trim().replace(/\/+$/, "");
+
+    // Try multiple CORS proxies in sequence
+    const proxies = [
+      url,  // direct
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      `https://proxy.cors.sh/${url}`,
+    ];
+
+    let text = null;
+    for (const proxyUrl of proxies) {
+      try {
+        const res = await fetch(proxyUrl, { mode: "cors" });
+        if (res.ok) {
+          const t = await res.text();
+          if (t && t.length > 10 && !t.includes("<html")) { text = t; break; }
+        }
+      } catch (_) {}
+    }
+
+    if (!text) {
+      hint.style.color = "var(--red)";
+      hint.textContent = "❌ Impossible de récupérer la feuille. Vérifiez que le fichier est publié publiquement (sans barre oblique finale).";
+      return;
+    }
+
+    // Detect format: if has ##DEPENSES → full database, else simple CSV
+    if (text.includes("##DEPENSES") || text.includes("##CATEGORIES")) {
+      importDatabaseCsv(text);
+      hint.style.color = "var(--green)";
+      hint.textContent = "✅ Base complète importée depuis Google Sheets !";
+    } else {
+      // Try as simple depenses CSV
+      importDepensesCsv(text);
+      hint.style.color = "var(--green)";
+      hint.textContent = "✅ Dépenses importées depuis Google Sheets !";
+    }
+    renderAll();
+  }
+
+  const btnGSheet = byId("btn-import-gsheet");
+  if (btnGSheet) {
+    btnGSheet.addEventListener("click", async () => {
+      const url = byId("gsheet-url").value.trim();
+      if (!url) { byId("gsheet-hint").textContent = "⚠️ Collez d'abord un lien."; return; }
+      await importFromGSheetUrl(url);
+    });
+  }
+
+  const btnGSheetId = byId("btn-import-gsheet-id");
+  if (btnGSheetId) {
+    btnGSheetId.addEventListener("click", async () => {
+      const id = byId("gsheet-id").value.trim();
+      const sheet = byId("gsheet-sheet").value.trim();
+      if (!id) { byId("gsheet-hint").textContent = "⚠️ Entrez l'ID de la feuille."; return; }
+      const gid = sheet ? `&sheet=${encodeURIComponent(sheet)}` : "";
+      const url = `https://docs.google.com/spreadsheets/d/${id}/pub?output=csv${gid}`;
+      byId("gsheet-url").value = url;
+      await importFromGSheetUrl(url);
+    });
+  }
+
+  // ── DELETE ALL DATA ──────────────────────────────────────────────────
+  const btnDeleteAll = byId("btn-delete-all");
+  if (btnDeleteAll) {
+    btnDeleteAll.addEventListener("click", () => {
+      confirmAction("⚠️ Supprimer TOUTES les données ? Cette action est irréversible.", () => {
+        state.depenses = [];
+        state.operations = [];
+        state.personnes = defaultState().personnes;
+        state.categories = defaultState().categories;
+        state.comptes = defaultState().comptes;
+        state.budgetMensuelGlobal = 0;
+        state.budgetsCategorie = {};
+        saveState();
+        renderAll();
+        const hint = byId("delete-all-hint");
+        if (hint) { hint.style.display = "inline"; setTimeout(() => hint.style.display = "none", 3000); }
+      });
+    });
+  }
+
 });
 
     
+
 </script>
-  
 </body>
 </html>
-
-</body>
-</html>
-
-  <!-- Edit Depense Modal -->
-  <div id="modal-edit-depense" class="modal-backdrop hidden">
-    <div class="modal-box">
-      <h3>✏️ Modifier la dépense</h3>
-      <div class="form-grid">
-        <label>Date <input type="date" id="edit-date" /></label>
-        <label>Montant (TND) <input type="number" id="edit-montant" min="0" step="0.001" /></label>
-        <label>Catégorie <select id="edit-categorie"></select></label>
-        <label>Personne <select id="edit-personne"></select></label>
-        <label>Compte <select id="edit-compte"></select></label>
-        <label>Description <input type="text" id="edit-desc" /></label>
-        <label>Moyen <input type="text" id="edit-moyen" /></label>
-        <label>Tags <div class="tag-input-wrap" id="edit-tags-wrap">
-          <input type="text" id="edit-tags-input" placeholder="Ajouter tag…" />
-        </div></label>
-        <label style="display:flex;align-items:center;gap:0.5rem">
-          <input type="checkbox" id="edit-recurrent" style="width:auto" />
-          Dépense récurrente (mensuelle)
-        </label>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" id="btn-edit-cancel">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btn-edit-save">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Personne Modal -->
-  <div id="modal-edit-personne" class="modal-backdrop hidden">
-    <div class="modal-box">
-      <h3>✏️ Modifier la personne</h3>
-      <label>Nom <input type="text" id="edit-personne-nom" /></label>
-      <div class="modal-footer">
-        <button type="button" class="btn" id="btn-edit-personne-cancel">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btn-edit-personne-save">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Categorie Modal -->
-  <div id="modal-edit-categorie" class="modal-backdrop hidden">
-    <div class="modal-box">
-      <h3>✏️ Modifier la catégorie</h3>
-      <label>Nom <input type="text" id="edit-categorie-nom" /></label>
-      <div class="modal-footer">
-        <button type="button" class="btn" id="btn-edit-categorie-cancel">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btn-edit-categorie-save">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Compte Modal -->
-  <div id="modal-edit-compte" class="modal-backdrop hidden">
-    <div class="modal-box">
-      <h3>✏️ Modifier le compte</h3>
-      <div class="form-grid">
-        <label>Nom <input type="text" id="edit-compte-nom" /></label>
-        <label>Type <select id="edit-compte-type">
-          <option value="courant">Courant</option>
-          <option value="epargne">Épargne</option>
-          <option value="especes">Espèces</option>
-          <option value="autre">Autre</option>
-        </select></label>
-        <label>Solde initial (TND) <input type="number" id="edit-compte-solde" step="0.001" /></label>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" id="btn-edit-compte-cancel">Annuler</button>
-        <button type="button" class="btn btn-primary" id="btn-edit-compte-save">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Confirm Dialog -->
-  <div id="confirm-box" class="confirm-box hidden">
-    <div class="confirm-inner">
-      <p id="confirm-msg">Confirmer la suppression ?</p>
-      <div class="confirm-btns">
-        <button type="button" class="btn" id="btn-confirm-cancel">Annuler</button>
-        <button type="button" class="btn btn-danger" id="btn-confirm-ok">Supprimer</button>
-      </div>
-    </div>
-  </div>
-
