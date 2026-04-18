@@ -386,7 +386,7 @@ input[type=file]{display:none}
         <div class="panel-title"><span class="icon">💳</span> Comptes</div>
         <p class="hint">Solde = solde initial − dépenses + opérations manuelles</p>
         <div class="table-wrap">
-          <table><thead><tr><th>Nom</th><th>Type</th><th>Solde initial</th><th>Dépensé</th><th>Solde restant</th><th></th></tr></thead>
+          <table><thead><tr><th>Nom</th><th>Type</th><th>Solde initial</th><th>Dépensé</th><th>Solde réel</th><th></th></tr></thead>
           <tbody id="tbody-comptes"></tbody></table>
         </div>
         <hr class="sep"/>
@@ -1131,7 +1131,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return `<div class="card ${cls}">
         <span>💳 ${escapeHtml(cc.nom)}</span>
         <strong>${formatMoney(s)}</strong>
-        <span class="card-sub">Initial : ${formatMoney(cc.soldeInitial)}</span>
+        <span class="card-sub">Dépensé : ${formatMoney(totalDepensesSurCompte(cc.id))}</span>
       </div>`;
     }).join("");
 
@@ -1371,12 +1371,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const perPage = perPageEl ? parseInt(perPageEl.value) || 50 : 50;
     const tb = byId("tbody-depenses");
     const summary = byId("filter-summary");
-    const totalFiltered = allRows.reduce((s, d) => s + d.montant, 0);
+    // Totals filtered by period (not all-time)
+    const now = new Date();
+    const curMk = currentMonthKey();
+    const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const totalFiltered   = allRows.reduce((s, d) => s + d.montant, 0);
+    const totalThisMonth  = allRows.filter(d => monthKeyFromIso(d.date) === curMk).reduce((s, d) => s + d.montant, 0);
+    const totalThisWeek   = allRows.filter(d => new Date(d.date) >= weekStart).reduce((s, d) => s + d.montant, 0);
 
     if (summary) {
-      summary.textContent = allRows.length
-        ? `${allRows.length} dépense(s) — Total : ${formatMoney(totalFiltered)}`
-        : "";
+      if (allRows.length) {
+        // Are filters restricting to a specific period? Show contextual totals
+        const fFrom = byId("f-from").value;
+        const fTo   = byId("f-to").value;
+        const hasDateFilter = fFrom || fTo;
+        if (hasDateFilter) {
+          // User already filtered by date: show total of that filtered period
+          summary.innerHTML = `
+            <span class="filter-badge">${allRows.length}</span>
+            dépense(s) — Total période : <strong>${formatMoney(totalFiltered)}</strong>`;
+        } else {
+          // No date filter: show month + week breakdowns
+          summary.innerHTML = `
+            <span class="filter-badge">${allRows.length}</span> dépense(s) &nbsp;|&nbsp;
+            📅 <strong>Ce mois :</strong> ${formatMoney(totalThisMonth)} &nbsp;|&nbsp;
+            📆 <strong>Cette semaine :</strong> ${formatMoney(totalThisWeek)}`;
+        }
+      } else {
+        summary.innerHTML = "";
+      }
     }
 
     renderSortIcons();
@@ -1409,9 +1436,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tb.querySelectorAll("[data-del]").forEach((btn) => {
       btn.addEventListener("click", () => {
+        const dep = state.depenses.find(x => x.id === btn.getAttribute("data-del"));
+        const depInfo = dep ? `${formatMoney(dep.montant)} — ${nomCompte(dep.compteId)}` : "";
         confirmAction("Supprimer cette dépense ?", () => {
           state.depenses = state.depenses.filter((x) => x.id !== btn.getAttribute("data-del"));
           saveState(); renderAll();
+          // Show sync confirmation in the comptes table
+          const hint = document.createElement("div");
+          hint.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);color:var(--accent2);padding:10px 20px;border-radius:10px;font-size:13px;z-index:999;border:1px solid var(--accent2);animation:fadeIn .3s ease";
+          hint.textContent = `✅ Dépense supprimée — solde recalculé${depInfo ? " ("+depInfo+")" : ""}`;
+          document.body.appendChild(hint);
+          setTimeout(() => hint.remove(), 3000);
         });
       });
     });
@@ -1426,14 +1461,19 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((c) => {
         const spent = totalDepensesSurCompte(c.id);
         const rest = soldeCompte(c);
+        const restCls = rest < 0 ? "style=\"color:var(--red)\"" : "";
+        const soldeCls = rest < 0 ? "text-red" : rest < c.soldeInitial * 0.1 && c.soldeInitial > 0 ? "text-amber" : "text-green";
         return `
         <tr data-cid="${escapeHtml(c.id)}">
-          <td>${escapeHtml(c.nom)}</td>
-          <td>${escapeHtml(c.type)}</td>
-          <td class="num"><input type="number" class="inp-solde-init" data-cid="${escapeHtml(c.id)}" value="${c.soldeInitial}" step="0.001" style="width:100px;background:var(--bg);color:var(--text);border:1px solid var(--surface2);border-radius:6px;padding:0.25rem" /></td>
-          <td class="num">${formatMoney(spent)}</td>
-          <td class="num">${formatMoney(rest)}</td>
-          <td><button type="button" class="btn btn-sm btn-danger btn-del-compte" data-cid="${escapeHtml(c.id)}">Suppr.</button></td>
+          <td><strong>${escapeHtml(c.nom)}</strong></td>
+          <td><span class="badge">${escapeHtml(c.type)}</span></td>
+          <td class="num"><input class="inp-solde-init" type="number" data-cid="${escapeHtml(c.id)}" value="${c.soldeInitial}" step="0.001" style="width:110px;text-align:right;background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;outline:none"/></td>
+          <td class="num text-red">${formatMoney(spent)}</td>
+          <td class="num ${soldeCls}"><strong>${formatMoney(rest)}</strong></td>
+          <td style="white-space:nowrap">
+            <button type="button" class="btn btn-sm btn-edit btn-edit-compte" data-cid="${escapeHtml(c.id)}" title="Modifier">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger btn-del-compte" data-cid="${escapeHtml(c.id)}" title="Supprimer">🗑️</button>
+          </td>
         </tr>`;
       })
       .join("");
@@ -1760,13 +1800,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!byId("add-date").value) byId("add-date").value = today;
 
     const activeId = document.querySelector(".page.active")?.id || "page-dashboard";
+
+    // Always render these (they recalculate soldes from scratch)
+    renderDepensesTable();
+    renderComptesTable();  // recalculates all account balances
+    renderBudgetsPage();
+    renderReferentiels();
+
+    // Page-specific renders
     if (activeId === "page-dashboard") renderDashboard();
     if (activeId === "page-analyses") renderAnalysesCharts();
 
-    renderDepensesTable();
-    renderComptesTable();
-    renderBudgetsPage();
-    renderReferentiels();
+    // Always update dashboard KPI cards even when on another page
+    // so next time user goes to dashboard it's fresh
+    // (renderDashboard already called above when on dashboard)
   }
 
   function showPage(name) {
