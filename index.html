@@ -219,6 +219,25 @@ input[type=file]{display:none}
 .danger-zone{border-color:rgba(244,63,94,.25)!important}
 .danger-zone .panel-title{color:var(--red)}
 
+/* WISHLIST CARDS */
+.wl-card { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r2); padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: border-color .15s, transform .15s; position: relative; overflow: hidden; }
+.wl-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.wl-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--wl-color, var(--accent)); }
+.wl-card.done { opacity: .65; }
+.wl-card.done .wl-title { text-decoration: line-through; color: var(--muted2); }
+.wl-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.wl-title { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.wl-prix { font-size: 15px; font-weight: 700; font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+.wl-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 11.5px; color: var(--muted2); }
+.wl-badge-priority { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.wl-badge-priority.haute { background: var(--red-d); color: var(--red); }
+.wl-badge-priority.moyenne { background: var(--amber-d); color: var(--amber); }
+.wl-badge-priority.basse { background: var(--green-d); color: var(--green); }
+.wl-notes { font-size: 12px; color: var(--muted2); font-style: italic; }
+.wl-card-actions { display: flex; gap: 5px; margin-top: 4px; align-items: center; }
+.btn-wl-done { flex: 1; font-size: 12px; padding: 6px; }
+.btn-wl-done.is-done { background: var(--green-d); border-color: var(--green); color: var(--green); }
+
 /* BUDGET ROWS */
 .budget-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .budget-row:last-child{border-bottom:none}
@@ -270,6 +289,8 @@ input[type=file]{display:none}
     <button class="nav-btn" data-page="referentiels"><span class="nav-icon">👥</span><span class="nav-label">Référentiels</span></button>
     <div class="nav-section">Données</div>
     <button class="nav-btn" data-page="fichiers"><span class="nav-icon">📁</span><span class="nav-label">Fichiers & Import</span></button>
+    <div class="nav-section">Extra</div>
+    <button class="nav-btn" data-page="wishlist"><span class="nav-icon">🛒</span><span class="nav-label">Liste d'achats</span></button>
   </div>
   <div class="nav-footer">
     <button class="btn-save-nav" id="btn-save-local"><span class="nav-icon">💾</span><span class="nav-label">Enregistrer</span></button>
@@ -287,9 +308,8 @@ input[type=file]{display:none}
       </div>
     </div>
     <div class="topbar-right">
-      <button id="btn-theme-toggle" title="Changer le thème"
-        style="border:none;background:var(--s2);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:15px;color:var(--muted2);transition:all .15s;border:1px solid var(--border2)"
-        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted2)'">
+      <button id="btn-theme-toggle" title="Thème clair / sombre"
+        style="border:1px solid var(--border2);background:var(--s2);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:15px;color:var(--muted2);transition:all .15s">
         🌙
       </button>
       <span id="csv-link-status" style="font-size:11.5px;color:var(--muted2)"></span>
@@ -517,6 +537,59 @@ input[type=file]{display:none}
       </div>
     </section>
 
+    <!-- WISHLIST -->
+    <section id="page-wishlist" class="page">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">➕</span> Ajouter un achat prévu</div>
+        <div class="form-grid">
+          <div class="field"><label>Article / Description</label><input type="text" id="wl-desc" placeholder="Ex: Nike Air Max, TV 55pouces…"/></div>
+          <div class="field"><label>Prix estimé (TND)</label><input type="number" id="wl-prix" min="0" step="0.001" placeholder="0.000"/></div>
+          <div class="field"><label>Catégorie</label><select id="wl-cat"></select></div>
+          <div class="field"><label>Priorité</label>
+            <select id="wl-priority">
+              <option value="haute">🔴 Haute</option>
+              <option value="moyenne" selected>🟡 Moyenne</option>
+              <option value="basse">🟢 Basse</option>
+            </select>
+          </div>
+          <div class="field"><label>Date souhaitée</label><input type="date" id="wl-date"/></div>
+          <div class="field"><label>Lien / URL</label><input type="url" id="wl-url" placeholder="https://…"/></div>
+          <div class="field"><label>Notes</label><input type="text" id="wl-notes" placeholder="Taille, couleur, remarque…"/></div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-wl">Ajouter à la liste</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="field"><label>Recherche</label><input type="search" id="wl-f-text" placeholder="article, catégorie…"/></div>
+        <div class="field"><label>Catégorie</label><select id="wl-f-cat"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Priorité</label>
+          <select id="wl-f-priority">
+            <option value="">Toutes</option>
+            <option value="haute">🔴 Haute</option>
+            <option value="moyenne">🟡 Moyenne</option>
+            <option value="basse">🟢 Basse</option>
+          </select>
+        </div>
+        <div class="field"><label>Statut</label>
+          <select id="wl-f-status">
+            <option value="">Tous</option>
+            <option value="pending">⏳ À acheter</option>
+            <option value="done">✅ Acheté</option>
+          </select>
+        </div>
+        <div class="field" style="align-self:flex-end"><button class="btn" id="btn-reset-wl-filters">Réinitialiser</button></div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="kpi-grid" id="wl-kpi" style="margin-bottom:16px"></div>
+
+      <!-- Cards grid -->
+      <div id="wl-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px"></div>
+
+      <p id="wl-empty" class="empty-row" style="display:none;text-align:center;padding:40px;color:var(--muted)">Aucun achat prévu. Ajoutez-en un ci-dessus !</p>
+    </section>
+
   </div>
 </div>
 
@@ -633,6 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Trigger renders if needed
     if (name === "analyses") { try { renderAnalysesCharts(); } catch(e) {} }
     if (name === "dashboard") { try { renderDashboard(); } catch(e) {} }
+    if (name === "wishlist") { try { renderWishlist(); } catch(e) {} }
     sidebar.classList.remove("open");
     overlay.classList.remove("show");
   }
@@ -682,6 +756,7 @@ document.addEventListener("DOMContentLoaded", () => {
       depenses: [],
       operations: [],
       recurringDue: [],
+      wishlist: [],
     };
   }
 
@@ -738,6 +813,14 @@ document.addEventListener("DOMContentLoaded", () => {
       lines.push("id,date,compteId,type,montant,motif");
       state.operations.forEach((o) => {
         lines.push(`${o.id},${o.date},${o.compteId},${o.type},${o.montant},${csvEsc(o.motif||"")}`);
+      });
+    }
+    if (state.wishlist && state.wishlist.length) {
+      lines.push("");
+      lines.push("##WISHLIST");
+      lines.push("id,desc,prix,categorieId,priority,date,url,notes,done,createdAt");
+      state.wishlist.forEach((w) => {
+        lines.push([w.id, csvEsc(w.desc), w.prix||0, w.categorieId||"", csvEsc(w.priority), w.date||"", csvEsc(w.url||""), csvEsc(w.notes||""), w.done?1:0, w.createdAt||""].join(","));
       });
     }
     return "\ufeff" + lines.join("\n");
@@ -1075,7 +1158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fillSelect(byId("add-compte"), state.comptes, "nom", "id", false);
     fillSelect(byId("f-cat"), state.categories, "nom", "id", "Toutes");
     fillSelect(byId("f-pers"), state.personnes, "nom", "id", "Toutes");
-    fillSelect(byId("f-compte"), state.comptes, "nom", "id", "Tous");
+    const fCompte = byId("f-compte"); if (fCompte) fillSelect(fCompte, state.comptes, "nom", "id", "Tous");
   }
 
   function renderDashboard() {
@@ -2085,6 +2168,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // parse WISHLIST if present
+    const wishlist = [];
+    let inWl = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (t === "##WISHLIST") { inWl = true; continue; }
+      if (inWl) {
+        if (t.startsWith("##")) { inWl = false; continue; }
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 5 && p[0] !== "id")
+          wishlist.push({ id:p[0], desc:p[1], prix:Number(p[2])||0, categorieId:p[3]||"", priority:p[4]||"moyenne", date:p[5]||"", url:p[6]||"", notes:p[7]||"", done:p[8]==="1", createdAt:p[9]||"" });
+      }
+    }
+
     // parse OPERATIONS if present
     const operations = [];
     let inOps = false;
@@ -2712,6 +2810,222 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ── WISHLIST ──────────────────────────────────────────────────────────────
+
+  const PRIORITY_COLORS = { haute: 'var(--red)', moyenne: 'var(--amber)', basse: 'var(--green)' };
+  const PRIORITY_LABELS = { haute: '🔴 Haute', moyenne: '🟡 Moyenne', basse: '🟢 Basse' };
+
+  function filteredWishlist() {
+    const q = (byId("wl-f-text")?.value || "").trim().toLowerCase();
+    const cat = byId("wl-f-cat")?.value || "";
+    const prio = byId("wl-f-priority")?.value || "";
+    const status = byId("wl-f-status")?.value || "";
+    return (state.wishlist || []).filter(w => {
+      if (cat && w.categorieId !== cat) return false;
+      if (prio && w.priority !== prio) return false;
+      if (status === "pending" && w.done) return false;
+      if (status === "done" && !w.done) return false;
+      if (q) {
+        const blob = `${w.desc} ${nomCategorie(w.categorieId)} ${w.notes||""} ${w.url||""}`.toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderWishlist() {
+    if (!byId("page-wishlist")) return;
+
+    // Refresh category select in form
+    fillSelect(byId("wl-cat"), state.categories, "nom", "id", false);
+    fillSelect(byId("wl-f-cat"), state.categories, "nom", "id", "Toutes");
+
+    const items = filteredWishlist();
+    const all = state.wishlist || [];
+
+    // KPI strip
+    const totalPrix = all.reduce((s, w) => s + (w.done ? 0 : w.prix||0), 0);
+    const done = all.filter(w => w.done).length;
+    const pending = all.length - done;
+    const hauteCount = all.filter(w => !w.done && w.priority === "haute").length;
+    byId("wl-kpi").innerHTML = `
+      <div class="kpi" style="--kc:var(--accent)">
+        <span class="kpi-icon">🛒</span>
+        <span class="kpi-label">À acheter</span>
+        <span class="kpi-value">${pending}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--amber)">
+        <span class="kpi-icon">💰</span>
+        <span class="kpi-label">Budget total prévu</span>
+        <span class="kpi-value" style="font-size:15px">${pending > 0 ? formatMoney(totalPrix) : "—"}</span>
+      </div>
+      <div class="kpi ${hauteCount > 0 ? "danger" : ""}" style="--kc:var(--red)">
+        <span class="kpi-icon">🔴</span>
+        <span class="kpi-label">Priorité haute</span>
+        <span class="kpi-value">${hauteCount}</span>
+      </div>
+      <div class="kpi green" style="--kc:var(--green)">
+        <span class="kpi-icon">✅</span>
+        <span class="kpi-label">Achetés</span>
+        <span class="kpi-value">${done}</span>
+      </div>
+    `;
+
+    // Cards
+    const container = byId("wl-cards");
+    const emptyMsg = byId("wl-empty");
+
+    // Sort: undone first by priority, then done
+    const sorted = [...items].sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      const prioOrder = { haute: 0, moyenne: 1, basse: 2 };
+      return (prioOrder[a.priority] || 1) - (prioOrder[b.priority] || 1);
+    });
+
+    if (!sorted.length) {
+      container.innerHTML = "";
+      emptyMsg.style.display = "block";
+      return;
+    }
+    emptyMsg.style.display = "none";
+
+    container.innerHTML = sorted.map(w => {
+      const catNom = nomCategorie(w.categorieId);
+      const dateStr = w.date ? new Date(w.date).toLocaleDateString("fr-FR") : "";
+      const color = PRIORITY_COLORS[w.priority] || "var(--accent)";
+      return `<div class="wl-card ${w.done ? "done" : ""}" style="--wl-color:${color}" data-wl-id="${w.id}">
+        <div class="wl-card-header">
+          <div class="wl-title">${escapeHtml(w.desc)}</div>
+          ${w.prix ? `<div class="wl-prix">${formatMoney(w.prix)}</div>` : ""}
+        </div>
+        <div class="wl-meta">
+          <span class="wl-badge-priority ${w.priority}">${PRIORITY_LABELS[w.priority]}</span>
+          ${catNom !== "—" ? `<span class="badge">${escapeHtml(catNom)}</span>` : ""}
+          ${dateStr ? `<span>📅 ${dateStr}</span>` : ""}
+        </div>
+        ${w.notes ? `<div class="wl-notes">${escapeHtml(w.notes)}</div>` : ""}
+        ${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--accent);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;display:block">🔗 ${escapeHtml(w.url.replace(/^https?:\/\//, "").slice(0,50))}</a>` : ""}
+        <div class="wl-card-actions">
+          <button class="btn btn-sm btn-wl-done ${w.done ? "is-done" : ""}" data-wl-done="${w.id}">${w.done ? "✅ Acheté" : "⬜ Marquer acheté"}</button>
+          <button class="btn btn-sm btn-edit" data-wl-edit="${w.id}">✏️</button>
+          <button class="btn btn-sm btn-danger" data-wl-del="${w.id}">🗑️</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    // Wire card buttons
+    container.querySelectorAll("[data-wl-done]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const w = state.wishlist.find(x => x.id === btn.getAttribute("data-wl-done"));
+        if (w) { w.done = !w.done; saveState(); renderWishlist(); }
+      });
+    });
+    container.querySelectorAll("[data-wl-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        confirmAction("Supprimer cet achat de la liste ?", () => {
+          state.wishlist = state.wishlist.filter(x => x.id !== btn.getAttribute("data-wl-del"));
+          saveState(); renderWishlist();
+        });
+      });
+    });
+    container.querySelectorAll("[data-wl-edit]").forEach(btn => {
+      btn.addEventListener("click", () => openEditWishlist(btn.getAttribute("data-wl-edit")));
+    });
+  }
+
+  // Add wishlist item
+  byId("btn-add-wl")?.addEventListener("click", () => {
+    const desc = byId("wl-desc").value.trim();
+    if (!desc) { byId("wl-desc").focus(); return; }
+    const w = {
+      id: uid(),
+      desc,
+      prix: parseFloat(byId("wl-prix").value) || 0,
+      categorieId: byId("wl-cat").value,
+      priority: byId("wl-priority").value,
+      date: byId("wl-date").value || "",
+      url: byId("wl-url").value.trim(),
+      notes: byId("wl-notes").value.trim(),
+      done: false,
+      createdAt: new Date().toISOString(),
+    };
+    if (!state.wishlist) state.wishlist = [];
+    state.wishlist.push(w);
+    saveState(); renderWishlist();
+    // Reset form
+    ["wl-desc","wl-prix","wl-date","wl-url","wl-notes"].forEach(id => { const el = byId(id); if (el) el.value = ""; });
+    byId("wl-priority").value = "moyenne";
+  });
+
+  // Wishlist filters
+  ["wl-f-text","wl-f-cat","wl-f-priority","wl-f-status"].forEach(id => {
+    byId(id)?.addEventListener("input", () => renderWishlist());
+    byId(id)?.addEventListener("change", () => renderWishlist());
+  });
+  byId("btn-reset-wl-filters")?.addEventListener("click", () => {
+    ["wl-f-text","wl-f-cat","wl-f-priority","wl-f-status"].forEach(id => { const el = byId(id); if (el) el.value = ""; });
+    renderWishlist();
+  });
+
+  // Edit wishlist modal (reuse edit-depense modal structure)
+  let _editWlId = null;
+  function openEditWishlist(id) {
+    const w = (state.wishlist||[]).find(x => x.id === id);
+    if (!w) return;
+    _editWlId = id;
+    // Build a simple modal dynamically
+    let modal = byId("modal-edit-wl");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modal-edit-wl";
+      modal.className = "modal-backdrop hidden";
+      modal.innerHTML = `<div class="modal-box">
+        <div class="modal-header"><h3>✏️ Modifier l'achat</h3><button class="modal-close" id="btn-close-wl-modal">✕</button></div>
+        <div class="form-grid">
+          <div class="field"><label>Article</label><input type="text" id="ewl-desc"/></div>
+          <div class="field"><label>Prix estimé (TND)</label><input type="number" id="ewl-prix" step="0.001"/></div>
+          <div class="field"><label>Catégorie</label><select id="ewl-cat"></select></div>
+          <div class="field"><label>Priorité</label><select id="ewl-priority">
+            <option value="haute">🔴 Haute</option><option value="moyenne">🟡 Moyenne</option><option value="basse">🟢 Basse</option>
+          </select></div>
+          <div class="field"><label>Date souhaitée</label><input type="date" id="ewl-date"/></div>
+          <div class="field"><label>Lien / URL</label><input type="url" id="ewl-url"/></div>
+          <div class="field" style="grid-column:1/-1"><label>Notes</label><input type="text" id="ewl-notes"/></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="btn-ewl-cancel">Annuler</button>
+          <button class="btn btn-primary" id="btn-ewl-save">Enregistrer</button>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
+      byId("btn-close-wl-modal").addEventListener("click", () => modal.classList.add("hidden"));
+      byId("btn-ewl-cancel").addEventListener("click", () => modal.classList.add("hidden"));
+      modal.addEventListener("click", e => { if (e.target === modal) modal.classList.add("hidden"); });
+      byId("btn-ewl-save").addEventListener("click", () => {
+        const w2 = (state.wishlist||[]).find(x => x.id === _editWlId);
+        if (!w2) return;
+        w2.desc = byId("ewl-desc").value.trim() || w2.desc;
+        w2.prix = parseFloat(byId("ewl-prix").value) || 0;
+        w2.categorieId = byId("ewl-cat").value;
+        w2.priority = byId("ewl-priority").value;
+        w2.date = byId("ewl-date").value || "";
+        w2.url = byId("ewl-url").value.trim();
+        w2.notes = byId("ewl-notes").value.trim();
+        saveState(); renderWishlist();
+        modal.classList.add("hidden");
+      });
+    }
+    fillSelect(byId("ewl-cat"), state.categories, "nom", "id", false);
+    byId("ewl-desc").value = w.desc;
+    byId("ewl-prix").value = w.prix || "";
+    byId("ewl-cat").value = w.categorieId;
+    byId("ewl-priority").value = w.priority;
+    byId("ewl-date").value = w.date || "";
+    byId("ewl-url").value = w.url || "";
+    byId("ewl-notes").value = w.notes || "";
+    modal.classList.remove("hidden");
+  }
+
   // ── RECURRING: check on load ─────────────────────────────────────────────
   function checkRecurring() {
     const mk = currentMonthKey();
@@ -2819,6 +3133,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   }
+
 
   // ── THEME TOGGLE ──────────────────────────────────────────────────────
   const btnTheme = byId("btn-theme-toggle");
