@@ -1231,6 +1231,10 @@ document.addEventListener("DOMContentLoaded", () => {
     fillSelect(byId("f-cat"), state.categories, "nom", "id", "Toutes");
     fillSelect(byId("f-pers"), state.personnes, "nom", "id", "Toutes");
     const fCompte = byId("f-compte"); if (fCompte) fillSelect(fCompte, state.comptes, "nom", "id", "Tous");
+    // Always populate wishlist category selects
+    const wlCats = state.wishlistCategories || defaultState().wishlistCategories;
+    const wlCatSel = byId("wl-cat"); if (wlCatSel) fillSelect(wlCatSel, wlCats, "nom", "id", false);
+    const wlFCat  = byId("wl-f-cat"); if (wlFCat)  fillSelect(wlFCat, wlCats, "nom", "id", "Toutes");
   }
 
   function renderDashboard() {
@@ -3014,9 +3018,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderWishlist() {
     if (!byId("page-wishlist")) return;
 
-    // Refresh category select in form
-    fillSelect(byId("wl-cat"), state.wishlistCategories || [], "nom", "id", false);
-    fillSelect(byId("wl-f-cat"), state.wishlistCategories || [], "nom", "id", "Toutes");
+    // Category selects already filled by refreshSelects() in renderAll()
+    // Re-fill here as safety net for direct renderWishlist() calls
+    const _wlCats = state.wishlistCategories || defaultState().wishlistCategories;
+    if (_wlCats.length) {
+      const _wlSel = byId("wl-cat"); if (_wlSel) fillSelect(_wlSel, _wlCats, "nom", "id", false);
+      const _wlFSel = byId("wl-f-cat"); if (_wlFSel) fillSelect(_wlFSel, _wlCats, "nom", "id", "Toutes");
+    }
 
     const items = filteredWishlist();
     const all = state.wishlist || [];
@@ -3422,25 +3430,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  // ── THEME TOGGLE ──────────────────────────────────────────────────────
-  const btnTheme = byId("btn-theme-toggle");
-  const savedTheme = localStorage.getItem("fintrack-theme") || "dark";
-  if (savedTheme === "light") {
-    document.body.classList.add("light");
-    if (btnTheme) btnTheme.textContent = "☀️";
-  }
-  if (btnTheme) {
-    btnTheme.addEventListener("click", () => {
-      const isLight = document.body.classList.toggle("light");
-      btnTheme.textContent = isLight ? "☀️" : "🌙";
-      localStorage.setItem("fintrack-theme", isLight ? "light" : "dark");
-    });
-  }
-
-});
-
-    
-
-</script>
-</body>
-</html>
+  // ── THEME TOGGLE ─────────────────
