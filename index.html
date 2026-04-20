@@ -238,6 +238,17 @@ input[type=file]{display:none}
 .btn-wl-done { flex: 1; font-size: 12px; padding: 6px; }
 .btn-wl-done.is-done { background: var(--green-d); border-color: var(--green); color: var(--green); }
 
+/* RECOMMENDATIONS */
+.rec-card{background:linear-gradient(135deg,var(--s1),var(--s2));border:1px solid var(--accent-d);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;transition:border-color .15s}
+.rec-card:hover{border-color:var(--accent)}
+.rec-icon{font-size:22px;flex-shrink:0}
+.rec-body{flex:1;min-width:0}
+.rec-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.rec-desc{font-size:12px;color:var(--muted2);line-height:1.5}
+.rec-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:600;margin-left:8px}
+.rec-badge.urgent{background:var(--red-d);color:var(--red)}
+.rec-badge.soon{background:var(--amber-d);color:var(--amber)}
+.rec-badge.saving{background:var(--green-d);color:var(--green)}
 /* BUDGET ROWS */
 .budget-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .budget-row:last-child{border-bottom:none}
@@ -270,6 +281,20 @@ input[type=file]{display:none}
 </style>
 </head>
 <body>
+<!-- LOADING SCREEN -->
+<div id="app-loader" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s">
+  <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(140deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;box-shadow:0 8px 24px rgba(79,143,255,.4)">FT</div>
+  <div style="font-size:16px;font-weight:600;color:var(--text)">FinTrack</div>
+  <div style="display:flex;gap:6px">
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:loaderDot .9s ease-in-out infinite"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:loaderDot .9s ease-in-out infinite .2s"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:loaderDot .9s ease-in-out infinite .4s"></div>
+  </div>
+  <div id="loader-status" style="font-size:12px;color:var(--muted2)">Chargement des données…</div>
+</div>
+<style>
+@keyframes loaderDot{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+</style>
 
 <div class="overlay-backdrop" id="nav-overlay"></div>
 
@@ -486,13 +511,31 @@ input[type=file]{display:none}
           <ul class="ref-list" id="list-personnes"></ul>
         </div>
         <div class="panel">
-          <div class="panel-title"><span class="icon">🏷️</span> Catégories</div>
+          <div class="panel-title"><span class="icon">🏷️</span> Catégories dépenses</div>
           <div class="form-grid" style="grid-template-columns:1fr auto">
             <div class="field"><label>Nom</label><input type="text" id="new-cat-nom" placeholder="ex. Loisirs"/></div>
             <button class="btn btn-primary" id="btn-add-categorie" style="align-self:flex-end">Ajouter</button>
           </div>
           <ul class="ref-list" id="list-categories"></ul>
         </div>
+      </div>
+
+      <!-- WISHLIST CATEGORIES -->
+      <div class="panel" style="margin-top:18px">
+        <div class="panel-title"><span class="icon">🛍️</span> Catégories Wishlist</div>
+        <p class="hint">Ces catégories sont utilisées uniquement dans la Wishlist (séparées des catégories de dépenses).</p>
+        <div class="form-grid" style="max-width:600px">
+          <div class="field">
+            <label>Nom</label>
+            <input type="text" id="new-wlcat-nom" placeholder="ex. Électronique"/>
+          </div>
+          <div class="field">
+            <label>Icône</label>
+            <input type="text" id="new-wlcat-icon" placeholder="🛒" maxlength="4" style="width:80px"/>
+          </div>
+          <button class="btn btn-primary" id="btn-add-wlcat" style="align-self:flex-end">Ajouter</button>
+        </div>
+        <ul class="ref-list" id="list-wlcats"></ul>
       </div>
     </section>
 
@@ -531,7 +574,7 @@ input[type=file]{display:none}
       </div>
       <div class="panel danger-zone">
         <div class="panel-title"><span class="icon">🗑️</span> Supprimer toutes les données</div>
-        <p class="hint">Efface définitivement toutes les dépenses, opérations, personnes, catégories et comptes. <strong style="color:var(--red)">Irréversible.</strong></p>
+        <p class="hint">Efface définitivement toutes les dépenses, opérations, personnes, catégories, comptes <strong>et la wishlist</strong>. <strong style="color:var(--red)">Irréversible.</strong></p>
         <button class="btn btn-danger" id="btn-delete-all">Tout supprimer</button>
         <span id="delete-all-hint" style="display:none;margin-left:12px;font-size:12px;color:var(--red)">✅ Données effacées.</span>
       </div>
@@ -588,6 +631,9 @@ input[type=file]{display:none}
       <div id="wl-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px"></div>
 
       <p id="wl-empty" class="empty-row" style="display:none;text-align:center;padding:40px;color:var(--muted)">Aucun achat prévu. Ajoutez-en un ci-dessus !</p>
+
+      <!-- RECOMMENDATIONS PANEL -->
+      <div id="wl-recommendations" style="margin-top:8px"></div>
     </section>
 
   </div>
@@ -757,6 +803,15 @@ document.addEventListener("DOMContentLoaded", () => {
       operations: [],
       recurringDue: [],
       wishlist: [],
+      wishlistCategories: [
+        { id: "wlcat_mode",    nom: "Mode & Vêtements",   icon: "👗", color: 0 },
+        { id: "wlcat_tech",    nom: "Tech & Électronique", icon: "💻", color: 1 },
+        { id: "wlcat_maison",  nom: "Maison & Déco",       icon: "🏠", color: 2 },
+        { id: "wlcat_sport",   nom: "Sport & Loisirs",     icon: "⚽", color: 3 },
+        { id: "wlcat_voyage",  nom: "Voyage",              icon: "✈️", color: 4 },
+        { id: "wlcat_livre",   nom: "Livres & Culture",    icon: "📚", color: 5 },
+        { id: "wlcat_autre",   nom: "Autre",               icon: "🛍️", color: 7 },
+      ],
     };
   }
 
@@ -777,6 +832,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Ensure fields added after initial release always exist
       if (!Array.isArray(state.wishlist)) state.wishlist = [];
       if (!Array.isArray(state.operations)) state.operations = [];
+      if (!Array.isArray(state.wishlistCategories) || state.wishlistCategories.length === 0)
+        state.wishlistCategories = defaultState().wishlistCategories;
     } catch {
       state = defaultState();
     }
@@ -818,6 +875,12 @@ document.addEventListener("DOMContentLoaded", () => {
         lines.push(`${o.id},${o.date},${o.compteId},${o.type},${o.montant},${csvEsc(o.motif||"")}`);
       });
     }
+    lines.push("");
+    lines.push("##WISHLIST_CATEGORIES");
+    lines.push("id,nom,icon,color");
+    (state.wishlistCategories || []).forEach((c) => {
+      lines.push(`${c.id},${csvEsc(c.nom)},${csvEsc(c.icon)},${c.color||0}`);
+    });
     lines.push("");
     lines.push("##WISHLIST");
     lines.push("id,desc,prix,categorieId,priority,date,url,notes,done,createdAt");
@@ -938,6 +1001,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function nomCategorie(id) {
     return state.categories.find((c) => c.id === id)?.nom || "—";
+  }
+  function nomWlCategorie(id) {
+    if (!id) return "";
+    return (state.wishlistCategories || []).find(c => c.id === id)?.nom || "";
+  }
+  function iconWlCategorie(id) {
+    if (!id) return "🛍️";
+    return (state.wishlistCategories || []).find(c => c.id === id)?.icon || "🛍️";
   }
   function nomCompte(id) {
     return state.comptes.find((c) => c.id === id)?.nom || "—";
@@ -1913,6 +1984,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderComptesTable();  // recalculates all account balances
     renderBudgetsPage();
     renderReferentiels();
+    renderWlCategories();
 
     // Page-specific renders
     if (activeId === "page-dashboard") renderDashboard();
@@ -1934,6 +2006,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nav) nav.classList.add("active");
     if (name === "analyses") renderAnalysesCharts();
     if (name === "dashboard") renderDashboard();
+    if (name === "wishlist") renderWishlist(); // ✅ FIX
     requestAnimationFrame(() => resizeVisibleCharts());
     // close mobile nav
     const sb = document.getElementById("sidebar");
@@ -2119,6 +2192,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const budgetsCat = {};
     let budgetGlobal = 0;
     const depenses = [];
+    const wishlist = [];
+    const wishlistCats = [];
+    const operations = [];
 
     for (const line of lines) {
       const t = line.trim();
@@ -2155,50 +2231,32 @@ document.addEventListener("DOMContentLoaded", () => {
         const p = splitCsvLineFull(line);
         if (p.length >= 7 && p[0] !== "id")
           depenses.push({
-            id: p[0],
-            date: p[1],
-            categorieId: p[2],
-            personneId: p[3],
-            compteId: p[4],
-            description: p[5],
-            montant: Number(p[6]) || 0,
-            moyen: p[7] || "",
+            id: p[0], date: p[1], categorieId: p[2], personneId: p[3], compteId: p[4],
+            description: p[5], montant: Number(p[6]) || 0, moyen: p[7] || "",
             tags: p[8] ? p[8].split("|").filter(Boolean) : [],
-            recurrent: p[9] === "1",
-            sourceRecurring: p[10] || "",
+            recurrent: p[9] === "1", sourceRecurring: p[10] || "",
           });
-      }
-    }
-
-    // parse WISHLIST if present
-    const wishlist = [];
-    let inWl = false;
-    for (const line of lines) {
-      const t = line.trim();
-      if (t === "##WISHLIST") { inWl = true; continue; }
-      if (inWl) {
-        if (t.startsWith("##")) { inWl = false; continue; }
+      } else if (mode === "WISHLIST_CATEGORIES") {
         if (t.toLowerCase().startsWith("id,")) continue;
         const p = splitCsvLineFull(line);
-        if (p.length >= 5 && p[0] !== "id")
-          wishlist.push({ id:p[0], desc:p[1], prix:Number(p[2])||0, categorieId:p[3]||"", priority:p[4]||"moyenne", date:p[5]||"", url:p[6]||"", notes:p[7]||"", done:p[8]==="1", createdAt:p[9]||"" });
-      }
-    }
-
-    // parse OPERATIONS if present
-    const operations = [];
-    let inOps = false;
-    for (const line of lines) {
-      const t = line.trim();
-      if (t === "##OPERATIONS") { inOps = true; continue; }
-      if (inOps) {
-        if (t.startsWith("##")) { inOps = false; continue; }
+        if (p.length >= 2 && p[0] && p[0] !== "id")
+          wishlistCats.push({ id:p[0], nom:p[1]||"", icon:p[2]||"🛍️", color:Number(p[3])||0 });
+      } else if (mode === "WISHLIST") {
         if (t.toLowerCase().startsWith("id,")) continue;
         const p = splitCsvLineFull(line);
-        if (p.length >= 5 && p[0] !== "id")
+        if (p.length >= 5 && p[0] && p[0] !== "id")
+          wishlist.push({ id:p[0], desc:p[1]||"", prix:Number(p[2])||0, categorieId:p[3]||"",
+            priority:p[4]||"moyenne", date:p[5]||"", url:p[6]||"", notes:p[7]||"",
+            done:p[8]==="1", createdAt:p[9]||"" });
+      } else if (mode === "OPERATIONS") {
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 5 && p[0] && p[0] !== "id")
           operations.push({ id: p[0], date: p[1], compteId: p[2], type: p[3], montant: Number(p[4])||0, motif: p[5]||"" });
       }
     }
+    // (wishlist and operations are now parsed inside the main loop above)
+    const _unused = null; // placeholder
 
     // Remplace TOUT — on écrase toutes les données existantes
     state.personnes = personnes.length ? personnes : [];
@@ -2208,13 +2266,19 @@ document.addEventListener("DOMContentLoaded", () => {
     state.budgetsCategorie = budgetsCat;
     state.depenses = depenses;
     state.operations = operations;
-    state.wishlist = wishlist.length ? wishlist : (state.wishlist || []);
+    state.wishlist = wishlist.length ? wishlist : [];
+    if (wishlistCats.length) state.wishlistCategories = wishlistCats;
     state.version = 2;
     saveState();
     byId("global-error").textContent = "";
     const hint = byId("import-db-hint");
-    if (hint) { hint.style.display = "inline"; setTimeout(()=>hint.style.display="none", 3000); }
+    if (hint) {
+      hint.style.display = "inline";
+      hint.textContent = `✅ Base importée ! ${depenses.length} dépenses, ${wishlist.length} articles wishlist.`;
+      setTimeout(()=>hint.style.display="none", 4000);
+    }
     renderAll();
+    renderWishlist(); // ✅ FIX: force wishlist render after import
   }
 
   function splitCsvLine(line) {
@@ -2382,12 +2446,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const granEl = byId("ana-granularity");
   if (granEl) granEl.addEventListener("change", () => renderAnalysesCharts());
 
+  // ✅ FIX 8: loader status + hide after data loads
+  const loaderStatus = document.getElementById("loader-status");
+  if (loaderStatus) loaderStatus.textContent = "Initialisation…";
   loadState();
+  if (loaderStatus) loaderStatus.textContent = "Rendu de l'interface…";
   renderAll();
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
       resizeVisibleCharts();
+      // Hide loader with fade
+      const loader = document.getElementById("app-loader");
+      if (loader) {
+        loader.style.opacity = "0";
+        setTimeout(() => { loader.style.display = "none"; }, 420);
+      }
     });
   });
 
@@ -2836,12 +2910,113 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ── WISHLIST RECOMMENDATIONS ────────────────────────────────────────────
+  function renderWishlistRecommendations() {
+    const el = byId("wl-recommendations");
+    if (!el) return;
+    const wl = state.wishlist || [];
+    const pending = wl.filter(w => !w.done);
+    if (!pending.length) { el.innerHTML = ""; return; }
+
+    const recs = [];
+    const now = new Date();
+
+    // 1. Priorité haute urgente
+    const urgent = pending.filter(w => w.priority === "haute");
+    if (urgent.length) {
+      recs.push({
+        icon: "🚨", badge: "urgent",
+        title: `${urgent.length} article(s) en priorité haute`,
+        desc: urgent.slice(0,3).map(w => `• ${escapeHtml(w.desc)}${w.prix ? " — " + formatMoney(w.prix) : ""}`).join("<br>"),
+      });
+    }
+
+    // 2. Dates proches (< 14 jours)
+    const soonItems = pending.filter(w => {
+      if (!w.date) return false;
+      const d = new Date(w.date);
+      const diff = (d - now) / 86400000;
+      return diff >= 0 && diff <= 14;
+    });
+    if (soonItems.length) {
+      recs.push({
+        icon: "📅", badge: "soon",
+        title: `${soonItems.length} achat(s) prévu(s) dans les 14 prochains jours`,
+        desc: soonItems.slice(0,3).map(w => {
+          const d = new Date(w.date);
+          const diff = Math.ceil((d - now) / 86400000);
+          return `• ${escapeHtml(w.desc)} — dans ${diff} jour(s)`;
+        }).join("<br>"),
+      });
+    }
+
+    // 3. Budget total vs solde
+    const totalBudget = pending.reduce((s, w) => s + (w.prix||0), 0);
+    const totalSolde = state.comptes.reduce((s, c) => s + soldeCompte(c), 0);
+    if (totalBudget > 0 && totalSolde > 0) {
+      const canAfford = pending.filter(w => (w.prix||0) <= totalSolde && (w.prix||0) > 0);
+      const cannotAfford = pending.filter(w => (w.prix||0) > totalSolde);
+      if (canAfford.length) {
+        recs.push({
+          icon: "💰", badge: "saving",
+          title: `Vous pouvez acheter ${canAfford.length} article(s) maintenant`,
+          desc: `Solde total disponible : ${formatMoney(totalSolde)}.<br>` +
+            canAfford.slice(0,3).map(w => `• ${escapeHtml(w.desc)} (${formatMoney(w.prix||0)})`).join("<br>"),
+        });
+      }
+      if (cannotAfford.length) {
+        const needed = cannotAfford.reduce((s, w) => s + (w.prix||0), 0);
+        recs.push({
+          icon: "🎯", badge: "saving",
+          title: `Économisez ${formatMoney(needed - totalSolde)} pour tout acheter`,
+          desc: `${cannotAfford.length} article(s) dépassent votre solde actuel (${formatMoney(totalSolde)}).`,
+        });
+      }
+    }
+
+    // 4. Articles sans prix
+    const noPrix = pending.filter(w => !w.prix || w.prix === 0);
+    if (noPrix.length > 1) {
+      recs.push({
+        icon: "💡", badge: null,
+        title: `${noPrix.length} articles sans prix estimé`,
+        desc: `Ajoutez un prix pour mieux planifier votre budget d'achats.`,
+      });
+    }
+
+    // 5. Articles sans date
+    const noDate = pending.filter(w => !w.date);
+    if (noDate.length > 2) {
+      recs.push({
+        icon: "📌", badge: null,
+        title: `${noDate.length} articles sans date souhaitée`,
+        desc: `Planifiez vos achats en ajoutant une date cible à chaque article.`,
+      });
+    }
+
+    if (!recs.length) { el.innerHTML = ""; return; }
+
+    const badgeColors = { urgent: "urgent", soon: "soon", saving: "saving" };
+    el.innerHTML = `
+      <div class="panel">
+        <div class="panel-title"><span class="icon">💡</span> Recommandations d'achat</div>
+        ${recs.map(r => `
+          <div class="rec-card">
+            <span class="rec-icon">${r.icon}</span>
+            <div class="rec-body">
+              <div class="rec-title">${r.title}${r.badge ? `<span class="rec-badge ${r.badge}">${r.badge === "urgent" ? "Urgent" : r.badge === "soon" ? "Bientôt" : "Économies"}</span>` : ""}</div>
+              <div class="rec-desc">${r.desc}</div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  }
+
   function renderWishlist() {
     if (!byId("page-wishlist")) return;
 
     // Refresh category select in form
-    fillSelect(byId("wl-cat"), state.categories, "nom", "id", false);
-    fillSelect(byId("wl-f-cat"), state.categories, "nom", "id", "Toutes");
+    fillSelect(byId("wl-cat"), state.wishlistCategories || [], "nom", "id", false);
+    fillSelect(byId("wl-f-cat"), state.wishlistCategories || [], "nom", "id", "Toutes");
 
     const items = filteredWishlist();
     const all = state.wishlist || [];
@@ -2893,7 +3068,8 @@ document.addEventListener("DOMContentLoaded", () => {
     emptyMsg.style.display = "none";
 
     container.innerHTML = sorted.map(w => {
-      const catNom = nomCategorie(w.categorieId);
+      const catNom = nomWlCategorie(w.categorieId) || nomCategorie(w.categorieId);
+      const catIcon = iconWlCategorie(w.categorieId);
       const dateStr = w.date ? new Date(w.date).toLocaleDateString("fr-FR") : "";
       const color = PRIORITY_COLORS[w.priority] || "var(--accent)";
       return `<div class="wl-card ${w.done ? "done" : ""}" style="--wl-color:${color}" data-wl-id="${w.id}">
@@ -2903,7 +3079,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="wl-meta">
           <span class="wl-badge-priority ${w.priority}">${PRIORITY_LABELS[w.priority]}</span>
-          ${catNom !== "—" ? `<span class="badge">${escapeHtml(catNom)}</span>` : ""}
+          ${catNom && catNom !== "—" ? `<span class="badge">${escapeHtml(catIcon)} ${escapeHtml(catNom)}</span>` : ""}
           ${dateStr ? `<span>📅 ${dateStr}</span>` : ""}
         </div>
         ${w.notes ? `<div class="wl-notes">${escapeHtml(w.notes)}</div>` : ""}
@@ -2934,7 +3110,93 @@ document.addEventListener("DOMContentLoaded", () => {
     container.querySelectorAll("[data-wl-edit]").forEach(btn => {
       btn.addEventListener("click", () => openEditWishlist(btn.getAttribute("data-wl-edit")));
     });
+
+    // ✅ FIX: render recommendations after cards
+    renderWishlistRecommendations();
   }
+
+  // ── WISHLIST CATEGORIES MANAGEMENT ─────────────────────────────────────
+  function renderWlCategories() {
+    const list = byId("list-wlcats");
+    if (!list) return;
+    const cats = state.wishlistCategories || [];
+    if (!cats.length) {
+      list.innerHTML = `<li style="padding:10px 4px;color:var(--muted);font-size:12px">Aucune catégorie. Ajoutez-en une ci-dessus.</li>`;
+      return;
+    }
+    list.innerHTML = cats.map(c => `
+      <li class="ref-item">
+        <span style="font-size:20px">${escapeHtml(c.icon)}</span>
+        <span style="flex:1;font-size:13.5px">${escapeHtml(c.nom)}</span>
+        <div class="ref-actions">
+          <button class="btn btn-sm btn-edit btn-edit-wlcat" data-id="${escapeHtml(c.id)}" data-nom="${escapeHtml(c.nom)}" data-icon="${escapeHtml(c.icon)}" title="Modifier">✏️</button>
+          <button class="btn btn-sm btn-danger btn-del-wlcat" data-id="${escapeHtml(c.id)}" title="Supprimer">🗑️</button>
+        </div>
+      </li>`).join("");
+
+    // Delete
+    list.querySelectorAll(".btn-del-wlcat").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const usedInWl = (state.wishlist || []).some(w => w.categorieId === id);
+        if (usedInWl) {
+          confirmAction(`Cette catégorie est utilisée dans ${(state.wishlist||[]).filter(w=>w.categorieId===id).length} article(s) wishlist. Supprimer quand même ?`, () => {
+            state.wishlistCategories = state.wishlistCategories.filter(c => c.id !== id);
+            saveState(); renderWlCategories(); renderWishlist();
+          });
+        } else {
+          confirmAction("Supprimer cette catégorie wishlist ?", () => {
+            state.wishlistCategories = state.wishlistCategories.filter(c => c.id !== id);
+            saveState(); renderWlCategories(); renderWishlist();
+          });
+        }
+      });
+    });
+
+    // Edit inline
+    list.querySelectorAll(".btn-edit-wlcat").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const cat = (state.wishlistCategories || []).find(c => c.id === id);
+        if (!cat) return;
+        // Build edit row inline
+        const li = btn.closest("li");
+        li.innerHTML = `
+          <input type="text" class="ewlcat-nom" value="${escapeHtml(cat.nom)}" style="flex:1;background:var(--s2);border:1px solid var(--accent);color:var(--text);padding:5px 8px;border-radius:6px;font-size:13px;outline:none"/>
+          <input type="text" class="ewlcat-icon" value="${escapeHtml(cat.icon)}" maxlength="4" style="width:52px;background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:5px;border-radius:6px;font-size:16px;text-align:center;outline:none"/>
+          <div class="ref-actions">
+            <button class="btn btn-sm btn-primary ewlcat-save">✓</button>
+            <button class="btn btn-sm ewlcat-cancel">✕</button>
+          </div>`;
+        li.querySelector(".ewlcat-save").addEventListener("click", () => {
+          const nom = li.querySelector(".ewlcat-nom").value.trim();
+          const icon = li.querySelector(".ewlcat-icon").value.trim() || "🛍️";
+          if (!nom) return;
+          cat.nom = nom; cat.icon = icon;
+          saveState(); renderWlCategories(); renderWishlist();
+        });
+        li.querySelector(".ewlcat-cancel").addEventListener("click", () => renderWlCategories());
+        li.querySelector(".ewlcat-nom").focus();
+      });
+    });
+  }
+
+  // Add wishlist category
+  byId("btn-add-wlcat")?.addEventListener("click", () => {
+    const nom = byId("new-wlcat-nom").value.trim();
+    if (!nom) { byId("new-wlcat-nom").focus(); return; }
+    const icon = byId("new-wlcat-icon").value.trim() || "🛍️";
+    if (!state.wishlistCategories) state.wishlistCategories = [];
+    const exists = state.wishlistCategories.some(c => c.nom.toLowerCase() === nom.toLowerCase());
+    if (exists) { byId("new-wlcat-nom").select(); return; }
+    state.wishlistCategories.push({ id: uid(), nom, icon, color: state.wishlistCategories.length % 8 });
+    byId("new-wlcat-nom").value = "";
+    byId("new-wlcat-icon").value = "";
+    saveState(); renderWlCategories(); renderWishlist();
+  });
+  byId("new-wlcat-nom")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") byId("btn-add-wlcat").click();
+  });
 
   // Add wishlist item
   byId("btn-add-wl")?.addEventListener("click", () => {
@@ -3018,7 +3280,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.classList.add("hidden");
       });
     }
-    fillSelect(byId("ewl-cat"), state.categories, "nom", "id", false);
+    fillSelect(byId("ewl-cat"), state.wishlistCategories || [], "nom", "id", false);
     byId("ewl-desc").value = w.desc;
     byId("ewl-prix").value = w.prix || "";
     byId("ewl-cat").value = w.categorieId;
@@ -3121,16 +3383,38 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnDeleteAll = byId("btn-delete-all");
   if (btnDeleteAll) {
     btnDeleteAll.addEventListener("click", () => {
-      confirmAction("⚠️ Supprimer TOUTES les données ? Cette action est irréversible.", () => {
-        state.depenses = [];
-        state.operations = [];
+      confirmAction("⚠️ Supprimer TOUTES les données (dépenses, comptes, wishlist…) ? Cette action est irréversible.", async () => {
+        // Clear ALL data including wishlist
+        state.depenses       = [];
+        state.operations     = [];
+        state.wishlist             = [];
+        state.wishlistCategories   = defaultState().wishlistCategories;
+        state.budgetMensuelGlobal = 0;
+        state.budgetsCategorie    = {};
         state.personnes = defaultState().personnes;
         state.categories = defaultState().categories;
-        state.comptes = defaultState().comptes;
-        state.budgetMensuelGlobal = 0;
-        state.budgetsCategorie = {};
-        saveState();
+        state.comptes    = defaultState().comptes;
+
+        // Force save to localStorage immediately and synchronously
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+        // Wait for async saveState (CSV file write if linked)
+        await saveState();
+
+        // Re-render everything
         renderAll();
+        renderWishlist();
+
+        // Clear wishlist UI directly as safety net
+        const wlCards = byId("wl-cards");
+        if (wlCards) wlCards.innerHTML = "";
+        const wlKpi = byId("wl-kpi");
+        if (wlKpi) wlKpi.innerHTML = "";
+        const wlEmpty = byId("wl-empty");
+        if (wlEmpty) wlEmpty.style.display = "block";
+        const wlRec = byId("wl-recommendations");
+        if (wlRec) wlRec.innerHTML = "";
+
         const hint = byId("delete-all-hint");
         if (hint) { hint.style.display = "inline"; setTimeout(() => hint.style.display = "none", 3000); }
       });
