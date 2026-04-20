@@ -774,6 +774,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const o = JSON.parse(raw);
       if (o && o.version === 2 && Array.isArray(o.depenses)) state = o;
       else state = defaultState();
+      // Ensure fields added after initial release always exist
+      if (!Array.isArray(state.wishlist)) state.wishlist = [];
+      if (!Array.isArray(state.operations)) state.operations = [];
     } catch {
       state = defaultState();
     }
@@ -815,14 +818,12 @@ document.addEventListener("DOMContentLoaded", () => {
         lines.push(`${o.id},${o.date},${o.compteId},${o.type},${o.montant},${csvEsc(o.motif||"")}`);
       });
     }
-    if (state.wishlist && state.wishlist.length) {
-      lines.push("");
-      lines.push("##WISHLIST");
-      lines.push("id,desc,prix,categorieId,priority,date,url,notes,done,createdAt");
-      state.wishlist.forEach((w) => {
-        lines.push([w.id, csvEsc(w.desc), w.prix||0, w.categorieId||"", csvEsc(w.priority), w.date||"", csvEsc(w.url||""), csvEsc(w.notes||""), w.done?1:0, w.createdAt||""].join(","));
-      });
-    }
+    lines.push("");
+    lines.push("##WISHLIST");
+    lines.push("id,desc,prix,categorieId,priority,date,url,notes,done,createdAt");
+    (state.wishlist || []).forEach((w) => {
+      lines.push([w.id, csvEsc(w.desc), w.prix||0, w.categorieId||"", csvEsc(w.priority), w.date||"", csvEsc(w.url||""), csvEsc(w.notes||""), w.done?1:0, w.createdAt||""].join(","));
+    });
     return "\ufeff" + lines.join("\n");
   }
 
@@ -1916,6 +1917,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Page-specific renders
     if (activeId === "page-dashboard") renderDashboard();
     if (activeId === "page-analyses") renderAnalysesCharts();
+    if (activeId === "page-wishlist") renderWishlist();
 
     // Always update dashboard KPI cards even when on another page
     // so next time user goes to dashboard it's fresh
@@ -2206,6 +2208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.budgetsCategorie = budgetsCat;
     state.depenses = depenses;
     state.operations = operations;
+    state.wishlist = wishlist.length ? wishlist : (state.wishlist || []);
     state.version = 2;
     saveState();
     byId("global-error").textContent = "";
