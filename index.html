@@ -2450,24 +2450,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const granEl = byId("ana-granularity");
   if (granEl) granEl.addEventListener("change", () => renderAnalysesCharts());
 
-  // ✅ FIX 8: loader status + hide after data loads
   const loaderStatus = document.getElementById("loader-status");
-  if (loaderStatus) loaderStatus.textContent = "Initialisation…";
-  loadState();
-  if (loaderStatus) loaderStatus.textContent = "Rendu de l'interface…";
-  renderAll();
-  requestAnimationFrame(() => {
+  const appLoader = document.getElementById("app-loader");
+
+  function hideLoader() {
+    if (appLoader) {
+      appLoader.style.opacity = "0";
+      setTimeout(() => { appLoader.style.display = "none"; }, 400);
+    }
+  }
+
+  try {
+    if (loaderStatus) loaderStatus.textContent = "Initialisation…";
+    loadState();
+    if (loaderStatus) loaderStatus.textContent = "Rendu de l\'interface…";
+    renderAll();
+  } catch(e) {
+    console.error("FinTrack init error:", e);
+  } finally {
+    // ALWAYS hide loader, even if renderAll() crashes
     requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-      resizeVisibleCharts();
-      // Hide loader with fade
-      const loader = document.getElementById("app-loader");
-      if (loader) {
-        loader.style.opacity = "0";
-        setTimeout(() => { loader.style.display = "none"; }, 420);
-      }
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        try { resizeVisibleCharts(); } catch(e) {}
+        hideLoader();
+      });
     });
-  });
+  }
 
   // ── CONFIRM DIALOG ──────────────────────────────────────────────────────
   let _confirmCb = null;
@@ -3430,4 +3439,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  // ── THEME TOGGLE ─────────────────
+  // ── THEME TOGGLE ──────────────────────────────────────────────────────
+  const btnTheme = byId("btn-theme-toggle");
+  const savedTheme = localStorage.getItem("fintrack-theme") || "dark";
+  if (savedTheme === "light") {
+    document.body.classList.add("light");
+    if (btnTheme) btnTheme.textContent = "☀️";
+  }
+  if (btnTheme) {
+    btnTheme.addEventListener("click", () => {
+      const isLight = document.body.classList.toggle("light");
+      btnTheme.textContent = isLight ? "☀️" : "🌙";
+      localStorage.setItem("fintrack-theme", isLight ? "light" : "dark");
+    });
+  }
+
+});
+
+    
+
+</script>
+</body>
+</html>
