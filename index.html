@@ -249,6 +249,10 @@ input[type=file]{display:none}
 .rec-badge.urgent{background:var(--red-d);color:var(--red)}
 .rec-badge.soon{background:var(--amber-d);color:var(--amber)}
 .rec-badge.saving{background:var(--green-d);color:var(--green)}
+/* TRANSFER TABS */
+.tab-hist { opacity: .6; }
+.tab-hist.active { opacity: 1; background: var(--accent-d); border-color: var(--accent); color: var(--accent); }
+
 /* BUDGET ROWS */
 .budget-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .budget-row:last-child{border-bottom:none}
@@ -475,9 +479,31 @@ input[type=file]{display:none}
         <button class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
         <span id="op-hint" class="success-msg" style="display:none;margin-left:12px"></span>
       </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🔀</span> Transfert entre comptes</div>
+        <p class="hint">Déplace de l'argent d'un compte vers un autre. Les deux soldes sont mis à jour.</p>
+        <div class="form-grid" style="max-width:700px">
+          <div class="field"><label>De (compte source)</label><select id="transfer-from"></select></div>
+          <div class="field"><label>Vers (compte cible)</label><select id="transfer-to"></select></div>
+          <div class="field"><label>Montant (TND)</label><input type="number" id="transfer-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
+          <div class="field"><label>Date</label><input type="date" id="transfer-date"/></div>
+          <div class="field" style="grid-column:1/-1"><label>Motif</label><input type="text" id="transfer-motif" placeholder="Ex: virement épargne, retrait espèces…"/></div>
+        </div>
+        <button class="btn btn-primary" id="btn-apply-transfer">🔀 Effectuer le transfert</button>
+        <span id="transfer-hint" class="success-msg" style="display:none;margin-left:12px"></span>
+      </div>
       <div class="panel" style="margin-bottom:0">
-        <div class="panel-title"><span class="icon">📋</span> Historique des opérations</div>
-        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-operations"></tbody></table></div>
+        <div class="panel-title"><span class="icon">📋</span> Historique des opérations & transferts</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn btn-sm tab-hist active" data-hist="ops">Opérations manuelles</button>
+          <button class="btn btn-sm tab-hist" data-hist="transfers">Transferts</button>
+        </div>
+        <div id="hist-ops">
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-operations"></tbody></table></div>
+        </div>
+        <div id="hist-transfers" style="display:none">
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>De</th><th>Vers</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-transfers"></tbody></table></div>
+        </div>
       </div>
     </section>
 
@@ -803,6 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
       operations: [],
       recurringDue: [],
       wishlist: [],
+      transfers: [],
       wishlistCategories: [
         { id: "wlcat_mode",    nom: "Mode & Vêtements",   icon: "👗", color: 0 },
         { id: "wlcat_tech",    nom: "Tech & Électronique", icon: "💻", color: 1 },
@@ -832,6 +859,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Ensure fields added after initial release always exist
       if (!Array.isArray(state.wishlist)) state.wishlist = [];
       if (!Array.isArray(state.operations)) state.operations = [];
+      if (!Array.isArray(state.transfers)) state.transfers = [];
       if (!Array.isArray(state.wishlistCategories) || state.wishlistCategories.length === 0)
         state.wishlistCategories = defaultState().wishlistCategories;
     } catch {
@@ -873,6 +901,14 @@ document.addEventListener("DOMContentLoaded", () => {
       lines.push("id,date,compteId,type,montant,motif");
       state.operations.forEach((o) => {
         lines.push(`${o.id},${o.date},${o.compteId},${o.type},${o.montant},${csvEsc(o.motif||"")}`);
+      });
+    }
+    if (state.transfers && state.transfers.length) {
+      lines.push("");
+      lines.push("##TRANSFERS");
+      lines.push("id,fromCompteId,toCompteId,montant,date,motif");
+      state.transfers.forEach((t) => {
+        lines.push([t.id, t.fromCompteId, t.toCompteId, t.montant, t.date||"", csvEsc(t.motif||"")].join(","));
       });
     }
     lines.push("");
@@ -1021,7 +1057,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function soldeCompte(c) {
     const ops = (state.operations || []).filter(o => o.compteId === c.id);
     const opsBalance = ops.reduce((s, o) => s + (o.type === 'credit' ? o.montant : -o.montant), 0);
-    return c.soldeInitial - totalDepensesSurCompte(c.id) + opsBalance;
+    // Transfers: money out when source, money in when target
+    const transfers = state.transfers || [];
+    const transferBalance = transfers.reduce((s, t) => {
+      if (t.fromCompteId === c.id) return s - t.montant;
+      if (t.toCompteId === c.id)   return s + t.montant;
+      return s;
+    }, 0);
+    return c.soldeInitial - totalDepensesSurCompte(c.id) + opsBalance + transferBalance;
   }
 
   function monthKeyFromIso(iso) {
@@ -1699,8 +1742,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // Fill op-compte select
     fillSelect(byId("op-compte"), state.comptes, "nom", "id", false);
-    // Render operations history
+    // Fill transfer selects
+    fillSelect(byId("transfer-from"), state.comptes, "nom", "id", false);
+    fillSelect(byId("transfer-to"),   state.comptes, "nom", "id", false);
+    // Render histories
     renderOperationsTable();
+    renderTransfersTable();
   }
 
   function renderOperationsTable() {
@@ -2199,6 +2246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const wishlist = [];
     const wishlistCats = [];
     const operations = [];
+    const transfers = [];
 
     for (const line of lines) {
       const t = line.trim();
@@ -2207,12 +2255,18 @@ document.addEventListener("DOMContentLoaded", () => {
         mode = t.slice(2).toUpperCase();
         continue;
       }
+      // Skip known header rows
+      const tl = t.toLowerCase();
       if (
-        t.toLowerCase() === "id,nom" ||
-        t.toLowerCase() === "id,nom,type,solde_initial" ||
-        t.toLowerCase() === "type,clef,valeur" ||
-        t.toLowerCase() === "id,date,categorieid,personneid,compteid,description,montant,moyen" ||
-        t.toLowerCase().startsWith("id,date,categorieid,personneid,compteid")
+        tl === "id,nom" ||
+        tl === "id,nom,type,solde_initial" ||
+        tl === "type,clef,valeur" ||
+        tl === "id,date,categorieid,personneid,compteid,description,montant,moyen" ||
+        tl.startsWith("id,date,categorieid,personneid,compteid") ||
+        tl === "id,date,compteid,type,montant,motif" ||
+        tl === "id,desc,prix,categorieid,priority,date,url,notes,done,createdat" ||
+        tl === "id,nom,icon,color" ||
+        tl === "id,fromcompteid,tocompteid,montant,date,motif"
       ) {
         continue;
       }
@@ -2257,6 +2311,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const p = splitCsvLineFull(line);
         if (p.length >= 5 && p[0] && p[0] !== "id")
           operations.push({ id: p[0], date: p[1], compteId: p[2], type: p[3], montant: Number(p[4])||0, motif: p[5]||"" });
+      } else if (mode === "TRANSFERS") {
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 4 && p[0] && p[0] !== "id")
+          transfers.push({ id: p[0], fromCompteId: p[1], toCompteId: p[2], montant: Number(p[3])||0, date: p[4]||"", motif: p[5]||"" });
       }
     }
     // (wishlist and operations are now parsed inside the main loop above)
@@ -2270,6 +2329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.budgetsCategorie = budgetsCat;
     state.depenses = depenses;
     state.operations = operations;
+    state.transfers = transfers.length ? transfers : [];
     state.wishlist = wishlist.length ? wishlist : [];
     if (wishlistCats.length) state.wishlistCategories = wishlistCats;
     state.version = 2;
@@ -3451,6 +3511,89 @@ document.addEventListener("DOMContentLoaded", () => {
       const isLight = document.body.classList.toggle("light");
       btnTheme.textContent = isLight ? "☀️" : "🌙";
       localStorage.setItem("fintrack-theme", isLight ? "light" : "dark");
+    });
+  }
+
+
+  // ── TRANSFERS ──────────────────────────────────────────────────────────────
+
+  function renderTransfersTable() {
+    const tb = byId("tbody-transfers");
+    if (!tb) return;
+    const transfers = (state.transfers || []).slice().reverse();
+    if (!transfers.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty-row">Aucun transfert effectué.</td></tr>`;
+      return;
+    }
+    tb.innerHTML = transfers.map(t => {
+      const fromNom = state.comptes.find(c => c.id === t.fromCompteId)?.nom || t.fromCompteId;
+      const toNom   = state.comptes.find(c => c.id === t.toCompteId)?.nom   || t.toCompteId;
+      const date = t.date ? new Date(t.date).toLocaleDateString("fr-FR") : "—";
+      return `<tr>
+        <td>${date}</td>
+        <td><span class="badge">${escapeHtml(fromNom)}</span></td>
+        <td><span class="badge" style="background:var(--green-d);color:var(--green)">${escapeHtml(toNom)}</span></td>
+        <td class="num" style="color:var(--accent)">${formatMoney(t.montant)}</td>
+        <td>${escapeHtml(t.motif || "—")}</td>
+        <td><button class="btn btn-sm btn-danger" data-del-transfer="${t.id}">🗑️</button></td>
+      </tr>`;
+    }).join("");
+    tb.querySelectorAll("[data-del-transfer]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        confirmAction("Supprimer ce transfert ?", () => {
+          state.transfers = (state.transfers||[]).filter(t => t.id !== btn.getAttribute("data-del-transfer"));
+          saveState(); renderComptesTable();
+        });
+      });
+    });
+  }
+
+  // Tab switching ops/transfers
+  document.querySelectorAll(".tab-hist").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-hist").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const hist = btn.getAttribute("data-hist");
+      byId("hist-ops").style.display      = hist === "ops" ? "" : "none";
+      byId("hist-transfers").style.display = hist === "transfers" ? "" : "none";
+    });
+  });
+
+  // Apply transfer button
+  const btnTransfer = byId("btn-apply-transfer");
+  if (btnTransfer) {
+    // Init date field to today
+    const tDateEl = byId("transfer-date");
+    if (tDateEl && !tDateEl.value) tDateEl.value = new Date().toISOString().slice(0,10);
+
+    btnTransfer.addEventListener("click", () => {
+      const fromId  = byId("transfer-from").value;
+      const toId    = byId("transfer-to").value;
+      const montant = parseFloat(byId("transfer-montant").value);
+      const date    = byId("transfer-date").value || new Date().toISOString().slice(0,10);
+      const motif   = byId("transfer-motif").value.trim();
+      const hint    = byId("transfer-hint");
+
+      if (!fromId || !toId) { hint.style.display="inline"; hint.style.color="var(--red)"; hint.textContent="⚠️ Choisissez les deux comptes."; return; }
+      if (fromId === toId)  { hint.style.display="inline"; hint.style.color="var(--red)"; hint.textContent="⚠️ Les comptes doivent être différents."; return; }
+      if (!montant || montant <= 0) { hint.style.display="inline"; hint.style.color="var(--red)"; hint.textContent="⚠️ Montant invalide."; return; }
+
+      const fromNom = state.comptes.find(c => c.id === fromId)?.nom || "";
+      const toNom   = state.comptes.find(c => c.id === toId)?.nom   || "";
+
+      if (!state.transfers) state.transfers = [];
+      state.transfers.push({ id: uid(), fromCompteId: fromId, toCompteId: toId, montant, date: date+"T12:00:00.000Z", motif });
+
+      // Reset form
+      byId("transfer-montant").value = "";
+      byId("transfer-motif").value   = "";
+
+      saveState();
+      renderComptesTable();
+
+      hint.style.display = "inline"; hint.style.color = "var(--green)";
+      hint.textContent = `✅ ${formatMoney(montant)} transféré de « ${fromNom} » vers « ${toNom} »`;
+      setTimeout(() => hint.style.display = "none", 4000);
     });
   }
 
