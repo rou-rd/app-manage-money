@@ -792,6 +792,9 @@ document.addEventListener("DOMContentLoaded", () => {
 /* global Chart */
 document.addEventListener("DOMContentLoaded", () => {
   const STORAGE_KEY = "gestion_depenses_v2";
+
+  const PRIORITY_COLORS = { haute: 'var(--red)', moyenne: 'var(--amber)', basse: 'var(--green)' };
+  const PRIORITY_LABELS = { haute: '🔴 Haute', moyenne: '🟡 Moyenne', basse: '🟢 Basse' };
   /** @type {FileSystemFileHandle|null} */
   let csvFileHandle = null;
 
@@ -2036,11 +2039,11 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBudgetsPage();
     renderReferentiels();
     renderWlCategories();
+    renderWishlist();      // always render so cards are ready when page opens
 
     // Page-specific renders
     if (activeId === "page-dashboard") renderDashboard();
     if (activeId === "page-analyses") renderAnalysesCharts();
-    if (activeId === "page-wishlist") renderWishlist();
 
     // Always update dashboard KPI cards even when on another page
     // so next time user goes to dashboard it's fresh
@@ -2962,8 +2965,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── WISHLIST ──────────────────────────────────────────────────────────────
 
-  const PRIORITY_COLORS = { haute: 'var(--red)', moyenne: 'var(--amber)', basse: 'var(--green)' };
-  const PRIORITY_LABELS = { haute: '🔴 Haute', moyenne: '🟡 Moyenne', basse: '🟢 Basse' };
+
 
   function filteredWishlist() {
     const q = (byId("wl-f-text")?.value || "").trim().toLowerCase();
