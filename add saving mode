@@ -266,6 +266,43 @@ input[type=file]{display:none}
 .text-green{color:var(--green)}.text-red{color:var(--red)}.text-amber{color:var(--amber)}
 .mono{font-family:var(--mono)}
 
+/* SAVING PLANNER */
+.sp-budget-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.sp-budget-input{font-size:24px;font-weight:700;font-family:var(--mono);width:170px;background:var(--s2);border:2px solid var(--accent);color:var(--accent);padding:10px 14px;border-radius:var(--r2);outline:none;text-align:right;transition:box-shadow .15s}
+.sp-budget-input:focus{box-shadow:0 0 0 3px var(--accent-d)}
+.sp-kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.sp-formula-box{background:var(--s2);border-radius:var(--r2);padding:13px 16px;font-size:12px;color:var(--muted2);line-height:1.8;border-left:3px solid var(--accent);margin-bottom:14px}
+.sp-formula-box code{font-family:var(--mono);color:var(--cyan);font-size:11.5px;background:rgba(34,211,238,.08);padding:1px 5px;border-radius:4px}
+.sp-table-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--border);margin-bottom:0}
+.sp-table{width:100%;border-collapse:collapse;font-size:13px}
+.sp-table thead{background:var(--s2)}
+.sp-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+.sp-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.sp-table tbody tr:last-child td{border-bottom:none}
+.sp-table tbody tr:hover{background:rgba(79,143,255,.04)}
+.sp-num{text-align:right;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.sp-mini-inp{width:82px;text-align:right;background:var(--s3);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:var(--r);font-family:var(--mono);font-size:12.5px;outline:none;transition:border-color .15s}
+.sp-mini-inp:focus{border-color:var(--accent);background:var(--s2)}
+.sp-mini-inp.locked{border-color:var(--amber)!important;background:var(--amber-d)!important;color:var(--amber)}
+.sp-prog{background:var(--s3);border-radius:99px;height:6px;overflow:hidden;min-width:80px;margin-top:4px}
+.sp-prog-fill{height:100%;border-radius:99px;transition:width .45s var(--ease)}
+.sp-month-pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700;font-family:var(--mono)}
+.sp-lock-btn{border:none;background:none;cursor:pointer;font-size:16px;padding:3px 6px;border-radius:var(--r);transition:background .15s;line-height:1}
+.sp-lock-btn:hover{background:var(--s3)}
+.sp-tl-item{display:flex;align-items:flex-start;gap:14px;padding:13px 0;border-bottom:1px solid var(--border)}
+.sp-tl-item:last-child{border-bottom:none}
+.sp-tl-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.sp-tl-body{flex:1;min-width:0}
+.sp-tl-title{font-size:13.5px;font-weight:600;margin-bottom:3px}
+.sp-tl-meta{font-size:11.5px;color:var(--muted2);line-height:1.6}
+.sp-tl-date{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--cyan);white-space:nowrap;padding-top:4px}
+.sp-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px}
+@media(max-width:720px){
+  .sp-table th,.sp-table td{padding:7px 8px}
+  .sp-table{font-size:12px}
+  .sp-mini-inp{width:65px}
+}
+
 /* RESPONSIVE */
 @media(max-width:900px){.chart-grid,.chart-grid.cols3,.two-col{grid-template-columns:1fr}}
 @media(max-width:720px){
@@ -320,6 +357,7 @@ input[type=file]{display:none}
     <button class="nav-btn" data-page="fichiers"><span class="nav-icon">📁</span><span class="nav-label">Fichiers & Import</span></button>
     <div class="nav-section">Extra</div>
     <button class="nav-btn" data-page="wishlist"><span class="nav-icon">🛒</span><span class="nav-label">Liste d'achats</span></button>
+    <button class="nav-btn" data-page="saving-planner"><span class="nav-icon">🧮</span><span class="nav-label">Planificateur épargne</span></button>
   </div>
   <div class="nav-footer">
     <button class="btn-save-nav" id="btn-save-local"><span class="nav-icon">💾</span><span class="nav-label">Enregistrer</span></button>
@@ -662,6 +700,60 @@ input[type=file]{display:none}
       <div id="wl-recommendations" style="margin-top:8px"></div>
     </section>
 
+    <!-- SAVING PLANNER -->
+    <section id="page-saving-planner" class="page">
+
+      <!-- Budget input -->
+      <div class="panel">
+        <div class="panel-title"><span class="icon">💰</span> Capacité d'épargne mensuelle</div>
+        <p class="hint">Indiquez combien vous pouvez mettre de côté chaque mois. Le montant sera réparti entre vos articles selon leur priorité.</p>
+        <div class="sp-budget-bar">
+          <div>
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted2);display:block;margin-bottom:6px">Budget mensuel (TND)</label>
+            <input type="number" id="sp-monthly-budget" class="sp-budget-input" min="0" step="1" placeholder="300"/>
+          </div>
+          <div style="font-size:12.5px;color:var(--muted2);line-height:1.7;max-width:320px">
+            🔴 Haute → <strong style="color:var(--text)">×3</strong> &nbsp;
+            🟡 Moyenne → <strong style="color:var(--text)">×2</strong> &nbsp;
+            🟢 Basse → <strong style="color:var(--text)">×1</strong><br>
+            Verrouillez 🔒 une ligne pour fixer son allocation manuellement.
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="sp-kpi-row" id="sp-kpi-row"></div>
+
+      <!-- Allocation table -->
+      <div class="panel" style="padding-bottom:4px">
+        <div class="panel-title"><span class="icon">📊</span> Allocation par article</div>
+        <div class="sp-formula-box" id="sp-formula-box">Définissez un budget mensuel ci-dessus pour calculer les allocations.</div>
+        <div class="sp-table-wrap">
+          <table class="sp-table">
+            <thead><tr>
+              <th>Article</th>
+              <th>Priorité</th>
+              <th style="text-align:right">Prix</th>
+              <th style="text-align:right">Économisé</th>
+              <th style="text-align:right">Reste</th>
+              <th>Progression</th>
+              <th style="text-align:right">Alloc/mois</th>
+              <th style="text-align:center">Mois</th>
+              <th style="text-align:center">🔒</th>
+            </tr></thead>
+            <tbody id="sp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="panel" id="sp-timeline-panel" style="display:none">
+        <div class="panel-title"><span class="icon">🗓️</span> Calendrier d'achats estimé</div>
+        <div id="sp-timeline"></div>
+      </div>
+
+    </section>
+
   </div>
 </div>
 
@@ -762,6 +854,8 @@ document.addEventListener("DOMContentLoaded", () => {
     budgets:      ["Budgets",            "Plafonds mensuels globaux et par catégorie"],
     referentiels: ["Référentiels",       "Gestion des personnes et catégories"],
     fichiers:     ["Fichiers & Import",  "Import/export CSV et synchronisation"],
+    wishlist:     ["Liste d'achats",       "Planifiez et suivez vos achats prévus"],
+    "saving-planner": ["Planificateur d'épargne", "Répartissez votre budget mensuel vers vos achats"],
   };
 
   function showPage(name) {
@@ -779,6 +873,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (name === "analyses") { try { renderAnalysesCharts(); } catch(e) {} }
     if (name === "dashboard") { try { renderDashboard(); } catch(e) {} }
     if (name === "wishlist") { try { renderWishlist(); } catch(e) {} }
+    if (name === "saving-planner") { try { renderSavingPlanner(); } catch(e) {} }
     sidebar.classList.remove("open");
     overlay.classList.remove("show");
   }
@@ -833,6 +928,8 @@ document.addEventListener("DOMContentLoaded", () => {
       recurringDue: [],
       wishlist: [],
       transfers: [],
+      spMonthlyBudget: 0,
+      spLocks: {},
       wishlistCategories: [
         { id: "wlcat_mode",    nom: "Mode & Vêtements",   icon: "👗", color: 0 },
         { id: "wlcat_tech",    nom: "Tech & Électronique", icon: "💻", color: 1 },
@@ -865,6 +962,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!Array.isArray(state.transfers)) state.transfers = [];
       if (!Array.isArray(state.wishlistCategories) || state.wishlistCategories.length === 0)
         state.wishlistCategories = defaultState().wishlistCategories;
+      if (typeof state.spMonthlyBudget !== 'number') state.spMonthlyBudget = 0;
+      if (!state.spLocks || typeof state.spLocks !== 'object') state.spLocks = {};
     } catch {
       state = defaultState();
     }
@@ -3501,7 +3600,224 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
+
+  // ── SAVING PLANNER ──────────────────────────────────────────────────────────
+
+  const SP_WEIGHTS = { haute: 3, moyenne: 2, basse: 1 };
+
+  function spCompute() {
+    if (!state.spLocks) state.spLocks = {};
+    const budget = state.spMonthlyBudget || 0;
+    const active = (state.wishlist || []).filter(w => !w.done && (w.prix || 0) > 0);
+    const locked = active.filter(w => state.spLocks[w.id] != null);
+    const free   = active.filter(w => state.spLocks[w.id] == null);
+    const lockedTotal = locked.reduce((s, w) => s + (state.spLocks[w.id] || 0), 0);
+    const freeBudget  = Math.max(0, budget - lockedTotal);
+    const totalWeight = free.reduce((s, w) => s + (SP_WEIGHTS[w.priority] || 1), 0);
+    const results = active.map(w => {
+      const saved     = w.savedAmount || 0;
+      const prix      = w.prix || 0;
+      const remaining = Math.max(0, prix - saved);
+      const pct       = prix > 0 ? Math.min(100, (saved / prix) * 100) : 0;
+      const alloc     = state.spLocks[w.id] != null
+        ? state.spLocks[w.id]
+        : (totalWeight > 0 ? (freeBudget * (SP_WEIGHTS[w.priority] || 1)) / totalWeight : 0);
+      const months    = alloc > 0.01 ? Math.ceil(remaining / alloc) : Infinity;
+      return { ...w, _saved: saved, _remaining: remaining, _pct: pct, _alloc: alloc, _months: months };
+    });
+    return { results, budget, lockedTotal, freeBudget, totalWeight };
+  }
+
+  function renderSavingPlanner() {
+    if (!byId("page-saving-planner")) return;
+
+    // Sync budget input without infinite loop
+    const budgetEl = byId("sp-monthly-budget");
+    if (budgetEl && document.activeElement !== budgetEl)
+      budgetEl.value = state.spMonthlyBudget || "";
+
+    const { results, budget, lockedTotal, freeBudget, totalWeight } = spCompute();
+    const pending   = results.filter(r => r._months !== Infinity);
+    const totalNeed = results.reduce((s, r) => s + r._remaining, 0);
+    const avgMonths = pending.length ? Math.ceil(pending.reduce((s,r)=>s+r._months,0) / pending.length) : 0;
+
+    // ── KPI strip
+    const kpiRow = byId("sp-kpi-row");
+    if (kpiRow) kpiRow.innerHTML = `
+      <div class="kpi" style="--kc:var(--accent)">
+        <span class="kpi-icon">💰</span>
+        <span class="kpi-label">Budget mensuel</span>
+        <span class="kpi-value" style="font-size:16px">${budget > 0 ? formatMoney(budget) : "—"}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--amber)">
+        <span class="kpi-icon">🎯</span>
+        <span class="kpi-label">Total à économiser</span>
+        <span class="kpi-value" style="font-size:15px">${totalNeed > 0 ? formatMoney(totalNeed) : "—"}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--purple)">
+        <span class="kpi-icon">📦</span>
+        <span class="kpi-label">Articles actifs</span>
+        <span class="kpi-value">${results.length}</span>
+      </div>
+      <div class="kpi ${avgMonths > 24 ? 'warn' : 'green'}">
+        <span class="kpi-icon">🗓️</span>
+        <span class="kpi-label">Durée moyenne</span>
+        <span class="kpi-value">${avgMonths > 0 ? avgMonths + " mois" : "—"}</span>
+      </div>
+      ${lockedTotal > 0 ? `<div class="kpi" style="--kc:var(--amber)">
+        <span class="kpi-icon">🔒</span>
+        <span class="kpi-label">Verrouillé</span>
+        <span class="kpi-value" style="font-size:15px">${formatMoney(lockedTotal)}</span>
+        <span class="kpi-sub">Libre : ${formatMoney(freeBudget)}</span>
+      </div>` : ""}
+    `;
+
+    // ── Formula explainer
+    const fbox = byId("sp-formula-box");
+    if (fbox) {
+      if (budget > 0 && totalWeight > 0) {
+        const unit = (freeBudget / totalWeight).toFixed(1);
+        fbox.innerHTML = `<strong>Formule :</strong> Alloc(i) = <code>Budget libre (${formatMoney(freeBudget)})</code> × <code>Poids(priorité)</code> / <code>Σ Poids</code> — unité = <code>${unit} TND</code> par point de poids`;
+      } else if (budget > 0) {
+        fbox.innerHTML = `Budget défini. Ajoutez des articles sans verrou pour voir la répartition automatique.`;
+      } else {
+        fbox.innerHTML = `Définissez un budget mensuel ci-dessus pour calculer les allocations.`;
+      }
+    }
+
+    // ── Table
+    const tbody = byId("sp-tbody");
+    if (tbody) {
+      if (!results.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="sp-empty">Aucun article avec un prix dans votre liste d'achats.<br><span style="font-size:12px">Ajoutez des articles via <strong>Liste d'achats</strong>.</span></td></tr>`;
+      } else {
+        const PRIO_BG  = { haute:'var(--red-d)',   moyenne:'var(--amber-d)',  basse:'var(--green-d)' };
+        const PRIO_COL = { haute:'var(--red)',      moyenne:'var(--amber)',    basse:'var(--green)' };
+        tbody.innerHTML = results.map(r => {
+          const isLocked = state.spLocks[r.id] != null;
+          const pct = r._pct.toFixed(0);
+          const progCol = r._pct >= 100 ? 'var(--green)' : r._pct >= 50 ? 'var(--accent)' : 'var(--amber)';
+          const mDisplay = r._months === Infinity ? "∞" : r._months;
+          const mCol = r._months <= 3 ? 'var(--green)' : r._months <= 12 ? 'var(--accent)' : 'var(--amber)';
+          const mBg  = r._months <= 3 ? 'var(--green-d)' : r._months <= 12 ? 'var(--accent-d)' : 'var(--amber-d)';
+          return `<tr data-spid="${r.id}">
+            <td><strong>${escapeHtml(r.desc)}</strong></td>
+            <td><span class="wl-badge-priority ${r.priority}">${PRIORITY_LABELS[r.priority]}</span></td>
+            <td class="sp-num">${formatMoney(r.prix)}</td>
+            <td class="sp-num">
+              <input class="sp-mini-inp" type="number" data-sp-saved="${r.id}"
+                value="${r._saved > 0 ? r._saved : ''}" min="0" step="1" placeholder="0"
+                title="Montant déjà économisé"/>
+            </td>
+            <td class="sp-num" style="color:var(--muted2)">${formatMoney(r._remaining)}</td>
+            <td style="min-width:100px">
+              <div style="font-size:10.5px;color:var(--muted2);margin-bottom:2px">${pct}%</div>
+              <div class="sp-prog"><div class="sp-prog-fill" style="width:${pct}%;background:${progCol}"></div></div>
+            </td>
+            <td class="sp-num">
+              <input class="sp-mini-inp ${isLocked ? 'locked' : ''}" type="number" data-sp-alloc="${r.id}"
+                value="${r._alloc > 0 ? Math.round(r._alloc) : ''}"
+                min="0" step="1" placeholder="auto" title="Allocation mensuelle"/>
+            </td>
+            <td style="text-align:center">
+              <span class="sp-month-pill" style="background:${mBg};color:${mCol}">${mDisplay}</span>
+            </td>
+            <td style="text-align:center">
+              <button class="sp-lock-btn" data-sp-lock="${r.id}" title="${isLocked ? "Déverrouiller" : "Verrouiller l'allocation"}">
+                ${isLocked ? "🔒" : "🔓"}
+              </button>
+            </td>
+          </tr>`;
+        }).join("");
+
+        // Wire inputs — saved amount
+        tbody.querySelectorAll("[data-sp-saved]").forEach(inp => {
+          inp.addEventListener("change", () => {
+            const w = state.wishlist.find(x => x.id === inp.getAttribute("data-sp-saved"));
+            if (w) { w.savedAmount = Math.max(0, parseFloat(inp.value) || 0); saveState(); renderSavingPlanner(); }
+          });
+        });
+
+        // Wire inputs — manual alloc (sets lock)
+        tbody.querySelectorAll("[data-sp-alloc]").forEach(inp => {
+          inp.addEventListener("change", () => {
+            const id = inp.getAttribute("data-sp-alloc");
+            const val = parseFloat(inp.value);
+            if (!isNaN(val) && val >= 0) {
+              if (!state.spLocks) state.spLocks = {};
+              state.spLocks[id] = val;
+              saveState(); renderSavingPlanner();
+            }
+          });
+        });
+
+        // Wire lock buttons
+        tbody.querySelectorAll("[data-sp-lock]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-sp-lock");
+            if (!state.spLocks) state.spLocks = {};
+            if (state.spLocks[id] != null) {
+              delete state.spLocks[id];
+            } else {
+              const r = results.find(x => x.id === id);
+              state.spLocks[id] = r ? Math.round(r._alloc) : 0;
+            }
+            saveState(); renderSavingPlanner();
+          });
+        });
+      }
+    }
+
+    // ── Timeline
+    const tlPanel = byId("sp-timeline-panel");
+    const tlEl    = byId("sp-timeline");
+    if (!tlPanel || !tlEl) return;
+
+    const tl = results
+      .filter(r => r._months !== Infinity && r._months > 0)
+      .slice().sort((a, b) => a._months - b._months);
+
+    if (!tl.length) { tlPanel.style.display = "none"; return; }
+    tlPanel.style.display = "";
+
+    const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+    const PRIO_ICONS = { haute:"🔴", moyenne:"🟡", basse:"🟢" };
+    const PRIO_BG2   = { haute:"var(--red-d)",   moyenne:"var(--amber-d)",  basse:"var(--green-d)" };
+    const PRIO_COL2  = { haute:"var(--red)",      moyenne:"var(--amber)",    basse:"var(--green)"   };
+    const now = new Date();
+
+    tlEl.innerHTML = tl.map(r => {
+      const d = new Date(now); d.setMonth(d.getMonth() + r._months);
+      const dateStr = MONTHS_FR[d.getMonth()] + " " + d.getFullYear();
+      const catNom = (typeof nomWlCategorie === 'function' ? nomWlCategorie(r.categorieId) : "") || "";
+      return `<div class="sp-tl-item">
+        <div class="sp-tl-dot" style="background:${PRIO_BG2[r.priority]};color:${PRIO_COL2[r.priority]}">${PRIO_ICONS[r.priority]}</div>
+        <div class="sp-tl-body">
+          <div class="sp-tl-title">${escapeHtml(r.desc)}${catNom ? ` <span class="badge" style="font-size:10px">${escapeHtml(catNom)}</span>` : ""}</div>
+          <div class="sp-tl-meta">
+            ${formatMoney(Math.round(r._alloc))}/mois · ${r._months} mois · ${formatMoney(r.prix)} total
+            ${r._saved > 0 ? ` · <span style="color:var(--green)">✅ ${formatMoney(r._saved)} déjà économisé</span>` : ""}
+          </div>
+        </div>
+        <div class="sp-tl-date">${dateStr}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // Budget input wiring (do once after DOMContentLoaded)
+  (() => {
+    const inp = byId("sp-monthly-budget");
+    if (!inp) return;
+    inp.value = state.spMonthlyBudget || "";
+    inp.addEventListener("input", () => {
+      state.spMonthlyBudget = Math.max(0, parseFloat(inp.value) || 0);
+      saveState();
+      if (byId("page-saving-planner")?.classList.contains("active")) renderSavingPlanner();
+    });
+  })();
+
   // ── THEME TOGGLE ──────────────────────────────────────────────────────
+
   const btnTheme = byId("btn-theme-toggle");
   const savedTheme = localStorage.getItem("fintrack-theme") || "dark";
   if (savedTheme === "light") {
