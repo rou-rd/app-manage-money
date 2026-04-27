@@ -194,6 +194,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono
 .row-total td{font-weight:600;font-family:var(--mono);font-size:12px}
 .cell-pos{color:var(--green)}.cell-neg{color:var(--red)}.cell-zero{color:var(--muted)}
 .op-credit{color:var(--green);font-weight:600}.op-debit{color:var(--red);font-weight:600}
+.badge.op-credit{background:var(--green-d);color:var(--green);border:1px solid rgba(16,217,160,.2)}
+.badge.op-debit{background:var(--red-d);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+td.empty{text-align:center;padding:28px;color:var(--muted);font-size:13px}
 
 /* TWO COL */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -489,60 +492,144 @@ input[type=file]{display:none}
 
     <!-- COMPTES -->
     <section id="page-comptes" class="page">
-      <div class="panel">
-        <div class="panel-title"><span class="icon">💳</span> Comptes</div>
-        <p class="hint">Solde = solde initial − dépenses + opérations manuelles</p>
-        <div class="table-wrap">
-          <table><thead><tr><th>Nom</th><th>Type</th><th>Solde initial</th><th>Dépensé</th><th>Solde réel</th><th></th></tr></thead>
-          <tbody id="tbody-comptes"></tbody></table>
+
+      <!-- ══ VUE LISTE DES COMPTES ══ -->
+      <div id="comptes-list-view">
+        <div class="panel">
+          <div class="panel-title"><span class="icon">💳</span> Comptes <span style="font-size:11px;font-weight:400;color:var(--muted2);margin-left:8px">Cliquez sur un compte pour voir son historique détaillé</span></div>
+          <p class="hint">Solde = solde initial − dépenses + opérations manuelles + transferts</p>
+          <div class="table-wrap">
+            <table><thead><tr><th>Nom</th><th>Type</th><th>Solde initial</th><th>Dépensé</th><th>Solde réel</th><th>Actions</th></tr></thead>
+            <tbody id="tbody-comptes"></tbody></table>
+          </div>
+          <hr class="sep"/>
+          <div class="panel-title" style="margin-bottom:12px"><span class="icon">➕</span> Nouveau compte</div>
+          <div class="form-grid" style="max-width:600px">
+            <div class="field"><label>Nom</label><input type="text" id="new-compte-nom" placeholder="ex. Livret A"/></div>
+            <div class="field"><label>Type</label><select id="new-compte-type"><option value="courant">Courant</option><option value="epargne">Épargne</option><option value="especes">Espèces</option></select></div>
+            <div class="field"><label>Solde initial (TND)</label><input type="number" id="new-compte-solde" min="0" step="0.001" value="0"/></div>
+          </div>
+          <button class="btn btn-primary" id="btn-add-compte">Ajouter le compte</button>
         </div>
-        <hr class="sep"/>
-        <div class="panel-title" style="margin-bottom:12px"><span class="icon">➕</span> Nouveau compte</div>
-        <div class="form-grid" style="max-width:600px">
-          <div class="field"><label>Nom</label><input type="text" id="new-compte-nom" placeholder="ex. Livret A"/></div>
-          <div class="field"><label>Type</label><select id="new-compte-type"><option value="courant">Courant</option><option value="epargne">Épargne</option><option value="especes">Espèces</option></select></div>
-          <div class="field"><label>Solde initial (TND)</label><input type="number" id="new-compte-solde" min="0" step="0.001" value="0"/></div>
+        <div class="panel">
+          <div class="panel-title"><span class="icon">🔄</span> Opérations manuelles</div>
+          <p class="hint">Créditez ou débitez un compte directement (hors dépenses).</p>
+          <div class="form-grid" style="max-width:700px">
+            <div class="field"><label>Compte</label><select id="op-compte"></select></div>
+            <div class="field"><label>Type</label><select id="op-type"><option value="credit">+ Crédit (ajouter)</option><option value="debit">− Débit (retirer)</option></select></div>
+            <div class="field"><label>Montant (TND)</label><input type="number" id="op-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
+            <div class="field"><label>Motif</label><input type="text" id="op-motif" placeholder="Virement, retrait…"/></div>
+          </div>
+          <button class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
+          <span id="op-hint" class="success-msg" style="display:none;margin-left:12px"></span>
         </div>
-        <button class="btn btn-primary" id="btn-add-compte">Ajouter le compte</button>
+        <div class="panel">
+          <div class="panel-title"><span class="icon">🔀</span> Transfert entre comptes</div>
+          <p class="hint">Déplace de l'argent d'un compte vers un autre. Les deux soldes sont mis à jour.</p>
+          <div class="form-grid" style="max-width:700px">
+            <div class="field"><label>De (compte source)</label><select id="transfer-from"></select></div>
+            <div class="field"><label>Vers (compte cible)</label><select id="transfer-to"></select></div>
+            <div class="field"><label>Montant (TND)</label><input type="number" id="transfer-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
+            <div class="field"><label>Date</label><input type="date" id="transfer-date"/></div>
+            <div class="field" style="grid-column:1/-1"><label>Motif</label><input type="text" id="transfer-motif" placeholder="Ex: virement épargne, retrait espèces…"/></div>
+          </div>
+          <button class="btn btn-primary" id="btn-apply-transfer">🔀 Effectuer le transfert</button>
+          <span id="transfer-hint" class="success-msg" style="display:none;margin-left:12px"></span>
+        </div>
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-title"><span class="icon">📋</span> Historique global des opérations & transferts</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-sm tab-hist active" data-hist="ops">Opérations manuelles</button>
+            <button class="btn btn-sm tab-hist" data-hist="transfers">Transferts</button>
+          </div>
+          <div id="hist-ops">
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-operations"></tbody></table></div>
+          </div>
+          <div id="hist-transfers" style="display:none">
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>De</th><th>Vers</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-transfers"></tbody></table></div>
+          </div>
+        </div>
       </div>
-      <div class="panel">
-        <div class="panel-title"><span class="icon">🔄</span> Opérations manuelles</div>
-        <p class="hint">Créditez ou débitez un compte directement (hors dépenses).</p>
-        <div class="form-grid" style="max-width:700px">
-          <div class="field"><label>Compte</label><select id="op-compte"></select></div>
-          <div class="field"><label>Type</label><select id="op-type"><option value="credit">+ Crédit (ajouter)</option><option value="debit">− Débit (retirer)</option></select></div>
-          <div class="field"><label>Montant (TND)</label><input type="number" id="op-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
-          <div class="field"><label>Motif</label><input type="text" id="op-motif" placeholder="Virement, retrait…"/></div>
+
+      <!-- ══ VUE HISTORIQUE D'UN COMPTE ══ -->
+      <div id="compte-history-view" style="display:none">
+        <!-- Header du compte -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+          <button class="btn" id="btn-back-comptes" style="gap:6px;font-weight:600">← Retour</button>
+          <div id="compte-hist-header" style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;flex-wrap:wrap"></div>
         </div>
-        <button class="btn btn-primary" id="btn-apply-operation">Appliquer l'opération</button>
-        <span id="op-hint" class="success-msg" style="display:none;margin-left:12px"></span>
+
+        <!-- KPI cards du compte -->
+        <div id="compte-hist-kpis" class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(155px,1fr));margin-bottom:18px"></div>
+
+        <!-- Totaux par mois / par semaine -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+          <div class="panel" style="margin-bottom:0">
+            <div class="panel-title"><span class="icon">📅</span> Totaux par mois</div>
+            <div class="table-wrap"><table id="tbl-compte-monthly"><thead><tr><th>Mois</th><th>Débit</th><th>Crédit</th><th>Net</th></tr></thead><tbody id="tbody-compte-monthly"></tbody></table></div>
+          </div>
+          <div class="panel" style="margin-bottom:0">
+            <div class="panel-title"><span class="icon">📆</span> Totaux par semaine (8 dernières)</div>
+            <div class="table-wrap"><table id="tbl-compte-weekly"><thead><tr><th>Semaine</th><th>Débit</th><th>Crédit</th><th>Net</th></tr></thead><tbody id="tbody-compte-weekly"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="panel" style="margin-bottom:14px">
+          <div class="panel-title" style="margin-bottom:10px"><span class="icon">🔍</span> Filtres</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="margin-bottom:0;min-width:130px">
+              <label style="font-size:11px">Type d'opération</label>
+              <select id="hist-filter-type" style="width:100%">
+                <option value="">Tout</option>
+                <option value="depense">Dépenses</option>
+                <option value="credit">Crédit</option>
+                <option value="debit">Débit manuel</option>
+                <option value="transfer_out">Transfert sortant</option>
+                <option value="transfer_in">Transfert entrant</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0;min-width:130px">
+              <label style="font-size:11px">Catégorie</label>
+              <select id="hist-filter-cat" style="width:100%">
+                <option value="">Toutes</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0;min-width:120px">
+              <label style="font-size:11px">Date début</label>
+              <input type="date" id="hist-filter-date-from" style="width:100%"/>
+            </div>
+            <div class="field" style="margin-bottom:0;min-width:120px">
+              <label style="font-size:11px">Date fin</label>
+              <input type="date" id="hist-filter-date-to" style="width:100%"/>
+            </div>
+            <div class="field" style="margin-bottom:0;min-width:160px">
+              <label style="font-size:11px">Recherche (description)</label>
+              <input type="text" id="hist-filter-search" placeholder="Mot clé…" style="width:100%"/>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-hist-filter-apply" style="height:34px;align-self:flex-end">Filtrer</button>
+            <button class="btn btn-sm" id="btn-hist-filter-reset" style="height:34px;align-self:flex-end">Réinitialiser</button>
+          </div>
+        </div>
+
+        <!-- Tableau historique -->
+        <div class="panel" style="margin-bottom:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="panel-title" style="margin-bottom:0"><span class="icon">📋</span> Toutes les opérations <span id="hist-count-badge" style="font-size:11px;font-weight:400;color:var(--muted2)"></span></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="hist-total-debit" style="font-size:12px;color:var(--red);font-weight:600"></span>
+              <span id="hist-total-credit" style="font-size:12px;color:var(--green);font-weight:600"></span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Description / Motif</th><th>Catégorie</th><th>Débit</th><th>Crédit</th><th>Solde courant</th></tr></thead>
+              <tbody id="tbody-compte-hist"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="panel">
-        <div class="panel-title"><span class="icon">🔀</span> Transfert entre comptes</div>
-        <p class="hint">Déplace de l'argent d'un compte vers un autre. Les deux soldes sont mis à jour.</p>
-        <div class="form-grid" style="max-width:700px">
-          <div class="field"><label>De (compte source)</label><select id="transfer-from"></select></div>
-          <div class="field"><label>Vers (compte cible)</label><select id="transfer-to"></select></div>
-          <div class="field"><label>Montant (TND)</label><input type="number" id="transfer-montant" min="0.001" step="0.001" placeholder="0.000"/></div>
-          <div class="field"><label>Date</label><input type="date" id="transfer-date"/></div>
-          <div class="field" style="grid-column:1/-1"><label>Motif</label><input type="text" id="transfer-motif" placeholder="Ex: virement épargne, retrait espèces…"/></div>
-        </div>
-        <button class="btn btn-primary" id="btn-apply-transfer">🔀 Effectuer le transfert</button>
-        <span id="transfer-hint" class="success-msg" style="display:none;margin-left:12px"></span>
-      </div>
-      <div class="panel" style="margin-bottom:0">
-        <div class="panel-title"><span class="icon">📋</span> Historique des opérations & transferts</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button class="btn btn-sm tab-hist active" data-hist="ops">Opérations manuelles</button>
-          <button class="btn btn-sm tab-hist" data-hist="transfers">Transferts</button>
-        </div>
-        <div id="hist-ops">
-          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-operations"></tbody></table></div>
-        </div>
-        <div id="hist-transfers" style="display:none">
-          <div class="table-wrap"><table><thead><tr><th>Date</th><th>De</th><th>Vers</th><th>Montant</th><th>Motif</th><th></th></tr></thead><tbody id="tbody-transfers"></tbody></table></div>
-        </div>
-      </div>
+
     </section>
 
     <!-- BUDGETS -->
@@ -1798,6 +1885,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="num text-red">${formatMoney(spent)}</td>
           <td class="num ${soldeCls}"><strong>${formatMoney(rest)}</strong></td>
           <td style="white-space:nowrap">
+            <button type="button" class="btn btn-sm btn-edit btn-hist-compte" data-cid="${escapeHtml(c.id)}" title="Historique" style="background:var(--green-d);color:var(--green);border-color:rgba(16,217,160,.25)">📊 Historique</button>
             <button type="button" class="btn btn-sm btn-edit btn-edit-compte" data-cid="${escapeHtml(c.id)}" title="Modifier">✏️</button>
             <button type="button" class="btn btn-sm btn-danger btn-del-compte" data-cid="${escapeHtml(c.id)}" title="Supprimer">🗑️</button>
           </td>
@@ -1812,6 +1900,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (c) c.soldeInitial = Number(inp.value) || 0;
         saveState();
         renderAll();
+      });
+    });
+    tb.querySelectorAll(".btn-hist-compte").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-cid");
+        openCompteHistory(id);
       });
     });
     tb.querySelectorAll(".btn-del-compte").forEach((btn) => {
@@ -3876,6 +3970,284 @@ document.addEventListener("DOMContentLoaded", () => {
       byId("hist-transfers").style.display = hist === "transfers" ? "" : "none";
     });
   });
+
+  // ═══════════════════════════════════════════════
+  // COMPTE HISTORY SCREEN
+  // ═══════════════════════════════════════════════
+  let _histCompteId = null;
+
+  function openCompteHistory(compteId) {
+    _histCompteId = compteId;
+    byId("comptes-list-view").style.display = "none";
+    byId("compte-history-view").style.display = "";
+    // Populate category filter
+    const catSel = byId("hist-filter-cat");
+    catSel.innerHTML = '<option value="">Toutes les catégories</option>';
+    state.categories.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.id; o.textContent = c.nom;
+      catSel.appendChild(o);
+    });
+    // Reset filters
+    byId("hist-filter-type").value = "";
+    byId("hist-filter-cat").value = "";
+    byId("hist-filter-date-from").value = "";
+    byId("hist-filter-date-to").value = "";
+    byId("hist-filter-search").value = "";
+    renderCompteHistory(compteId, {});
+  }
+
+  function isoToDateStr(d) {
+    if (!d) return "";
+    // Accepts full ISO "2024-01-15T10:30:00.000Z" or plain "2024-01-15"
+    return d.slice(0, 10);
+  }
+
+  function getCompteAllEntries(compteId) {
+    const entries = [];
+    // Dépenses
+    state.depenses.filter(d => d.compteId === compteId).forEach(d => {
+      entries.push({
+        date: isoToDateStr(d.date),
+        type: "depense",
+        label: d.description || "Dépense",
+        categorieId: d.categorieId,
+        debit: d.montant,
+        credit: 0,
+        id: d.id
+      });
+    });
+    // Opérations manuelles
+    (state.operations || []).filter(o => o.compteId === compteId).forEach(o => {
+      entries.push({
+        date: isoToDateStr(o.date) || new Date().toISOString().slice(0,10),
+        type: o.type === "credit" ? "credit" : "debit",
+        label: o.motif || (o.type === "credit" ? "Crédit manuel" : "Débit manuel"),
+        categorieId: null,
+        debit: o.type === "debit" ? o.montant : 0,
+        credit: o.type === "credit" ? o.montant : 0,
+        id: o.id
+      });
+    });
+    // Transferts sortants
+    (state.transfers || []).filter(t => t.fromCompteId === compteId).forEach(t => {
+      const toNom = state.comptes.find(c => c.id === t.toCompteId)?.nom || "?";
+      entries.push({
+        date: isoToDateStr(t.date) || new Date().toISOString().slice(0,10),
+        type: "transfer_out",
+        label: `Transfert → ${toNom}${t.motif ? " (" + t.motif + ")" : ""}`,
+        categorieId: null,
+        debit: t.montant,
+        credit: 0,
+        id: t.id
+      });
+    });
+    // Transferts entrants
+    (state.transfers || []).filter(t => t.toCompteId === compteId).forEach(t => {
+      const fromNom = state.comptes.find(c => c.id === t.fromCompteId)?.nom || "?";
+      entries.push({
+        date: isoToDateStr(t.date) || new Date().toISOString().slice(0,10),
+        type: "transfer_in",
+        label: `Transfert ← ${fromNom}${t.motif ? " (" + t.motif + ")" : ""}`,
+        categorieId: null,
+        debit: 0,
+        credit: t.montant,
+        id: t.id
+      });
+    });
+    // Sort ascending by date
+    entries.sort((a, b) => a.date.localeCompare(b.date));
+    return entries;
+  }
+
+  function renderCompteHistory(compteId, filters) {
+    const compte = state.comptes.find(c => c.id === compteId);
+    if (!compte) return;
+
+    // Header
+    const typeColor = { courant: "var(--accent)", epargne: "var(--green)", especes: "var(--amber)" };
+    const typeIcon  = { courant: "🏦", epargne: "💰", especes: "💵" };
+    const solde = soldeCompte(compte);
+    byId("compte-hist-header").innerHTML = `
+      <span style="font-size:22px">${typeIcon[compte.type] || "💳"}</span>
+      <div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.4px">${escapeHtml(compte.nom)}</div>
+        <div style="font-size:11.5px;color:var(--muted2)">${compte.type} · Solde initial : ${formatMoney(compte.soldeInitial)}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:22px;font-weight:700;color:${solde<0?'var(--red)':'var(--green)'}">${formatMoney(solde)}</div>
+        <div style="font-size:11px;color:var(--muted2)">Solde actuel</div>
+      </div>`;
+
+    const allEntries = getCompteAllEntries(compteId);
+
+    // Apply filters
+    let filtered = allEntries;
+    if (filters.type)     filtered = filtered.filter(e => e.type === filters.type);
+    if (filters.cat)      filtered = filtered.filter(e => e.categorieId === filters.cat);
+    if (filters.dateFrom) filtered = filtered.filter(e => e.date >= filters.dateFrom);
+    if (filters.dateTo)   filtered = filtered.filter(e => e.date <= filters.dateTo);
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      filtered = filtered.filter(e => e.label.toLowerCase().includes(q));
+    }
+
+    // KPIs
+    const totalDebit  = allEntries.reduce((s,e) => s + e.debit,  0);
+    const totalCredit = allEntries.reduce((s,e) => s + e.credit, 0);
+    const totalDepenses = allEntries.filter(e => e.type==="depense").reduce((s,e) => s+e.debit, 0);
+    const totalTransferts = allEntries.filter(e => e.type==="transfer_out").reduce((s,e) => s+e.debit, 0);
+    byId("compte-hist-kpis").innerHTML = `
+      <div class="kpi" style="--kc:var(--red)"><span class="kpi-icon">⬇️</span><span class="kpi-label">Total débité</span><span class="kpi-value">${formatMoney(totalDebit)}</span></div>
+      <div class="kpi" style="--kc:var(--green)"><span class="kpi-icon">⬆️</span><span class="kpi-label">Total crédité</span><span class="kpi-value">${formatMoney(totalCredit)}</span></div>
+      <div class="kpi" style="--kc:var(--amber)"><span class="kpi-icon">🛒</span><span class="kpi-label">Dépenses</span><span class="kpi-value">${formatMoney(totalDepenses)}</span></div>
+      <div class="kpi" style="--kc:var(--purple)"><span class="kpi-icon">🔀</span><span class="kpi-label">Transferts sortants</span><span class="kpi-value">${formatMoney(totalTransferts)}</span></div>
+      <div class="kpi" style="--kc:var(--cyan)"><span class="kpi-icon">📊</span><span class="kpi-label">Nb opérations</span><span class="kpi-value">${allEntries.length}</span></div>`;
+
+    // Monthly totals
+    const monthly = {};
+    allEntries.forEach(e => {
+      const mk = e.date.slice(0,7);
+      if (!monthly[mk]) monthly[mk] = { debit:0, credit:0 };
+      monthly[mk].debit  += e.debit;
+      monthly[mk].credit += e.credit;
+    });
+    const months = Object.keys(monthly).sort().reverse();
+    byId("tbody-compte-monthly").innerHTML = months.length ? months.map(mk => {
+      const m = monthly[mk]; const net = m.credit - m.debit;
+      const [y,mo] = mk.split("-");
+      const label = new Date(+y, +mo-1, 1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+      return `<tr>
+        <td>${label}</td>
+        <td class="num" style="color:var(--red)">${formatMoney(m.debit)}</td>
+        <td class="num" style="color:var(--green)">${formatMoney(m.credit)}</td>
+        <td class="num" style="color:${net>=0?'var(--green)':'var(--red)'};font-weight:600">${net>=0?'+':''}${formatMoney(net)}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="4" class="empty">Aucune donnée.</td></tr>`;
+
+    // Weekly totals (last 8 weeks)
+    const weekly = {};
+    const now = new Date();
+    allEntries.forEach(e => {
+      const d = new Date(e.date + "T00:00:00");
+      const diffDays = Math.floor((now - d) / 86400000);
+      if (diffDays > 56) return;
+      const wk = Math.floor(diffDays / 7);
+      const wLabel = wk === 0 ? "Cette semaine" : `Il y a ${wk} sem.`;
+      if (!weekly[wk]) weekly[wk] = { label: wLabel, debit:0, credit:0 };
+      weekly[wk].debit  += e.debit;
+      weekly[wk].credit += e.credit;
+    });
+    const weeks = Object.keys(weekly).map(Number).sort();
+    byId("tbody-compte-weekly").innerHTML = weeks.length ? weeks.map(wk => {
+      const w = weekly[wk]; const net = w.credit - w.debit;
+      return `<tr>
+        <td>${w.label}</td>
+        <td class="num" style="color:var(--red)">${formatMoney(w.debit)}</td>
+        <td class="num" style="color:var(--green)">${formatMoney(w.credit)}</td>
+        <td class="num" style="color:${net>=0?'var(--green)':'var(--red)'};font-weight:600">${net>=0?'+':''}${formatMoney(net)}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="4" class="empty">Aucune donnée récente.</td></tr>`;
+
+    // Running balance table
+    let runningBalance = compte.soldeInitial;
+    const withBalance = [];
+    // Rebuild with balance running from oldest to newest
+    const allSorted = [...allEntries].sort((a,b) => a.date.localeCompare(b.date));
+    allSorted.forEach(e => {
+      runningBalance += e.credit - e.debit;
+      withBalance.push({ ...e, runningBalance });
+    });
+    // Map id -> balance
+    const balMap = {};
+    withBalance.forEach(e => balMap[e.id + e.date + e.type] = e.runningBalance);
+
+    // Filtered display (show descending)
+    const filteredDesc = [...filtered].reverse();
+    const totalFDebit  = filtered.reduce((s,e) => s+e.debit, 0);
+    const totalFCredit = filtered.reduce((s,e) => s+e.credit, 0);
+
+    byId("hist-count-badge").textContent = `— ${filtered.length} opération${filtered.length!==1?"s":""}`;
+    byId("hist-total-debit").textContent  = `Débit total : ${formatMoney(totalFDebit)}`;
+    byId("hist-total-credit").textContent = `Crédit total : ${formatMoney(totalFCredit)}`;
+
+    const typeLabel = { depense:"Dépense", credit:"Crédit", debit:"Débit", transfer_out:"Transfert →", transfer_in:"Transfert ←" };
+    const typeCls   = { depense:"op-debit", credit:"op-credit", debit:"op-debit", transfer_out:"op-debit", transfer_in:"op-credit" };
+
+    byId("tbody-compte-hist").innerHTML = filteredDesc.length ? filteredDesc.map(e => {
+      const bal = balMap[e.id + e.date + e.type];
+      const balStr = bal != null ? formatMoney(bal) : "—";
+      const balCls = bal != null && bal < 0 ? "style=\"color:var(--red);font-weight:600\"" : "style=\"color:var(--muted2)\"";
+      const catNom = e.categorieId ? escapeHtml(nomCategorie(e.categorieId)) : "—";
+      const dateStr = new Date(e.date + "T00:00:00").toLocaleDateString("fr-FR", {day:"2-digit",month:"short",year:"numeric"});
+      return `<tr>
+        <td style="white-space:nowrap;color:var(--muted2);font-size:12px">${dateStr}</td>
+        <td><span class="badge ${typeCls[e.type] || ''}" style="font-size:11px">${typeLabel[e.type]||e.type}</span></td>
+        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</td>
+        <td style="font-size:12px;color:var(--muted2)">${catNom}</td>
+        <td class="num" style="color:var(--red)">${e.debit  > 0 ? formatMoney(e.debit)  : "—"}</td>
+        <td class="num" style="color:var(--green)">${e.credit > 0 ? formatMoney(e.credit) : "—"}</td>
+        <td class="num" ${balCls}>${balStr}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="7" class="empty">Aucune opération pour ces filtres.</td></tr>`;
+  }
+
+  // Back button
+  const btnBackComptes = byId("btn-back-comptes");
+  if (btnBackComptes) {
+    btnBackComptes.addEventListener("click", () => {
+      byId("compte-history-view").style.display = "none";
+      byId("comptes-list-view").style.display = "";
+      _histCompteId = null;
+    });
+  }
+
+  // Filter apply
+  const btnHistApply = byId("btn-hist-filter-apply");
+  if (btnHistApply) {
+    btnHistApply.addEventListener("click", () => {
+      if (!_histCompteId) return;
+      renderCompteHistory(_histCompteId, {
+        type:     byId("hist-filter-type").value,
+        cat:      byId("hist-filter-cat").value,
+        dateFrom: byId("hist-filter-date-from").value,
+        dateTo:   byId("hist-filter-date-to").value,
+        search:   byId("hist-filter-search").value,
+      });
+    });
+  }
+
+  // Filter reset
+  const btnHistReset = byId("btn-hist-filter-reset");
+  if (btnHistReset) {
+    btnHistReset.addEventListener("click", () => {
+      if (!_histCompteId) return;
+      byId("hist-filter-type").value = "";
+      byId("hist-filter-cat").value = "";
+      byId("hist-filter-date-from").value = "";
+      byId("hist-filter-date-to").value = "";
+      byId("hist-filter-search").value = "";
+      renderCompteHistory(_histCompteId, {});
+    });
+  }
+
+  // Also allow Enter on search field
+  const histSearchInp = byId("hist-filter-search");
+  if (histSearchInp) {
+    histSearchInp.addEventListener("keydown", e => {
+      if (e.key === "Enter" && _histCompteId) {
+        renderCompteHistory(_histCompteId, {
+          type: byId("hist-filter-type").value,
+          cat: byId("hist-filter-cat").value,
+          dateFrom: byId("hist-filter-date-from").value,
+          dateTo: byId("hist-filter-date-to").value,
+          search: histSearchInp.value,
+        });
+      }
+    });
+  }
+
+
 
   // Apply transfer button
   const btnTransfer = byId("btn-apply-transfer");
