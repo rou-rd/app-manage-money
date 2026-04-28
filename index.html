@@ -306,6 +306,22 @@ input[type=file]{display:none}
   .sp-mini-inp{width:65px}
 }
 
+/* FACTURE ÉTIQUETTES */
+.fac-label-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600; }
+.fac-label-badge.accent  { background:var(--accent-d);  color:var(--accent); }
+.fac-label-badge.green   { background:var(--green-d);   color:var(--green); }
+.fac-label-badge.amber   { background:var(--amber-d);   color:var(--amber); }
+.fac-label-badge.red     { background:var(--red-d);     color:var(--red); }
+.fac-label-badge.purple  { background:var(--purple-d);  color:var(--purple); }
+.fac-label-badge.cyan    { background:rgba(34,211,238,.12); color:var(--cyan); }
+.fac-label-input-wrap input { width:100%; }
+
+/* INLINE EDIT ROW */
+.fac-edit-row td { background:var(--accent-d) !important; }
+.fac-edit-inp { width:100%; background:var(--s2); border:1px solid var(--accent); border-radius:var(--r); padding:5px 8px; font-size:12.5px; color:var(--text); font-family:var(--font); outline:none; }
+.fac-edit-inp:focus { box-shadow:0 0 0 2px var(--accent-d); }
+.fac-edit-notes { width:100%; margin-top:4px; background:var(--s2); border:1px solid var(--border2); border-radius:var(--r); padding:4px 8px; font-size:11.5px; color:var(--muted2); font-family:var(--font); outline:none; }
+
 /* RESPONSIVE */
 @media(max-width:900px){.chart-grid,.chart-grid.cols3,.two-col{grid-template-columns:1fr}}
 @media(max-width:720px){
@@ -359,6 +375,7 @@ input[type=file]{display:none}
     <div class="nav-section">Données</div>
     <button class="nav-btn" data-page="fichiers"><span class="nav-icon">📁</span><span class="nav-label">Fichiers & Import</span></button>
     <div class="nav-section">Extra</div>
+    <button class="nav-btn" data-page="factures"><span class="nav-icon">🧾</span><span class="nav-label">Factures</span></button>
     <button class="nav-btn" data-page="wishlist"><span class="nav-icon">🛒</span><span class="nav-label">Liste d'achats</span></button>
     <button class="nav-btn" data-page="saving-planner"><span class="nav-icon">🧮</span><span class="nav-label">Planificateur épargne</span></button>
   </div>
@@ -731,6 +748,161 @@ input[type=file]{display:none}
       </div>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════
+         FACTURES
+    ════════════════════════════════════════════════════════ -->
+    <section id="page-factures" class="page">
+
+      <!-- KPI strip -->
+      <div class="kpi-grid" id="factures-kpi" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));margin-bottom:18px"></div>
+
+      <!-- Formulaire ajout facture -->
+      <div class="panel">
+        <div class="panel-title"><span class="icon">➕</span> Nouvelle facture</div>
+        <p class="hint">Enregistrez une facture avec sa date d'émission et sa date d'échéance. Si vous la marquez "Payée", le montant est débité du compte sélectionné et apparaît dans son historique.</p>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Description / Libellé</label>
+            <input type="text" id="fac-desc" placeholder="Ex: Facture STEG, Loyer…"/>
+          </div>
+          <div class="field">
+            <label>Montant (TND)</label>
+            <input type="number" id="fac-montant" min="0" step="0.001" placeholder="0.000"/>
+          </div>
+          <div class="field">
+            <label>Date facture</label>
+            <input type="date" id="fac-date-emission"/>
+          </div>
+          <div class="field">
+            <label>Date d'échéance (paiement)</label>
+            <input type="date" id="fac-date-echeance"/>
+          </div>
+          <div class="field">
+            <label>Catégorie</label>
+            <select id="fac-categorie"></select>
+          </div>
+          <div class="field">
+            <label>Payer par (compte)</label>
+            <select id="fac-compte"></select>
+          </div>
+          <div class="field">
+            <label>Statut</label>
+            <select id="fac-statut">
+              <option value="en_attente">⏳ En attente</option>
+              <option value="payee">✅ Payée</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Catégorie dépense (étiquette)</label>
+            <select id="fac-dep-cat"></select>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Notes</label>
+            <input type="text" id="fac-notes" placeholder="Référence, remarque…"/>
+          </div>
+        </div>
+
+        <!-- Champs personnalisés -->
+        <div id="fac-custom-fields-form" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-add-facture">💾 Enregistrer la facture</button>
+          <span id="fac-hint" style="display:none;font-size:12.5px"></span>
+        </div>
+      </div>
+
+      <!-- Gestion des catégories de factures -->
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title"><span class="icon">🏷️</span> Catégories de factures</div>
+        <p class="hint">Les catégories de factures sont indépendantes des catégories de dépenses.</p>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+          <div class="field" style="margin-bottom:0">
+            <label>Nouvelle catégorie</label>
+            <input type="text" id="fac-new-cat-nom" placeholder="Ex: Électricité, Internet…" style="min-width:200px"/>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Icône (emoji)</label>
+            <input type="text" id="fac-new-cat-icon" placeholder="⚡" style="width:70px;text-align:center"/>
+          </div>
+          <button class="btn btn-primary" id="btn-add-fac-cat" style="margin-bottom:0">➕ Ajouter</button>
+          <span id="fac-cat-hint" style="display:none;font-size:12px"></span>
+        </div>
+        <div id="fac-cat-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
+
+      <!-- Champs personnalisés -->
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title"><span class="icon">✏️</span> Champs personnalisés</div>
+        <p class="hint">Ajoutez vos propres champs (ex: Fournisseur, Référence, N° contrat…). Ils apparaîtront dans le formulaire et dans le tableau.</p>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+          <div class="field" style="margin-bottom:0">
+            <label>Nom du champ</label>
+            <input type="text" id="fac-new-field-nom" placeholder="Ex: Fournisseur, Référence…" style="min-width:180px"/>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Type</label>
+            <select id="fac-new-field-type" style="width:auto">
+              <option value="text">Texte</option>
+              <option value="number">Nombre</option>
+              <option value="date">Date</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-add-fac-field">➕ Ajouter le champ</button>
+          <span id="fac-field-hint" style="display:none;font-size:12px"></span>
+        </div>
+        <div id="fac-fields-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="filters">
+        <div class="field"><label>Statut</label>
+          <select id="fac-f-statut">
+            <option value="">Tous</option>
+            <option value="en_attente">⏳ En attente</option>
+            <option value="payee">✅ Payée</option>
+            <option value="en_retard">🔴 En retard</option>
+          </select>
+        </div>
+        <div class="field"><label>Catégorie</label><select id="fac-f-cat"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Compte</label><select id="fac-f-compte"><option value="">Tous</option></select></div>
+        <div class="field"><label>Catégorie dépense</label><select id="fac-f-depcat"><option value="">Toutes</option></select></div>
+        <div class="field"><label>Du</label><input type="date" id="fac-f-from"/></div>
+        <div class="field"><label>Au</label><input type="date" id="fac-f-to"/></div>
+        <div class="field" style="align-self:flex-end"><button class="btn" id="btn-reset-fac-filters">Réinitialiser</button></div>
+      </div>
+
+      <!-- Tableau des factures -->
+      <div class="panel" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div class="filter-summary" id="fac-filter-summary"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" id="btn-pay-selected" style="background:var(--green-d);color:var(--green);border-color:rgba(16,217,160,.3)">✅ Payer la sélection</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" id="fac-check-all" title="Tout sélectionner"/></th>
+              <th>Description</th>
+              <th>Catégorie</th>
+              <th>Cat. dépense</th>
+              <th>Date facture</th>
+              <th>Échéance</th>
+              <th>Compte</th>
+              <th id="fac-custom-cols-header"></th>
+              <th class="num">Montant</th>
+              <th>Statut</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tbody-factures"></tbody>
+          </table>
+        </div>
+        <div style="font-size:12px;color:var(--muted2);text-align:right;margin-top:8px" id="fac-total-info"></div>
+      </div>
+
+    </section>
+
     <!-- WISHLIST -->
     <section id="page-wishlist" class="page">
       <div class="panel">
@@ -941,6 +1113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     budgets:      ["Budgets",            "Plafonds mensuels globaux et par catégorie"],
     referentiels: ["Référentiels",       "Gestion des personnes et catégories"],
     fichiers:     ["Fichiers & Import",  "Import/export CSV et synchronisation"],
+    factures:     ["Factures",            "Gestion des factures et échéances de paiement"],
     wishlist:     ["Liste d'achats",       "Planifiez et suivez vos achats prévus"],
     "saving-planner": ["Planificateur d'épargne", "Répartissez votre budget mensuel vers vos achats"],
   };
@@ -957,6 +1130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("topbar-title").textContent = title;
     document.getElementById("topbar-desc").textContent = desc;
     // Trigger renders if needed
+    if (name === "factures") { try { renderFactures(); } catch(e) {} }
     if (name === "analyses") { try { renderAnalysesCharts(); } catch(e) {} }
     if (name === "dashboard") { try { renderDashboard(); } catch(e) {} }
     if (name === "wishlist") { try { renderWishlist(); } catch(e) {} }
@@ -1017,6 +1191,16 @@ document.addEventListener("DOMContentLoaded", () => {
       transfers: [],
       spMonthlyBudget: 0,
       spLocks: {},
+      factures: [],
+      factureCategories: [
+        { id: "fcat_elec",    nom: "Électricité",  icon: "⚡" },
+        { id: "fcat_eau",     nom: "Eau",           icon: "💧" },
+        { id: "fcat_net",     nom: "Internet",      icon: "🌐" },
+        { id: "fcat_loyer",   nom: "Loyer",         icon: "🏠" },
+        { id: "fcat_tel",     nom: "Téléphone",     icon: "📱" },
+        { id: "fcat_assur",   nom: "Assurance",     icon: "🛡️" },
+        { id: "fcat_autre",   nom: "Autre",         icon: "🧾" },
+      ],
       wishlistCategories: [
         { id: "wlcat_mode",    nom: "Mode & Vêtements",   icon: "👗", color: 0 },
         { id: "wlcat_tech",    nom: "Tech & Électronique", icon: "💻", color: 1 },
@@ -1051,6 +1235,9 @@ document.addEventListener("DOMContentLoaded", () => {
         state.wishlistCategories = defaultState().wishlistCategories;
       if (typeof state.spMonthlyBudget !== 'number') state.spMonthlyBudget = 0;
       if (!state.spLocks || typeof state.spLocks !== 'object') state.spLocks = {};
+      if (!Array.isArray(state.factures)) state.factures = [];
+      if (!Array.isArray(state.factureCategories) || state.factureCategories.length === 0)
+        state.factureCategories = defaultState().factureCategories;
     } catch {
       state = defaultState();
     }
@@ -1112,6 +1299,22 @@ document.addEventListener("DOMContentLoaded", () => {
     (state.wishlist || []).forEach((w) => {
       lines.push([w.id, csvEsc(w.desc), w.prix||0, w.categorieId||"", csvEsc(w.priority), w.date||"", csvEsc(w.url||""), csvEsc(w.notes||""), w.done?1:0, w.createdAt||""].join(","));
     });
+    if (state.factureCategories && state.factureCategories.length) {
+      lines.push("");
+      lines.push("##FACTURE_CATEGORIES");
+      lines.push("id,nom,icon");
+      state.factureCategories.forEach(c => lines.push([c.id, csvEsc(c.nom), csvEsc(c.icon||"🧾")].join(",")));
+    }
+    if (state.factures && state.factures.length) {
+      lines.push("");
+      lines.push("##FACTURES");
+      lines.push("id,description,montant,dateEmission,dateEcheance,categorieId,compteId,typePaiement,statut,notes,datePaiement,createdAt");
+      state.factures.forEach(f => lines.push([
+        f.id, csvEsc(f.description), f.montant, f.dateEmission||"", f.dateEcheance||"",
+        f.categorieId||"", f.compteId||"", f.typePaiement||"", f.statut||"en_attente",
+        csvEsc(f.notes||""), f.datePaiement||"", f.createdAt||""
+      ].join(",")));
+    }
     return "\ufeff" + lines.join("\n");
   }
 
@@ -1244,7 +1447,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function soldeCompte(c) {
-    const ops = (state.operations || []).filter(o => o.compteId === c.id);
+    // Exclure les opérations créées automatiquement par payerFacture (factureId présent)
+    // car la dépense liée suffit déjà pour débiter le compte — évite le double comptage
+    const ops = (state.operations || []).filter(o => o.compteId === c.id && !o.factureId);
     const opsBalance = ops.reduce((s, o) => s + (o.type === 'credit' ? o.montant : -o.montant), 0);
     // Transfers: money out when source, money in when target
     const transfers = state.transfers || [];
@@ -2443,6 +2648,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const wishlistCats = [];
     const operations = [];
     const transfers = [];
+    const factures = [];
+    const factureCats = [];
 
     for (const line of lines) {
       const t = line.trim();
@@ -2462,7 +2669,9 @@ document.addEventListener("DOMContentLoaded", () => {
         tl === "id,date,compteid,type,montant,motif" ||
         tl === "id,desc,prix,categorieid,priority,date,url,notes,done,createdat" ||
         tl === "id,nom,icon,color" ||
-        tl === "id,fromcompteid,tocompteid,montant,date,motif"
+        tl === "id,fromcompteid,tocompteid,montant,date,motif" ||
+        tl === "id,nom,icon" ||
+        tl === "id,description,montant,dateemission,dateecheance,categorieid,compteid,typepaiement,statut,notes,datepaiement,createdat"
       ) {
         continue;
       }
@@ -2512,6 +2721,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const p = splitCsvLineFull(line);
         if (p.length >= 4 && p[0] && p[0] !== "id")
           transfers.push({ id: p[0], fromCompteId: p[1], toCompteId: p[2], montant: Number(p[3])||0, date: p[4]||"", motif: p[5]||"" });
+      } else if (mode === "FACTURE_CATEGORIES") {
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 2 && p[0] && p[0] !== "id")
+          factureCats.push({ id: p[0], nom: p[1]||"", icon: p[2]||"🧾" });
+      } else if (mode === "FACTURES") {
+        if (t.toLowerCase().startsWith("id,")) continue;
+        const p = splitCsvLineFull(line);
+        if (p.length >= 9 && p[0] && p[0] !== "id")
+          factures.push({
+            id: p[0], description: p[1]||"", montant: Number(p[2])||0,
+            dateEmission: p[3]||"", dateEcheance: p[4]||"",
+            categorieId: p[5]||"", compteId: p[6]||"",
+            typePaiement: p[7]||"autre", statut: p[8]||"en_attente",
+            notes: p[9]||"", datePaiement: p[10]||null,
+            createdAt: p[11]||"",
+          });
       }
     }
     // (wishlist and operations are now parsed inside the main loop above)
@@ -2528,17 +2754,20 @@ document.addEventListener("DOMContentLoaded", () => {
     state.transfers = transfers.length ? transfers : [];
     state.wishlist = wishlist.length ? wishlist : [];
     if (wishlistCats.length) state.wishlistCategories = wishlistCats;
+    state.factures = factures.length ? factures : [];
+    if (factureCats.length) state.factureCategories = factureCats;
     state.version = 2;
     saveState();
     byId("global-error").textContent = "";
     const hint = byId("import-db-hint");
     if (hint) {
       hint.style.display = "inline";
-      hint.textContent = `✅ Base importée ! ${depenses.length} dépenses, ${wishlist.length} articles wishlist.`;
+      hint.textContent = `✅ Base importée ! ${depenses.length} dépenses, ${wishlist.length} articles wishlist, ${factures.length} factures.`;
       setTimeout(()=>hint.style.display="none", 4000);
     }
     renderAll();
-    renderWishlist(); // ✅ FIX: force wishlist render after import
+    renderWishlist();
+    try { renderFactures(); } catch(e) {}
   }
 
   function splitCsvLine(line) {
@@ -4017,8 +4246,8 @@ document.addEventListener("DOMContentLoaded", () => {
         id: d.id
       });
     });
-    // Opérations manuelles
-    (state.operations || []).filter(o => o.compteId === compteId).forEach(o => {
+    // Opérations manuelles (exclure celles liées à une facture — déjà comptées via dépenses)
+    (state.operations || []).filter(o => o.compteId === compteId && !o.factureId).forEach(o => {
       entries.push({
         date: isoToDateStr(o.date) || new Date().toISOString().slice(0,10),
         type: o.type === "credit" ? "credit" : "debit",
@@ -4247,6 +4476,656 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+
+  // ═══════════════════════════════════════════════════════════
+  //  FACTURES – logique complète
+  // ═══════════════════════════════════════════════════════════
+
+  function nomFacCategorie(id) {
+    return (state.factureCategories || []).find(c => c.id === id)?.nom || "—";
+  }
+  function iconFacCategorie(id) {
+    return (state.factureCategories || []).find(c => c.id === id)?.icon || "🧾";
+  }
+  function getFacCustomFields() {
+    return state.factureCustomFields || [];
+  }
+  function getFacLabels() {
+    return state.factureLabels || [];
+  }
+  function nomFacLabel(id) {
+    return getFacLabels().find(l => l.id === id) || null;
+  }
+
+  // ── Catégorie dépense (réutilisation de state.categories) ──
+  function populateFacDepCatSelect(elId, selectedId) {
+    const el = byId(elId);
+    if (!el) return;
+    const prev = selectedId !== undefined ? selectedId : el.value;
+    const isFilter = elId.includes("f-depcat");
+    el.innerHTML = isFilter ? `<option value="">Toutes</option>` : `<option value="">— Aucune —</option>`;
+    (state.categories || []).forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.nom;
+      el.appendChild(opt);
+    });
+    if (prev) el.value = prev;
+  }
+
+  function renderDepCatBadge(depCatId) {
+    if (!depCatId) return '<span style="color:var(--muted);font-size:12px">—</span>';
+    const cat = (state.categories || []).find(c => c.id === depCatId);
+    if (!cat) return '<span style="color:var(--muted);font-size:12px">—</span>';
+    return `<span class="badge badge-accent" style="font-size:11px">${escapeHtml(cat.nom)}</span>`;
+  }
+
+  function renderFacLabelList() { /* no-op — removed */ }
+  function updateFacLabelDatalist() { /* no-op — removed */ }
+  function populateFacLabelFilter() {
+    populateFacDepCatSelect("fac-f-depcat");
+  }  function isFactureEnRetard(f) {
+    if (f.statut === "payee") return false;
+    return f.dateEcheance < new Date().toISOString().slice(0,10);
+  }
+
+  function statutFacLabel(f) {
+    if (f.statut === "payee")   return `<span class="badge badge-green">✅ Payée</span>`;
+    if (isFactureEnRetard(f))   return `<span class="badge" style="background:var(--red-d);color:var(--red)">🔴 En retard</span>`;
+    return `<span class="badge" style="background:var(--amber-d);color:var(--amber)">⏳ En attente</span>`;
+  }
+
+  function populateFacCatSelects() {
+    const cats = state.factureCategories || [];
+    ["fac-categorie", "fac-f-cat"].forEach(id => {
+      const el = byId(id);
+      if (!el) return;
+      const prev = el.value;
+      el.innerHTML = id === "fac-f-cat" ? `<option value="">Toutes</option>` : "";
+      cats.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.icon} ${c.nom}`;
+        el.appendChild(opt);
+      });
+      if (prev) el.value = prev;
+    });
+  }
+
+  function populateFacCompteSelects() {
+    const comptes = state.comptes || [];
+    ["fac-compte", "fac-f-compte"].forEach(id => {
+      const el = byId(id);
+      if (!el) return;
+      const prev = el.value;
+      el.innerHTML = id === "fac-f-compte" ? `<option value="">Tous</option>` : "";
+      comptes.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.nom;
+        el.appendChild(opt);
+      });
+      if (prev) el.value = prev;
+    });
+  }
+
+  function renderFacCatList() {
+    const el = byId("fac-cat-list");
+    if (!el) return;
+    const cats = state.factureCategories || [];
+    el.innerHTML = cats.map(c => `
+      <span class="tag" style="font-size:12.5px;padding:4px 10px">
+        ${escapeHtml(c.icon)} ${escapeHtml(c.nom)}
+        <span class="remove" data-faccat="${c.id}" title="Supprimer">×</span>
+      </span>`).join("");
+    el.querySelectorAll(".remove[data-faccat]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-faccat");
+        state.factureCategories = state.factureCategories.filter(c => c.id !== id);
+        saveState();
+        renderFacCatList();
+        populateFacCatSelects();
+      });
+    });
+  }
+
+  // ── Champs personnalisés ─────────────────────────────────────
+  function renderFacFieldsList() {
+    const el = byId("fac-fields-list");
+    if (!el) return;
+    const fields = getFacCustomFields();
+    const typeLabel = { text: "Texte", number: "Nombre", date: "Date" };
+    el.innerHTML = fields.length
+      ? fields.map(f => `
+        <span class="tag" style="font-size:12.5px;padding:4px 10px">
+          ✏️ ${escapeHtml(f.nom)} <span style="opacity:.6;font-size:11px">(${typeLabel[f.type]||f.type})</span>
+          <span class="remove" data-facfield="${f.id}" title="Supprimer">×</span>
+        </span>`).join("")
+      : `<span style="font-size:12px;color:var(--muted)">Aucun champ personnalisé.</span>`;
+    el.querySelectorAll(".remove[data-facfield]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-facfield");
+        state.factureCustomFields = state.factureCustomFields.filter(f => f.id !== id);
+        saveState();
+        renderFacFieldsList();
+        renderCustomFieldsInForm();
+        renderFacturesTable();
+      });
+    });
+  }
+
+  function renderCustomFieldsInForm(values) {
+    const el = byId("fac-custom-fields-form");
+    if (!el) return;
+    const fields = getFacCustomFields();
+    if (!fields.length) { el.innerHTML = ""; return; }
+    el.innerHTML = `<div style="font-size:11.5px;font-weight:500;color:var(--muted2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Champs personnalisés</div>
+      <div class="form-grid">${fields.map(f => `
+        <div class="field">
+          <label>${escapeHtml(f.nom)}</label>
+          <input type="${f.type}" id="fac-cf-${f.id}" placeholder="${f.type === 'date' ? '' : f.nom + '…'}" value="${escapeHtml(values?.[f.id] || '')}"/>
+        </div>`).join("")}
+      </div>`;
+  }
+
+  function getCustomFieldValues() {
+    const fields = getFacCustomFields();
+    const vals = {};
+    fields.forEach(f => {
+      const el = byId(`fac-cf-${f.id}`);
+      if (el) vals[f.id] = el.value;
+    });
+    return vals;
+  }
+
+  function updateCustomColsHeader() {
+    const th = byId("fac-custom-cols-header");
+    if (!th) return;
+    const fields = getFacCustomFields();
+    th.innerHTML = fields.map(f => `<span style="display:inline-block;min-width:90px;margin-right:8px">${escapeHtml(f.nom)}</span>`).join("");
+    th.style.display = fields.length ? "" : "none";
+  }
+
+  // ── KPI ────────────────────────────────────────────────────
+  function renderFacturesKpi() {
+    const el = byId("factures-kpi");
+    if (!el) return;
+    const all   = state.factures || [];
+    const today = new Date().toISOString().slice(0,10);
+    const total      = all.reduce((s, f) => s + f.montant, 0);
+    const totalPayee = all.filter(f => f.statut === "payee").reduce((s, f) => s + f.montant, 0);
+    const countAtt   = all.filter(f => f.statut !== "payee" && f.dateEcheance >= today).length;
+    const countRet   = all.filter(f => f.statut !== "payee" && f.dateEcheance <  today).length;
+    el.innerHTML = `
+      <div class="kpi"><span class="kpi-icon">🧾</span><span class="kpi-label">Total factures</span><span class="kpi-value">${all.length}</span><span class="kpi-sub">${formatMoney(total)}</span></div>
+      <div class="kpi green"><span class="kpi-icon">✅</span><span class="kpi-label">Payées</span><span class="kpi-value">${all.filter(f=>f.statut==="payee").length}</span><span class="kpi-sub">${formatMoney(totalPayee)}</span></div>
+      <div class="kpi warn"><span class="kpi-icon">⏳</span><span class="kpi-label">En attente</span><span class="kpi-value">${countAtt}</span><span class="kpi-sub">${formatMoney(all.filter(f=>f.statut!=="payee"&&f.dateEcheance>=today).reduce((s,f)=>s+f.montant,0))}</span></div>
+      <div class="kpi danger"><span class="kpi-icon">🔴</span><span class="kpi-label">En retard</span><span class="kpi-value">${countRet}</span><span class="kpi-sub">${formatMoney(all.filter(f=>f.statut!=="payee"&&f.dateEcheance<today).reduce((s,f)=>s+f.montant,0))}</span></div>
+    `;
+  }
+
+  function populateFacLabelFilter() {
+    const el = byId("fac-f-label");
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = `<option value="">Toutes</option>` + getFacLabels().map(l =>
+      `<option value="${l.id}">${l.nom}</option>`).join("");
+    if (prev) el.value = prev;
+  }
+
+  function getFilteredFactures() {
+    let list = state.factures || [];
+    const today = new Date().toISOString().slice(0,10);
+    const fStatut  = byId("fac-f-statut")?.value  || "";
+    const fCat     = byId("fac-f-cat")?.value      || "";
+    const fCompte  = byId("fac-f-compte")?.value   || "";
+    const fLabel   = byId("fac-f-label")?.value    || "";
+    const fDepCat  = byId("fac-f-depcat")?.value   || "";
+    const fFrom    = byId("fac-f-from")?.value      || "";
+    const fTo      = byId("fac-f-to")?.value        || "";
+
+    if (fStatut === "en_retard") list = list.filter(f => f.statut !== "payee" && f.dateEcheance < today);
+    else if (fStatut) list = list.filter(f => f.statut === fStatut);
+    if (fCat)    list = list.filter(f => f.categorieId === fCat);
+    if (fCompte) list = list.filter(f => f.compteId    === fCompte);
+    if (fLabel)  list = list.filter(f => f.labelId     === fLabel);
+    if (fDepCat) list = list.filter(f => f.depCatId    === fDepCat);
+    if (fFrom)   list = list.filter(f => f.dateEcheance >= fFrom);
+    if (fTo)     list = list.filter(f => f.dateEcheance <= fTo);
+    return list;
+  }
+
+  function payerFacture(f) {
+    if (f.statut === "payee") return;
+    const datePayee = new Date().toISOString().slice(0,10);
+    f.statut = "payee";
+    f.datePaiement = datePayee;
+
+    // Utilise depCatId (cat. dépense choisie sur la facture) en priorité,
+    // sinon tente de matcher par nom avec la catégorie facture, sinon première catégorie
+    const resolvedCatId = f.depCatId
+      || (state.categories.find(c => c.nom === nomFacCategorie(f.categorieId))?.id)
+      || (state.categories[0]?.id || "");
+
+    const depId = uid();
+    const opId  = uid();
+
+    // 1. Dépense — apparaît dans le module Dépenses avec la bonne catégorie
+    if (!state.depenses) state.depenses = [];
+    state.depenses.push({
+      id: depId,
+      date: datePayee,
+      categorieId: resolvedCatId,
+      personneId: state.personnes[0]?.id || "",
+      compteId: f.compteId,
+      description: "Facture : " + f.description,
+      montant: f.montant,
+      moyen: "Facture",
+      tags: ["facture"],
+      recurrent: false,
+      factureId: f.id,
+    });
+
+    // 2. Opération débit — apparaît dans l'historique du compte
+    if (!state.operations) state.operations = [];
+    state.operations.push({
+      id: opId,
+      date: datePayee,
+      compteId: f.compteId,
+      type: "debit",
+      montant: f.montant,
+      motif: "Facture payée : " + f.description,
+      factureId: f.id,
+    });
+
+    // Stocker les ids liés dans la facture pour suppression propre
+    f.linkedDepenseId  = depId;
+    f.linkedOperationId = opId;
+  }
+
+  // ── Inline edit logic ────────────────────────────────────────
+  let _facEditId = null;
+
+  function startEditRow(idx) {
+    _facEditId = idx;
+    renderFacturesTable();
+  }
+
+  function cancelEditRow() {
+    _facEditId = null;
+    renderFacturesTable();
+  }
+
+  function saveEditRow(idx) {
+    const f = state.factures[idx];
+    if (!f) return;
+    const desc    = byId(`fedit-desc-${idx}`)?.value.trim()    || f.description;
+    const montant = parseFloat(byId(`fedit-montant-${idx}`)?.value) || f.montant;
+    const dateEm  = byId(`fedit-datem-${idx}`)?.value          || f.dateEmission;
+    const dateEc  = byId(`fedit-datec-${idx}`)?.value          || f.dateEcheance;
+    const catId   = byId(`fedit-cat-${idx}`)?.value            || f.categorieId;
+    const labelId = byId(`fedit-label-${idx}`)?.value          || "";
+    const depCatId = byId(`fedit-depcat-${idx}`)?.value        || "";
+    const cmpId   = byId(`fedit-compte-${idx}`)?.value         || f.compteId;
+    const statut  = byId(`fedit-statut-${idx}`)?.value         || f.statut;
+    const notes   = byId(`fedit-notes-${idx}`)?.value.trim()   ?? f.notes;
+
+    // Custom fields
+    const fields = getFacCustomFields();
+    if (!f.customValues) f.customValues = {};
+    fields.forEach(field => {
+      const el = byId(`fedit-cf-${idx}-${field.id}`);
+      if (el) f.customValues[field.id] = el.value;
+    });
+
+    const wasPayee = f.statut === "payee";
+    f.description  = desc;
+    f.montant      = montant;
+    f.dateEmission = dateEm;
+    f.dateEcheance = dateEc;
+    f.categorieId  = catId;
+    f.labelId      = labelId;
+    f.depCatId     = depCatId;
+    f.compteId     = cmpId;
+    f.notes        = notes;
+
+    // If being paid now
+    if (!wasPayee && statut === "payee") {
+      f.statut = "en_attente"; // reset so payerFacture triggers
+      payerFacture(f);
+    } else {
+      f.statut = statut;
+    }
+
+    _facEditId = null;
+    saveState();
+    renderFactures();
+    renderComptesTable();
+    try { renderDashboard(); } catch(e) {}
+  }
+
+  function renderFacturesTable() {
+    const tbody = byId("tbody-factures");
+    if (!tbody) return;
+    const list   = getFilteredFactures();
+    const fields = getFacCustomFields();
+
+    updateCustomColsHeader();
+
+    // Filter summary
+    const sumEl = byId("fac-filter-summary");
+    if (sumEl) sumEl.innerHTML = `<span class="filter-badge">${list.length} facture${list.length!==1?"s":""}</span> — Total : <strong>${formatMoney(list.reduce((s,f)=>s+f.montant,0))}</strong>`;
+    const totEl = byId("fac-total-info");
+    if (totEl) {
+      const imp = list.filter(f => f.statut !== "payee");
+      totEl.textContent = `À payer : ${formatMoney(imp.reduce((s,f)=>s+f.montant,0))} sur ${imp.length} facture${imp.length!==1?"s":""}`;
+    }
+
+    const today = new Date().toISOString().slice(0,10);
+    const comptes = state.comptes || [];
+    const cats    = state.factureCategories || [];
+
+    tbody.innerHTML = list.length ? list.map((f) => {
+      const idx       = (state.factures || []).findIndex(x => x.id === f.id);
+      const isLate    = f.statut !== "payee" && f.dateEcheance < today;
+      const rowStyle  = isLate ? "background:rgba(244,63,94,.04)" : "";
+      const isEditing = _facEditId === idx;
+
+      if (isEditing) {
+        // ── EDIT ROW ──────────────────────────────────────
+        const catOpts    = cats.map(c => `<option value="${c.id}" ${c.id===f.categorieId?"selected":""}>${c.icon} ${escapeHtml(c.nom)}</option>`).join("");
+        const compteOpts = comptes.map(c => `<option value="${c.id}" ${c.id===f.compteId?"selected":""}>${escapeHtml(c.nom)}</option>`).join("");
+        const depCatOpts = `<option value="">— Aucune —</option>` + (state.categories||[]).map(c => `<option value="${c.id}" ${c.id===f.depCatId?"selected":""}>${escapeHtml(c.nom)}</option>`).join("");
+        const labelOpts  = `<option value="">— Aucune —</option>` + getFacLabels().map(l => `<option value="${l.id}" ${l.id===f.labelId?"selected":""}>${l.nom}</option>`).join("");
+        const customCols = fields.map(field => {
+          const val = escapeHtml(f.customValues?.[field.id] || "");
+          return `<td><input type="${field.type}" id="fedit-cf-${idx}-${field.id}" value="${val}" class="fac-edit-inp" style="min-width:80px"/></td>`;
+        }).join("");
+        const inpStyle = `class="fac-edit-inp"`;
+        return `<tr class="fac-edit-row" style="outline:2px solid var(--accent);outline-offset:-1px">
+          <td></td>
+          <td>
+            <input type="text" id="fedit-desc-${idx}" value="${escapeHtml(f.description)}" ${inpStyle} placeholder="Description"/>
+            <input type="text" id="fedit-notes-${idx}" value="${escapeHtml(f.notes||'')}" class="fac-edit-notes" placeholder="Notes…"/>
+          </td>
+          <td><select id="fedit-cat-${idx}" ${inpStyle}>${catOpts}</select></td>
+          <td><select id="fedit-depcat-${idx}" ${inpStyle}>${depCatOpts}</select></td>
+          <td><input type="date" id="fedit-datem-${idx}" value="${f.dateEmission||''}" ${inpStyle}/></td>
+          <td><input type="date" id="fedit-datec-${idx}" value="${f.dateEcheance||''}" ${inpStyle}/></td>
+          <td><select id="fedit-compte-${idx}" ${inpStyle}>${compteOpts}</select></td>
+          ${customCols}
+          <td><input type="number" id="fedit-montant-${idx}" value="${f.montant}" min="0" step="0.001" ${inpStyle} style="text-align:right;min-width:90px"/></td>
+          <td>
+            <select id="fedit-statut-${idx}" ${inpStyle}>
+              <option value="en_attente" ${f.statut==="en_attente"?"selected":""}>⏳ En attente</option>
+              <option value="payee" ${f.statut==="payee"?"selected":""}>✅ Payée</option>
+            </select>
+          </td>
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:nowrap">
+              <button class="btn btn-sm btn-primary" data-save-fac="${idx}" title="Enregistrer">💾 Sauver</button>
+              <button class="btn btn-sm" data-cancel-fac="${idx}" title="Annuler">✕</button>
+            </div>
+          </td>
+        </tr>`;
+      }
+
+      // ── DISPLAY ROW ───────────────────────────────────────
+      const catNom    = nomFacCategorie(f.categorieId);
+      const catIcon   = iconFacCategorie(f.categorieId);
+      const compteNom = nomCompte(f.compteId);
+      const dateEmStr = f.dateEmission ? new Date(f.dateEmission+"T00:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+      const dateEcStr = f.dateEcheance ? new Date(f.dateEcheance+"T00:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+      const customCols = fields.map(field => {
+        const val = f.customValues?.[field.id] || "—";
+        return `<td style="font-size:12px;color:var(--muted2)">${escapeHtml(val)}</td>`;
+      }).join("");
+
+      return `<tr style="${rowStyle}">
+        <td><input type="checkbox" class="fac-row-check" data-idx="${idx}"/></td>
+        <td>
+          <div style="font-weight:500;font-size:13px">${escapeHtml(f.description)}</div>
+          ${f.notes ? `<div style="font-size:11px;color:var(--muted2)">${escapeHtml(f.notes)}</div>` : ""}
+        </td>
+        <td><span class="badge" style="font-size:11px">${catIcon} ${escapeHtml(catNom)}</span></td>
+        <td>${renderDepCatBadge(f.depCatId)}</td>
+        <td style="white-space:nowrap;color:var(--muted2);font-size:12px">${dateEmStr}</td>
+        <td style="white-space:nowrap;font-size:12px;${isLate?'color:var(--red);font-weight:600':''}">${dateEcStr}${isLate?' ⚠️':''}</td>
+        <td style="font-size:12px">${escapeHtml(compteNom)}</td>
+        ${customCols}
+        <td class="num" style="font-weight:600">${formatMoney(f.montant)}</td>
+        <td>${statutFacLabel(f)}</td>
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm btn-edit" data-edit-fac="${idx}" title="Modifier">✏️</button>
+            ${f.statut !== "payee" ? `<button class="btn btn-sm" style="background:var(--green-d);color:var(--green);border-color:rgba(16,217,160,.3)" data-pay-fac="${idx}" title="Marquer payée">✅</button>` : ""}
+            <button class="btn btn-sm btn-danger" data-del-fac="${idx}" title="Supprimer">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="${8 + fields.length}" class="empty">Aucune facture pour ces filtres.</td></tr>`;
+
+    // Bind buttons
+    tbody.querySelectorAll("[data-edit-fac]").forEach(btn => {
+      btn.addEventListener("click", () => startEditRow(parseInt(btn.getAttribute("data-edit-fac"))));
+    });
+    tbody.querySelectorAll("[data-save-fac]").forEach(btn => {
+      btn.addEventListener("click", () => saveEditRow(parseInt(btn.getAttribute("data-save-fac"))));
+    });
+    tbody.querySelectorAll("[data-cancel-fac]").forEach(btn => {
+      btn.addEventListener("click", () => cancelEditRow());
+    });
+    tbody.querySelectorAll("[data-pay-fac]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-pay-fac"));
+        const f = state.factures[idx];
+        if (!f) return;
+        payerFacture(f);
+        saveState();
+        renderFactures();
+        renderComptesTable();
+        try { renderDashboard(); } catch(e) {}
+      });
+    });
+    tbody.querySelectorAll("[data-del-fac]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-del-fac"));
+        confirmAction("Supprimer cette facture ? Les dépenses et opérations liées seront aussi supprimées.", () => {
+          const f = state.factures[idx];
+          if (!f) return;
+          // Supprimer la dépense liée
+          if (f.linkedDepenseId)
+            state.depenses = state.depenses.filter(d => d.id !== f.linkedDepenseId);
+          // Supprimer l'opération liée
+          if (f.linkedOperationId)
+            state.operations = (state.operations || []).filter(o => o.id !== f.linkedOperationId);
+          // Supprimer la facture elle-même
+          state.factures.splice(idx, 1);
+          saveState();
+          renderFactures();
+          renderComptesTable();
+          try { renderDashboard(); } catch(e) {}
+        });
+      });
+    });
+    const checkAll = byId("fac-check-all");
+    if (checkAll) {
+      checkAll.addEventListener("change", () => {
+        tbody.querySelectorAll(".fac-row-check").forEach(cb => cb.checked = checkAll.checked);
+      });
+    }
+  }
+
+  function renderFactures() {
+    if (!state.factureCustomFields) state.factureCustomFields = [];
+    if (!state.factureLabels) state.factureLabels = [];
+    populateFacCatSelects();
+    populateFacCompteSelects();
+    renderFacCatList();
+    renderFacFieldsList();
+    renderFacLabelList();
+    updateFacLabelDatalist();
+    populateFacLabelFilter();
+    populateFacDepCatSelect("fac-dep-cat");
+    renderCustomFieldsInForm();
+    renderFacturesKpi();
+    renderFacturesTable();
+    const today = new Date().toISOString().slice(0,10);
+    const em = byId("fac-date-emission"); if (em && !em.value) em.value = today;
+    const ec = byId("fac-date-echeance"); if (ec && !ec.value) {
+      const d = new Date(); d.setMonth(d.getMonth()+1);
+      ec.value = d.toISOString().slice(0,10);
+    }
+  }
+
+  // ── Add facture category ───────────────────────────────────
+  const btnAddFacCat = byId("btn-add-fac-cat");
+  if (btnAddFacCat) {
+    btnAddFacCat.addEventListener("click", () => {
+      const nom  = byId("fac-new-cat-nom")?.value.trim()  || "";
+      const icon = byId("fac-new-cat-icon")?.value.trim() || "🧾";
+      const hint = byId("fac-cat-hint");
+      if (!nom) { if(hint){hint.style.display="inline";hint.style.color="var(--red)";hint.textContent="⚠️ Entrez un nom.";} return; }
+      if ((state.factureCategories||[]).some(c => c.nom.toLowerCase() === nom.toLowerCase())) {
+        if(hint){hint.style.display="inline";hint.style.color="var(--amber)";hint.textContent="⚠️ Catégorie déjà existante.";} return;
+      }
+      if (!state.factureCategories) state.factureCategories = [];
+      state.factureCategories.push({ id: uid(), nom, icon });
+      saveState();
+      byId("fac-new-cat-nom").value  = "";
+      byId("fac-new-cat-icon").value = "";
+      if(hint){hint.style.display="inline";hint.style.color="var(--green)";hint.textContent="✅ Catégorie ajoutée !";setTimeout(()=>hint.style.display="none",2500);}
+      renderFacCatList();
+      populateFacCatSelects();
+    });
+  }
+
+  // ── Add custom field ───────────────────────────────────────
+  const btnAddFacField = byId("btn-add-fac-field");
+  if (btnAddFacField) {
+    btnAddFacField.addEventListener("click", () => {
+      const nom  = byId("fac-new-field-nom")?.value.trim() || "";
+      const type = byId("fac-new-field-type")?.value       || "text";
+      const hint = byId("fac-field-hint");
+      if (!nom) { if(hint){hint.style.display="inline";hint.style.color="var(--red)";hint.textContent="⚠️ Entrez un nom.";} return; }
+      if (!state.factureCustomFields) state.factureCustomFields = [];
+      if (state.factureCustomFields.some(f => f.nom.toLowerCase() === nom.toLowerCase())) {
+        if(hint){hint.style.display="inline";hint.style.color="var(--amber)";hint.textContent="⚠️ Champ déjà existant.";} return;
+      }
+      state.factureCustomFields.push({ id: uid(), nom, type });
+      saveState();
+      byId("fac-new-field-nom").value = "";
+      if(hint){hint.style.display="inline";hint.style.color="var(--green)";hint.textContent="✅ Champ ajouté !";setTimeout(()=>hint.style.display="none",2500);}
+      renderFacFieldsList();
+      renderCustomFieldsInForm();
+      renderFacturesTable();
+    });
+  }
+
+  // ── Add facture ────────────────────────────────────────────
+  const btnAddFacture = byId("btn-add-facture");
+  if (btnAddFacture) {
+    btnAddFacture.addEventListener("click", () => {
+      const desc     = byId("fac-desc")?.value.trim()       || "";
+      const montant  = parseFloat(byId("fac-montant")?.value) || 0;
+      const dateEm   = byId("fac-date-emission")?.value      || "";
+      const dateEc   = byId("fac-date-echeance")?.value      || "";
+      const catId    = byId("fac-categorie")?.value           || "";
+      const compteId = byId("fac-compte")?.value              || "";
+      const statut   = byId("fac-statut")?.value              || "en_attente";
+      const notes    = byId("fac-notes")?.value.trim()        || "";
+      const hint     = byId("fac-hint");
+
+      if (!desc)               { showFacHint(hint, "var(--red)", "⚠️ Entrez une description."); return; }
+      if (!montant || montant <= 0) { showFacHint(hint, "var(--red)", "⚠️ Montant invalide."); return; }
+      if (!dateEc)             { showFacHint(hint, "var(--red)", "⚠️ Date d'échéance manquante."); return; }
+      if (!compteId)           { showFacHint(hint, "var(--red)", "⚠️ Sélectionnez un compte."); return; }
+
+      if (!state.factures) state.factures = [];
+      // Resolve label: match by name from input
+      const labelInput = byId("fac-label-input")?.value.trim() || "";
+      const matchedLabel = getFacLabels().find(l => l.nom.toLowerCase() === labelInput.toLowerCase());
+      const newFac = {
+        id: uid(),
+        description: desc, montant, dateEmission: dateEm,
+        dateEcheance: dateEc, categorieId: catId, compteId,
+        statut, notes, customValues: getCustomFieldValues(),
+        labelId: matchedLabel ? matchedLabel.id : "",
+        depCatId: byId("fac-dep-cat")?.value || "",
+        datePaiement: null, createdAt: new Date().toISOString(),
+      };
+      state.factures.push(newFac);
+
+      if (statut === "payee") {
+        newFac.statut = "en_attente";
+        payerFacture(newFac);
+      }
+
+      saveState();
+      renderFactures();
+      renderComptesTable();
+      try { renderDashboard(); } catch(e) {}
+
+      byId("fac-desc").value    = "";
+      byId("fac-montant").value = "";
+      byId("fac-notes").value   = "";
+      const labelInp = byId("fac-label-input"); if (labelInp) labelInp.value = "";
+      const depCatSel = byId("fac-dep-cat"); if (depCatSel) depCatSel.value = "";
+      const today = new Date().toISOString().slice(0,10);
+      byId("fac-date-emission").value = today;
+      const d2 = new Date(); d2.setMonth(d2.getMonth()+1);
+      byId("fac-date-echeance").value = d2.toISOString().slice(0,10);
+      renderCustomFieldsInForm(); // clear custom fields
+
+      showFacHint(hint, "var(--green)", "✅ Facture enregistrée !");
+    });
+  }
+
+  function showFacHint(el, color, msg) {
+    if (!el) return;
+    el.style.display = "inline";
+    el.style.color   = color;
+    el.textContent   = msg;
+    setTimeout(() => { el.style.display = "none"; }, 3500);
+  }
+
+  // ── Pay selected ───────────────────────────────────────────
+  const btnPaySelected = byId("btn-pay-selected");
+  if (btnPaySelected) {
+    btnPaySelected.addEventListener("click", () => {
+      const checks = document.querySelectorAll(".fac-row-check:checked");
+      if (!checks.length) { alert("Sélectionnez au moins une facture."); return; }
+      checks.forEach(cb => {
+        const idx = parseInt(cb.getAttribute("data-idx"));
+        const f = state.factures[idx];
+        if (f && f.statut !== "payee") payerFacture(f);
+      });
+      saveState();
+      renderFactures();
+      renderComptesTable();
+      try { renderDashboard(); } catch(e) {}
+    });
+  }
+
+  // ── Filter listeners ───────────────────────────────────────
+  ["fac-f-statut","fac-f-cat","fac-f-compte","fac-f-depcat","fac-f-from","fac-f-to"].forEach(id => {
+    const el = byId(id);
+    if (el) el.addEventListener("change", renderFacturesTable);
+  });
+  const btnResetFacFilters = byId("btn-reset-fac-filters");
+  if (btnResetFacFilters) {
+    btnResetFacFilters.addEventListener("click", () => {
+      ["fac-f-statut","fac-f-cat","fac-f-compte","fac-f-depcat","fac-f-from","fac-f-to"].forEach(id => {
+        const el = byId(id);
+        if (el) el.value = "";
+      });
+      renderFacturesTable();
+    });
+  }
+
+  // ── Initial render ─────────────────────────────────────────
+  renderFactures();
 
 
   // Apply transfer button
