@@ -338,6 +338,14 @@ input[type=file]{display:none}
   th,td{padding:8px 8px}
   .table-wrap{font-size:12px}
 }
+
+/* TOGGLE SWITCH */
+.toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0 }
+.toggle-switch input { opacity:0; width:0; height:0 }
+.toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--s3); border-radius:99px; transition:.2s }
+.toggle-slider:before { content:""; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s }
+.toggle-switch input:checked + .toggle-slider { background:var(--green) }
+.toggle-switch input:checked + .toggle-slider:before { transform:translateX(18px) }
 </style>
 </head>
 <body>
@@ -1019,6 +1027,73 @@ input[type=file]{display:none}
 </body>
 
 </html>
+
+
+<!-- ═══ MODAL: Acheter un article wishlist ═══ -->
+<div id="modal-wl-achat" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h3>🛍️ Confirmer l'achat</h3>
+      <button class="modal-close" id="btn-wl-achat-cancel">×</button>
+    </div>
+
+    <!-- Article info -->
+    <div id="wl-achat-info" style="background:var(--s2);border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;border-left:3px solid var(--accent)">
+      <div style="font-size:15px;font-weight:700;color:var(--text)" id="wl-achat-nom">—</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:3px" id="wl-achat-meta">—</div>
+    </div>
+
+    <!-- Toggle sync -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r2);border:1px solid var(--border);background:var(--s1);margin-bottom:14px;cursor:pointer" id="wl-achat-toggle-row">
+      <span style="font-size:20px">🔄</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Synchroniser avec les dépenses</div>
+        <div style="font-size:11.5px;color:var(--muted2)">Créer une dépense et débiter le compte automatiquement</div>
+      </div>
+      <label class="toggle-switch" onclick="event.stopPropagation()">
+        <input type="checkbox" id="wl-achat-sync" checked/>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Sync fields -->
+    <div id="wl-achat-fields">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr">
+        <div class="field">
+          <label>Montant réel payé (TND)</label>
+          <input type="number" id="wl-achat-montant" min="0" step="0.001" placeholder="0.000"/>
+        </div>
+        <div class="field">
+          <label>Date d'achat</label>
+          <input type="date" id="wl-achat-date"/>
+        </div>
+        <div class="field">
+          <label>Compte à débiter</label>
+          <select id="wl-achat-compte"></select>
+        </div>
+        <div class="field">
+          <label>Catégorie dépense</label>
+          <select id="wl-achat-categorie"></select>
+        </div>
+        <div class="field">
+          <label>Personne</label>
+          <select id="wl-achat-personne"></select>
+        </div>
+        <div class="field">
+          <label>Moyen de paiement</label>
+          <input type="text" id="wl-achat-moyen" placeholder="Carte, espèces…"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:4px">
+      <button class="btn" id="btn-wl-achat-cancel2">Annuler</button>
+      <button class="btn btn-primary" id="btn-wl-achat-confirm" style="background:var(--green);border-color:var(--green)">
+        ✅ Confirmer l'achat
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ MODAL: Edit Dépense ═══ -->
 <div id="modal-edit-depense" class="modal-backdrop hidden">
@@ -3054,6 +3129,29 @@ document.addEventListener("DOMContentLoaded", () => {
     byId("modal-edit-depense").classList.add("hidden");
   });
   byId("btn-edit-cancel").addEventListener("click", () => byId("modal-edit-depense").classList.add("hidden"));
+  // ── Wishlist purchase modal wiring ──────────────────────────────────────────
+  byId("btn-wl-achat-cancel").addEventListener("click", closeWlAchatModal);
+  byId("btn-wl-achat-cancel2").addEventListener("click", closeWlAchatModal);
+  byId("btn-wl-achat-confirm").addEventListener("click", confirmWlAchat);
+
+  // Toggle row click
+  byId("wl-achat-toggle-row").addEventListener("click", () => {
+    const chk = byId("wl-achat-sync");
+    chk.checked = !chk.checked;
+    byId("wl-achat-fields").style.display = chk.checked ? "" : "none";
+    byId("wl-achat-toggle-row").style.borderColor = chk.checked ? "var(--accent)" : "var(--border)";
+    byId("wl-achat-toggle-row").style.background = chk.checked ? "var(--accent-d)" : "var(--s1)";
+  });
+  byId("wl-achat-sync").addEventListener("change", function() {
+    byId("wl-achat-fields").style.display = this.checked ? "" : "none";
+    byId("wl-achat-toggle-row").style.borderColor = this.checked ? "var(--accent)" : "var(--border)";
+    byId("wl-achat-toggle-row").style.background = this.checked ? "var(--accent-d)" : "var(--s1)";
+  });
+
+  // Close on backdrop click
+  byId("modal-wl-achat").addEventListener("click", function(e) {
+    if (e.target === this) closeWlAchatModal();
+  });
 
   // ── MODAL CANCEL BUTTONS ─────────────────────────────────────────────────
   byId("btn-edit-personne-cancel").addEventListener("click", () => byId("modal-edit-personne").classList.add("hidden"));
@@ -3508,7 +3606,129 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>`;
   }
 
-  function renderWishlist() {
+  // ── WISHLIST PURCHASE MODAL ─────────────────────────────────────────────────
+  let _wlAchatItem = null;
+
+  function openWlAchatModal(w) {
+    _wlAchatItem = w;
+    const cat = (state.wishlistCategories || []).find(c => c.id === w.categorieId);
+    const catLabel = cat ? `${cat.icon} ${cat.nom}` : '—';
+    const prix = w.prix ? `${w.prix.toFixed(3)} TND` : 'Prix non défini';
+
+    // Fill info
+    byId('wl-achat-nom').textContent = w.desc;
+    byId('wl-achat-meta').textContent = `${catLabel} • ${prix} • ${w.priority === 'haute' ? '🔴' : w.priority === 'basse' ? '🟢' : '🟡'} ${w.priority}`;
+
+    // Pre-fill amount
+    if (w.prix > 0) byId('wl-achat-montant').value = w.prix.toFixed(3);
+    else byId('wl-achat-montant').value = '';
+
+    // Pre-fill today's date
+    byId('wl-achat-date').value = new Date().toISOString().slice(0,10);
+
+    // Fill comptes dropdown
+    const selCompte = byId('wl-achat-compte');
+    selCompte.innerHTML = state.comptes.map(c =>
+      `<option value="${c.id}">${c.nom} (${c.type})</option>`
+    ).join('');
+
+    // Fill categories dropdown
+    const selCat = byId('wl-achat-categorie');
+    selCat.innerHTML = '<option value="">— Aucune —</option>' +
+      state.categories.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+
+    // Try to auto-select "Loisirs" or "Autre"
+    const autocat = state.categories.find(c =>
+      c.nom.toLowerCase().includes('loisir') || c.nom.toLowerCase().includes('autre'));
+    if (autocat) selCat.value = autocat.id;
+
+    // Fill personnes dropdown
+    const selPers = byId('wl-achat-personne');
+    selPers.innerHTML = state.personnes.map(p =>
+      `<option value="${p.id}">${p.nom}</option>`
+    ).join('');
+
+    // Show modal
+    byId('modal-wl-achat').classList.remove('hidden');
+  }
+
+  function closeWlAchatModal() {
+    byId('modal-wl-achat').classList.add('hidden');
+    _wlAchatItem = null;
+  }
+
+  function confirmWlAchat() {
+    if (!_wlAchatItem) return;
+    const w = _wlAchatItem;
+    const sync = byId('wl-achat-sync').checked;
+
+    // Mark as done
+    w.done = true;
+
+    if (sync) {
+      const montant = Number(byId('wl-achat-montant').value);
+      if (!montant || montant <= 0) {
+        alert('Veuillez entrer un montant valide.');
+        return;
+      }
+      const dateVal = byId('wl-achat-date').value;
+      const compteId = byId('wl-achat-compte').value;
+      const categorieId = byId('wl-achat-categorie').value;
+      const personneId = byId('wl-achat-personne').value;
+      const moyen = byId('wl-achat-moyen').value.trim();
+
+      if (!compteId) { alert('Choisissez un compte.'); return; }
+
+      // Create depense
+      const dep = {
+        id: uid(),
+        date: new Date(dateVal + 'T12:00:00').toISOString(),
+        categorieId: categorieId || (state.categories[0]?.id || ''),
+        personneId:  personneId  || (state.personnes[0]?.id  || ''),
+        compteId:    compteId,
+        description: '🛍️ ' + w.desc,
+        montant:     montant,
+        moyen:       moyen,
+        tags:        ['wishlist'],
+        recurrent:   false,
+      };
+      state.depenses.push(dep);
+    }
+
+    saveState();
+    renderAll();
+    closeWlAchatModal();
+
+    // Toast feedback
+    showToast(sync
+      ? `✅ "${w.desc}" acheté · dépense créée !`
+      : `✅ "${w.desc}" marqué comme acheté`);
+  }
+
+  // Simple toast notification
+  function showToast(msg) {
+    let t = document.getElementById('ft-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'ft-toast';
+      t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+        background:var(--s2);color:var(--text);padding:12px 20px;border-radius:var(--r2);
+        border:1px solid var(--border2);font-size:13px;font-weight:500;z-index:9999;
+        box-shadow:0 4px 20px rgba(0,0,0,.4);transition:transform .3s,opacity .3s;opacity:0;
+        white-space:nowrap;max-width:90vw;text-align:center`;
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => {
+      t.style.transform = 'translateX(-50%) translateY(60px)';
+      t.style.opacity = '0';
+    }, 3500);
+  }
+
+    function renderWishlist() {
     if (!byId("page-wishlist")) return;
 
     // Category selects already filled by refreshSelects() in renderAll()
@@ -3586,7 +3806,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${w.notes ? `<div class="wl-notes">${escapeHtml(w.notes)}</div>` : ""}
         ${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--accent);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;display:block">🔗 ${escapeHtml(w.url.replace(/^https?:\/\//, "").slice(0,50))}</a>` : ""}
         <div class="wl-card-actions">
-          <button class="btn btn-sm btn-wl-done ${w.done ? "is-done" : ""}" data-wl-done="${w.id}">${w.done ? "✅ Acheté" : "⬜ Marquer acheté"}</button>
+          <button class="btn btn-sm btn-wl-done ${w.done ? "is-done" : ""}" data-wl-done="${w.id}">${w.done ? "✅ Acheté" : "🛒 Acheter"}</button>
           <button class="btn btn-sm btn-edit" data-wl-edit="${w.id}">✏️</button>
           <button class="btn btn-sm btn-danger" data-wl-del="${w.id}">🗑️</button>
         </div>
@@ -3597,7 +3817,16 @@ document.addEventListener("DOMContentLoaded", () => {
     container.querySelectorAll("[data-wl-done]").forEach(btn => {
       btn.addEventListener("click", () => {
         const w = state.wishlist.find(x => x.id === btn.getAttribute("data-wl-done"));
-        if (w) { w.done = !w.done; saveState(); renderWishlist(); }
+        if (!w) return;
+        if (!w.done) {
+          // Not yet bought → open purchase dialog
+          openWlAchatModal(w);
+        } else {
+          // Already bought → just unmark (no depense deletion)
+          w.done = false;
+          saveState();
+          renderWishlist();
+        }
       });
     });
     container.querySelectorAll("[data-wl-del]").forEach(btn => {
