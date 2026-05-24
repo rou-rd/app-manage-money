@@ -324,19 +324,236 @@ input[type=file]{display:none}
 
 /* RESPONSIVE */
 @media(max-width:900px){.chart-grid,.chart-grid.cols3,.two-col{grid-template-columns:1fr}}
+
+/* ── MOBILE BOTTOM NAV ─────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--s0);
+  border-top: 1px solid var(--border2);
+  z-index: 150;
+  align-items: stretch;
+  justify-content: space-around;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mob-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.mob-tab .mob-icon { font-size: 20px; line-height: 1; transition: transform .15s; }
+.mob-tab.active { color: var(--accent); }
+.mob-tab.active .mob-icon { transform: scale(1.15); }
+.mob-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 32px; height: 3px;
+  background: var(--accent);
+  border-radius: 0 0 4px 4px;
+}
+
+/* ── MORE DRAWER ───────────────────────────────────────────── */
+.mob-more-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 160;
+  backdrop-filter: blur(3px);
+}
+.mob-more-backdrop.show { display: block; }
+.mob-more-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--s0);
+  border-top: 1px solid var(--border2);
+  border-radius: 20px 20px 0 0;
+  z-index: 161;
+  padding: 12px 16px 32px;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.mob-more-sheet.show { transform: translateY(0); }
+.mob-more-handle {
+  width: 36px; height: 4px;
+  background: var(--border2);
+  border-radius: 99px;
+  margin: 0 auto 16px;
+}
+.mob-more-title { font-size: 13px; font-weight: 600; color: var(--muted2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.mob-more-btn {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 14px 12px;
+  border: none; background: none;
+  color: var(--text); font-family: var(--font);
+  font-size: 15px; font-weight: 500;
+  cursor: pointer; border-radius: var(--r2);
+  text-align: left; -webkit-tap-highlight-color: transparent;
+  transition: background .12s;
+}
+.mob-more-btn:hover, .mob-more-btn:active { background: var(--s2); }
+.mob-more-btn .mob-more-icon { font-size: 22px; width: 36px; text-align: center; flex-shrink: 0; }
+.mob-more-btn.active { color: var(--accent); background: var(--accent-d); }
+
+/* ── FAB (Floating Action Button) ─────────────────────────── */
+.fab {
+  display: none;
+  position: fixed;
+  bottom: 80px; right: 18px;
+  width: 54px; height: 54px;
+  background: linear-gradient(140deg, var(--accent), var(--accent2));
+  border: none; border-radius: 50%;
+  color: #fff; font-size: 26px; line-height: 1;
+  cursor: pointer; z-index: 140;
+  box-shadow: 0 6px 20px rgba(79,143,255,.45);
+  align-items: center; justify-content: center;
+  transition: transform .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.fab:active { transform: scale(.92); box-shadow: 0 3px 10px rgba(79,143,255,.35); }
+
+/* ── MOBILE MEDIA QUERY ────────────────────────────────────── */
 @media(max-width:720px){
-  .nav{transform:translateX(-100%);width:240px}
-  .nav.open{transform:none}
-  .main{margin-left:0}
-  .hamburger{display:flex}
-  .content{padding:16px 14px 48px}
-  .topbar{padding:0 14px}
-  .kpi-grid{grid-template-columns:repeat(2,1fr)}
-  .form-grid{grid-template-columns:1fr}
-  .filters{flex-direction:column}
-  .filters .field input,.filters .field select{width:100%}
-  th,td{padding:8px 8px}
-  .table-wrap{font-size:12px}
+  /* Hide desktop sidebar */
+  .nav { display: none !important; }
+  /* Override: sidebar overlay mode when hamburger used (keep for edge case) */
+  .nav.mob-overlay {
+    display: flex !important;
+    transform: translateX(-100%);
+    width: 85vw; max-width: 300px;
+    z-index: 170;
+    box-shadow: 4px 0 32px rgba(0,0,0,.4);
+  }
+  .nav.mob-overlay.open { transform: translateX(0); }
+
+  /* Show mobile chrome */
+  .mobile-bottom-nav { display: flex; }
+  .fab { display: flex; }
+
+  /* Layout */
+  .main { margin-left: 0; }
+  .content { padding: 14px 14px 90px; }
+
+  /* Topbar */
+  .topbar { padding: 0 14px; height: 54px; }
+  .hamburger { display: none; } /* replaced by bottom nav */
+  .topbar-title { font-size: 15px; }
+  .topbar-desc { display: none; }
+
+  /* KPI grid: 2 cols on mobile */
+  .kpi-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .kpi { padding: 14px; }
+  .kpi-value { font-size: 17px; }
+
+  /* Forms: single column, larger touch targets */
+  .form-grid { grid-template-columns: 1fr; gap: 10px; }
+  .field input, .field select, .field textarea,
+  input[type=date], input[type=number], input[type=text],
+  input[type=search], input[type=url], select {
+    font-size: 16px !important; /* prevents iOS zoom */
+    padding: 11px 12px;
+    min-height: 46px;
+  }
+  .field label { font-size: 11.5px; }
+  .field-check { padding-top: 8px; }
+  .field-check label { font-size: 15px !important; }
+
+  /* Buttons */
+  .btn { padding: 10px 16px; font-size: 13.5px; min-height: 44px; }
+  .btn-primary { width: 100%; justify-content: center; margin-top: 4px; }
+  .btn-sm { min-height: 36px; font-size: 12px; }
+
+  /* Panels */
+  .panel { padding: 16px 14px; border-radius: var(--r2); }
+  .panel-title { font-size: 15px; }
+
+  /* Tables: horizontal scroll with sticky first col feel */
+  .table-wrap { font-size: 12px; border-radius: var(--r); }
+  th, td { padding: 9px 8px; }
+  th { font-size: 10px; }
+
+  /* Filters: stack vertically */
+  .filters { flex-direction: column; padding: 12px 14px; gap: 8px; }
+  .filters .field input, .filters .field select { width: 100%; }
+  .filters .btn { width: auto; }
+
+  /* Charts: slightly shorter on mobile */
+  .chart-wrap.h220 { height: 180px; }
+  .chart-wrap.h260 { height: 210px; }
+  .chart-wrap.h280 { height: 220px; }
+
+  /* Modals: bottom-sheet style */
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal-box {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    padding: 20px 18px 32px;
+    max-width: 100%;
+    animation: sheetIn .25s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes sheetIn { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* Confirm dialog: centered but compact */
+  .confirm-box { padding: 24px 18px; }
+
+  /* Two-col → single col */
+  .two-col { grid-template-columns: 1fr; }
+
+  /* Nav buttons in topbar-right: compact */
+  .topbar-right { gap: 6px; }
+  #btn-theme-toggle { padding: 6px 8px; font-size: 17px; }
+
+  /* Budget rows */
+  .budget-row { flex-direction: column; align-items: flex-start; }
+  .budget-row input { width: 100% !important; }
+
+  /* Saving planner */
+  .sp-budget-input { font-size: 20px; width: 140px; }
+
+  /* Pagination: larger tap targets */
+  .pag-bar .page-btn { min-width: 38px; height: 38px; font-size: 13px; }
+
+  /* Ref items */
+  .ref-item { padding: 12px 4px; }
+  .ref-item span { font-size: 14px; }
+
+  /* Wl cards */
+  .wl-card { padding: 14px; }
+
+  /* Save button in sidebar — hide since sidebar hidden */
+  .btn-save-nav { display: none; }
+
+  /* Hide topbar desc on mobile */
+  .topbar-left { gap: 8px; }
+}
+
+/* ── SAFE AREA for notched phones ──────────────────────────── */
+@supports(padding-bottom: env(safe-area-inset-bottom)){
+  @media(max-width:720px){
+    .content { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+    .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); height: calc(64px + env(safe-area-inset-bottom)); }
+    .fab { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  }
 }
 
 /* TOGGLE SWITCH */
@@ -346,6 +563,581 @@ input[type=file]{display:none}
 .toggle-slider:before { content:""; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s }
 .toggle-switch input:checked + .toggle-slider { background:var(--green) }
 .toggle-switch input:checked + .toggle-slider:before { transform:translateX(18px) }
+
+/* ══════════════════════════════════════════════════
+   MOBILE-FIRST DASHBOARD & FORM REDESIGN
+══════════════════════════════════════════════════ */
+
+/* Dashboard hero card */
+.dash-hero {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: rgba(255,255,255,.08);
+  border-radius: 50%;
+}
+.dash-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; left: 40px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,.05);
+  border-radius: 50%;
+}
+.dash-hero-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  opacity: .75;
+  margin-bottom: 6px;
+}
+.dash-hero-amount {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.dash-hero-sub {
+  font-size: 12.5px;
+  opacity: .72;
+  margin-bottom: 16px;
+}
+.dash-hero-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dash-hero-pill {
+  background: rgba(255,255,255,.18);
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(4px);
+}
+.dash-hero-pill .ph-icon { font-size: 13px; }
+
+/* Stat row: quick numbers below hero */
+.dash-stat-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.dash-stat {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform .15s, border-color .15s;
+}
+.dash-stat:active { transform: scale(.97); }
+.dash-stat-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 6px;
+  display: block;
+}
+.dash-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 3px;
+}
+.dash-stat-value {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+  display: block;
+  color: var(--text);
+}
+.dash-stat-sub {
+  font-size: 10.5px;
+  color: var(--muted2);
+  display: block;
+  margin-top: 2px;
+}
+.dash-stat-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--s3);
+  overflow: hidden;
+  border-radius: 0 0 14px 14px;
+}
+.dash-stat-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width .5s var(--ease);
+}
+.dash-stat.danger { border-color: rgba(244,63,94,.3); }
+.dash-stat.danger .dash-stat-value { color: var(--red); }
+.dash-stat.danger .dash-stat-bar-fill { background: var(--red); }
+.dash-stat.warn { border-color: rgba(245,158,11,.3); }
+.dash-stat.warn .dash-stat-value { color: var(--amber); }
+.dash-stat.warn .dash-stat-bar-fill { background: var(--amber); }
+.dash-stat.green .dash-stat-bar-fill { background: var(--green); }
+
+/* Account cards row (horizontal scroll) */
+.dash-accounts-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.dash-accounts-scroll::-webkit-scrollbar { display: none; }
+.dash-acc-card {
+  flex-shrink: 0;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-width: 140px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-acc-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--green);
+  opacity: .7;
+}
+.dash-acc-card.danger::after { background: var(--red); }
+.dash-acc-card.warn::after { background: var(--amber); }
+.dash-acc-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted2);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: block;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-acc-balance {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+  display: block;
+  color: var(--text);
+}
+.dash-acc-card.danger .dash-acc-balance { color: var(--red); }
+.dash-acc-card.warn .dash-acc-balance { color: var(--amber); }
+.dash-acc-spent {
+  font-size: 10.5px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/* Section header for dashboard groups */
+.dash-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── FORM REDESIGN ──────────────────────────────── */
+/* Icon-labeled field groups */
+.form-section {
+  margin-bottom: 20px;
+}
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.field-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+}
+.field-icon label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted2);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.field-icon label .lbl-icon {
+  font-size: 14px;
+  opacity: .8;
+}
+.field-icon input,
+.field-icon select,
+.field-icon textarea {
+  background: var(--s2);
+  border: 1.5px solid var(--border2);
+  color: var(--text);
+  padding: 11px 13px;
+  border-radius: var(--r2);
+  font-family: var(--font);
+  font-size: 14px;
+  font-size: clamp(14px, 4vw, 16px);
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+  outline: none;
+  min-height: 48px;
+}
+.field-icon input:focus,
+.field-icon select:focus,
+.field-icon textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-d);
+}
+/* Amount field - bigger */
+.field-amount input {
+  font-size: 24px !important;
+  font-weight: 700;
+  letter-spacing: -1px;
+  font-family: var(--mono);
+  color: var(--accent);
+  padding: 14px 16px;
+  text-align: right;
+  border: 2px solid var(--accent);
+  background: var(--accent-d);
+  min-height: 60px;
+}
+
+/* Chip selectors for common categories */
+.chip-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border2);
+  background: var(--s2);
+  color: var(--muted2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font);
+}
+.chip:active { transform: scale(.94); }
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-d);
+  color: var(--accent);
+}
+
+/* Big submit button */
+.btn-submit-lg {
+  width: 100%;
+  padding: 15px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: -.2px;
+  min-height: 54px;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-submit-lg:active { opacity: .88; transform: scale(.98); }
+
+/* card alias to kpi for JS compatibility */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .15s, transform .15s;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--kc, var(--accent));
+  opacity: .6;
+}
+.card > span:first-child {
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.card > strong {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.card-sub {
+  font-size: 11px;
+  color: var(--muted2);
+}
+.card-trend {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.card-trend.up { color: var(--red); }
+.card-trend.down { color: var(--green); }
+.card-trend.flat { color: var(--muted2); }
+.card-bar-bg {
+  background: var(--s3);
+  border-radius: 99px;
+  height: 4px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.card-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width .5s var(--ease);
+}
+.card-bar-fill.danger { background: var(--red); }
+.card-bar-fill.warn { background: var(--amber); }
+.card.danger { --kc: var(--red); }
+.card.danger > strong { color: var(--red); }
+.card.warn { --kc: var(--amber); }
+.card.warn > strong { color: var(--amber); }
+
+/* Mobile overrides for new dashboard */
+@media(max-width:720px) {
+  .dash-hero-amount { font-size: 30px; }
+  .dash-stat-row { grid-template-columns: repeat(2, 1fr); }
+  .dash-section-title { margin-top: 6px; }
+  .field-amount input { font-size: 22px !important; }
+  .btn-submit-lg { font-size: 14px; }
+}
+
+
+/* Mobile logo and topbar tweaks */
+@media(max-width:720px) {
+  .mob-logo { display: flex !important; }
+  .topbar-title-group { display: none; }
+  #btn-save-local-top { display: flex !important; }
+}
+
+/* ══════════════════════════════════════════════
+   SUB-CATEGORY SYSTEM
+══════════════════════════════════════════════ */
+.subcat-picker {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--s2);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r2);
+  animation: fadeIn .18s ease;
+}
+.subcat-picker.show { display: flex; }
+.subcat-picker-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.subcat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.subcat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border2);
+  background: var(--s1);
+  color: var(--muted2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .14s;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.subcat-chip:active { transform: scale(.93); }
+.subcat-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-d);
+  color: var(--accent);
+  font-weight: 600;
+}
+.subcat-chip .sc-icon { font-size: 15px; }
+.subcat-add-row {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 4px;
+}
+.subcat-add-inp {
+  flex: 1;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: var(--r);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+  min-width: 0;
+}
+.subcat-add-inp:focus { border-color: var(--accent); }
+.subcat-add-btn {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: var(--r);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* In referentiels list */
+.cat-tree-item {
+  display: flex;
+  flex-direction: column;
+}
+.cat-tree-parent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px 6px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.cat-tree-parent:last-of-type { border-bottom: none; }
+.cat-parent-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cat-subcats {
+  padding: 4px 0 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cat-subcat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px;
+  border-radius: var(--r);
+  gap: 8px;
+  transition: background .1s;
+}
+.cat-subcat-row:hover { background: var(--s2); }
+.cat-subcat-name {
+  font-size: 13px;
+  color: var(--muted2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cat-subcat-name::before {
+  content: '↳';
+  color: var(--accent);
+  font-size: 12px;
+  opacity: .7;
+}
+.badge-subcat {
+  font-size: 10px;
+  background: var(--accent-d);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+/* In select dropdowns, indent sub-categories */
+select option.subcat-option {
+  padding-left: 20px;
+}
+
 </style>
 </head>
 <body>
@@ -365,6 +1157,33 @@ input[type=file]{display:none}
 </style>
 
 <div class="overlay-backdrop" id="nav-overlay"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <button class="mob-tab active" data-page="dashboard"><span class="mob-icon">🏠</span><span>Accueil</span></button>
+  <button class="mob-tab" data-page="depenses"><span class="mob-icon">💸</span><span>Dépenses</span></button>
+  <button class="mob-tab" data-page="analyses"><span class="mob-icon">📊</span><span>Analyses</span></button>
+  <button class="mob-tab" data-page="comptes"><span class="mob-icon">💳</span><span>Comptes</span></button>
+  <button class="mob-tab" id="mob-more-trigger"><span class="mob-icon">⋯</span><span>Plus</span></button>
+</nav>
+
+<!-- MORE DRAWER -->
+<div class="mob-more-backdrop" id="mob-more-backdrop"></div>
+<div class="mob-more-sheet" id="mob-more-sheet">
+  <div class="mob-more-handle"></div>
+  <div class="mob-more-title">Plus d'options</div>
+  <button class="mob-more-btn" data-page="budgets"><span class="mob-more-icon">🎯</span> Budgets</button>
+  <button class="mob-more-btn" data-page="factures"><span class="mob-more-icon">🧾</span> Factures</button>
+  <button class="mob-more-btn" data-page="wishlist"><span class="mob-more-icon">🛒</span> Liste d'achats</button>
+  <button class="mob-more-btn" data-page="saving-planner"><span class="mob-more-icon">🧮</span> Planificateur épargne</button>
+  <button class="mob-more-btn" data-page="referentiels"><span class="mob-more-icon">👥</span> Référentiels</button>
+  <button class="mob-more-btn" data-page="fichiers"><span class="mob-more-icon">📁</span> Fichiers &amp; Import</button>
+  <hr style="border:none;border-top:1px solid var(--border);margin:8px 0"/>
+  <button class="mob-more-btn" id="mob-save-btn"><span class="mob-more-icon">💾</span> Enregistrer</button>
+</div>
+
+<!-- FAB: Quick add expense -->
+<button class="fab" id="btn-fab" title="Ajouter une dépense">+</button>
 
 <nav class="nav" id="sidebar">
   <div class="nav-header">
@@ -397,12 +1216,21 @@ input[type=file]{display:none}
   <header class="topbar">
     <div class="topbar-left">
       <button class="hamburger" id="btn-hamburger">☰</button>
-      <div>
+      <!-- Mobile logo (hidden on desktop) -->
+      <div class="mob-logo" style="display:none;align-items:center;gap:8px">
+        <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(140deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">FT</div>
+        <span style="font-size:15px;font-weight:700;letter-spacing:-.3px">Fin<em style="color:var(--accent);font-style:normal">Track</em></span>
+      </div>
+      <div class="topbar-title-group">
         <div class="topbar-title" id="topbar-title">Dashboard</div>
         <div class="topbar-desc" id="topbar-desc">Vue d'ensemble de vos finances</div>
       </div>
     </div>
     <div class="topbar-right">
+      <button id="btn-save-local-top" title="Enregistrer"
+        style="display:none;border:1px solid var(--border2);background:var(--s2);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:15px;color:var(--muted2);transition:all .15s">
+        💾
+      </button>
       <button id="btn-theme-toggle" title="Thème clair / sombre"
         style="border:1px solid var(--border2);background:var(--s2);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:15px;color:var(--muted2);transition:all .15s">
         🌙
@@ -417,31 +1245,108 @@ input[type=file]{display:none}
     <!-- DASHBOARD -->
     <section id="page-dashboard" class="page active">
       <div id="alerts-dashboard" class="alerts"></div>
-      <div class="kpi-grid" id="dash-cards"></div>
+
+      <!-- Hero card: total this month -->
+      <div class="dash-hero" id="dash-hero">
+        <div class="dash-hero-label">💳 Dépenses — Ce mois</div>
+        <div class="dash-hero-amount" id="dh-amount">—</div>
+        <div class="dash-hero-sub" id="dh-sub">Chargement…</div>
+        <div class="dash-hero-pills" id="dh-pills"></div>
+      </div>
+
+      <!-- Quick stats 2×2 grid -->
+      <div class="dash-section-title">📈 Aperçu rapide</div>
+      <div class="dash-stat-row" id="dash-stat-row"></div>
+
+      <!-- Accounts horizontal scroll -->
+      <div class="dash-section-title">💳 Mes comptes</div>
+      <div class="dash-accounts-scroll" id="dash-accounts-scroll"></div>
+
+      <!-- Budget indicators -->
       <div id="budget-indicators"></div>
+
+      <!-- Charts -->
+      <div class="dash-section-title">📊 Graphiques</div>
       <div class="chart-grid">
         <div class="chart-box"><h3>Dépenses du mois par catégorie</h3><div class="chart-wrap h220"><canvas id="dash-chart-month-cat"></canvas></div></div>
         <div class="chart-box"><h3>Soldes des comptes</h3><div class="chart-wrap h220"><canvas id="dash-chart-comptes"></canvas></div></div>
       </div>
+
+      <!-- Keep the old kpi-grid hidden for JS compatibility -->
+      <div class="kpi-grid" id="dash-cards" style="display:none"></div>
     </section>
 
     <!-- DEPENSES -->
     <section id="page-depenses" class="page">
       <div class="panel">
-        <div class="panel-title"><span class="icon">➕</span> Ajouter une dépense</div>
-        <p class="hint">Le montant est débité du compte sélectionné.</p>
-        <div class="form-grid">
-          <div class="field"><label>Date</label><input type="date" id="add-date" required/></div>
-          <div class="field"><label>Montant (TND)</label><input type="number" id="add-montant" min="0" step="0.001" placeholder="0.000" required/></div>
-          <div class="field"><label>Catégorie</label><select id="add-categorie"></select></div>
-          <div class="field"><label>Personne</label><select id="add-personne"></select></div>
-          <div class="field"><label>Compte débité</label><select id="add-compte"></select></div>
-          <div class="field"><label>Description</label><input type="text" id="add-desc" placeholder="Libellé"/></div>
-          <div class="field"><label>Moyen de paiement</label><input type="text" id="add-moyen" placeholder="Carte, virement…"/></div>
-          <div class="field"><label>Tags</label><div class="tag-input-wrap" id="add-tags-wrap"><input type="text" id="add-tags-input" placeholder="tag + Entrée"/></div></div>
-          <div class="field-check"><input type="checkbox" id="add-recurrent"/><label for="add-recurrent" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted2)">Récurrente mensuelle</label></div>
+        <div class="panel-title"><span class="icon">➕</span> Nouvelle dépense</div>
+
+        <!-- Amount — hero field -->
+        <div class="form-section">
+          <div class="field-icon field-amount">
+            <label><span class="lbl-icon">💰</span> Montant (TND)</label>
+            <input type="number" id="add-montant" min="0" step="0.001" placeholder="0.000" required inputmode="decimal"/>
+          </div>
         </div>
-        <button class="btn btn-primary" id="btn-add-depense">Ajouter la dépense</button>
+
+        <!-- Core info -->
+        <div class="form-section">
+          <div class="form-section-title">📋 Informations</div>
+          <div class="form-grid" style="gap:10px">
+            <div class="field-icon">
+              <label><span class="lbl-icon">📅</span> Date</label>
+              <input type="date" id="add-date" required/>
+            </div>
+            <div class="field-icon" style="grid-column:1/-1">
+              <label><span class="lbl-icon">🏷️</span> Catégorie</label>
+              <select id="add-categorie"></select>
+              <!-- Sub-category picker: shown when parent has sub-cats -->
+              <div class="subcat-picker" id="add-subcat-picker">
+                <span class="subcat-picker-label">↳ Sous-catégorie</span>
+                <div class="subcat-chips" id="add-subcat-chips"></div>
+                <div class="subcat-add-row">
+                  <input class="subcat-add-inp" id="add-subcat-new-inp" placeholder="Nouvelle sous-catégorie…" autocomplete="off"/>
+                  <button class="subcat-add-btn" id="add-subcat-new-btn">+ Ajouter</button>
+                </div>
+              </div>
+            </div>
+            <div class="field-icon">
+              <label><span class="lbl-icon">💳</span> Compte débité</label>
+              <select id="add-compte"></select>
+            </div>
+            <div class="field-icon">
+              <label><span class="lbl-icon">👤</span> Personne</label>
+              <select id="add-personne"></select>
+            </div>
+            <div class="field-icon">
+              <label><span class="lbl-icon">📝</span> Description</label>
+              <input type="text" id="add-desc" placeholder="Libellé de la dépense"/>
+            </div>
+            <div class="field-icon">
+              <label><span class="lbl-icon">💳</span> Moyen de paiement</label>
+              <input type="text" id="add-moyen" placeholder="Carte, virement, espèces…"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags & options -->
+        <div class="form-section">
+          <div class="form-section-title">🔖 Options</div>
+          <div class="field-icon" style="margin-bottom:12px">
+            <label><span class="lbl-icon">🏷️</span> Tags</label>
+            <div class="tag-input-wrap" id="add-tags-wrap"><input type="text" id="add-tags-input" placeholder="Ajouter un tag puis Entrée…"/></div>
+          </div>
+          <div class="field-check" style="padding-top:0;gap:10px">
+            <input type="checkbox" id="add-recurrent"/>
+            <label for="add-recurrent" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--text);font-weight:500">
+              🔁 Dépense récurrente mensuelle
+            </label>
+          </div>
+        </div>
+
+        <button class="btn-submit-lg" id="btn-add-depense">
+          ✅ Enregistrer la dépense
+        </button>
       </div>
       <div class="filters">
         <div class="field"><label>Recherche</label><input type="search" id="f-text" placeholder="texte, catégorie…"/></div>
@@ -687,12 +1592,33 @@ input[type=file]{display:none}
           <ul class="ref-list" id="list-personnes"></ul>
         </div>
         <div class="panel">
-          <div class="panel-title"><span class="icon">🏷️</span> Catégories dépenses</div>
-          <div class="form-grid" style="grid-template-columns:1fr auto">
-            <div class="field"><label>Nom</label><input type="text" id="new-cat-nom" placeholder="ex. Loisirs"/></div>
+          <div class="panel-title"><span class="icon">🏷️</span> Catégories &amp; Sous-catégories</div>
+          <p class="hint">Ajoutez des catégories principales, puis créez des sous-catégories pour plus de détail.</p>
+
+          <!-- Add parent category -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">➕ Nouvelle catégorie principale</div>
+          <div class="form-grid" style="grid-template-columns:1fr auto;margin-bottom:16px">
+            <div class="field"><label>Nom</label><input type="text" id="new-cat-nom" placeholder="ex. Loisirs, Alimentation…"/></div>
             <button class="btn btn-primary" id="btn-add-categorie" style="align-self:flex-end">Ajouter</button>
           </div>
-          <ul class="ref-list" id="list-categories"></ul>
+
+          <!-- Add sub-category -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px">↳ Nouvelle sous-catégorie</div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr auto;margin-bottom:20px">
+            <div class="field">
+              <label>Catégorie parente</label>
+              <select id="new-subcat-parent"></select>
+            </div>
+            <div class="field">
+              <label>Nom de la sous-catégorie</label>
+              <input type="text" id="new-subcat-nom" placeholder="ex. Restaurant, Cinéma…"/>
+            </div>
+            <button class="btn btn-primary" id="btn-add-subcat" style="align-self:flex-end">Ajouter</button>
+          </div>
+
+          <!-- Tree list -->
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">📋 Toutes les catégories</div>
+          <div id="list-categories"></div>
         </div>
       </div>
 
@@ -1292,6 +2218,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let state = defaultState();
   const charts = {};
 
+  // Expose state helpers to inline sub-cat picker
+  window._state = () => state.categories || [];
+  window._fintrack_addSubcat = (parentId, nom) => {
+    if (!parentId || !nom) return;
+    if (state.categories.some(c => c.parentId === parentId && c.nom.toLowerCase() === nom.toLowerCase())) return;
+    state.categories.push({ id: uid(), nom, parentId });
+    saveState();
+    renderAll();
+    if (window.updateSubcatPicker) window.updateSubcatPicker();
+  };
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -1326,7 +2263,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lines.push("");
     lines.push("##CATEGORIES");
     lines.push("id,nom");
-    state.categories.forEach((c) => lines.push(`${c.id},${csvEsc(c.nom)}`));
+    state.categories.forEach((c) => lines.push(`${c.id},${csvEsc(c.nom)},${c.parentId||""}`) );
     lines.push("");
     lines.push("##COMPTES");
     lines.push("id,nom,type,solde_initial");
@@ -1502,8 +2439,26 @@ document.addEventListener("DOMContentLoaded", () => {
   function nomPersonne(id) {
     return state.personnes.find((p) => p.id === id)?.nom || "—";
   }
-  function nomCategorie(id) {
-    return state.categories.find((c) => c.id === id)?.nom || "—";
+  function nomCategorie(id, withParent) {
+    const cat = state.categories.find((c) => c.id === id);
+    if (!cat) return "—";
+    if (cat.parentId) {
+      const parent = state.categories.find((c) => c.id === cat.parentId);
+      if (parent && withParent !== false) return parent.nom + " › " + cat.nom;
+    }
+    return cat.nom;
+  }
+  function getCatParent(id) {
+    const cat = state.categories.find(c => c.id === id);
+    if (!cat) return null;
+    if (cat.parentId) return state.categories.find(c => c.id === cat.parentId) || null;
+    return null;
+  }
+  function getSubCats(parentId) {
+    return state.categories.filter(c => c.parentId === parentId);
+  }
+  function getRootCats() {
+    return state.categories.filter(c => !c.parentId);
   }
   function nomWlCategorie(id) {
     if (!id) return "";
@@ -1691,7 +2646,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return state.depenses.filter((d) => {
       const dt = new Date(d.date);
       if (compte && d.compteId !== compte) return false;
-      if (cat && d.categorieId !== cat) return false;
+      if (cat) {
+        // Include sub-cats of the selected parent
+        const selectedCat = state.categories.find(c => c.id === cat);
+        const isParent = selectedCat && !selectedCat.parentId;
+        if (isParent) {
+          const subIds = state.categories.filter(c => c.parentId === cat).map(c => c.id);
+          if (d.categorieId !== cat && !subIds.includes(d.categorieId)) return false;
+        } else {
+          if (d.categorieId !== cat) return false;
+        }
+      }
       if (pers && d.personneId !== pers) return false;
       if (dFrom && dt < dFrom) return false;
       if (dTo && dt > dTo) return false;
@@ -1736,17 +2701,67 @@ document.addEventListener("DOMContentLoaded", () => {
     if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
   }
 
+  /** Fill a category select with grouped parent/sub structure */
+  function fillCatSelect(sel, emptyLabel, includeAll) {
+    const cur = sel.value;
+    sel.innerHTML = "";
+    if (emptyLabel) {
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = emptyLabel;
+      sel.appendChild(o);
+    }
+    const roots = getRootCats();
+    roots.forEach(parent => {
+      const subs = getSubCats(parent.id);
+      if (subs.length === 0) {
+        // No sub-cats: simple option
+        const o = document.createElement("option");
+        o.value = parent.id;
+        o.textContent = parent.nom;
+        sel.appendChild(o);
+      } else {
+        // Optgroup for parent with sub-cats
+        const grp = document.createElement("optgroup");
+        grp.label = parent.nom;
+        if (includeAll) {
+          const oAll = document.createElement("option");
+          oAll.value = parent.id;
+          oAll.textContent = "— Toutes (" + parent.nom + ")";
+          grp.appendChild(oAll);
+        }
+        subs.forEach(sub => {
+          const o = document.createElement("option");
+          o.value = sub.id;
+          o.textContent = "  " + sub.nom;
+          o.className = "subcat-option";
+          grp.appendChild(o);
+        });
+        sel.appendChild(grp);
+      }
+    });
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  }
+
   function refreshSelects() {
-    fillSelect(byId("add-categorie"), state.categories, "nom", "id", false);
+    const catSel = byId("add-categorie");
+    if (catSel) fillCatSelect(catSel, false, false);
     fillSelect(byId("add-personne"), state.personnes, "nom", "id", false);
     fillSelect(byId("add-compte"), state.comptes, "nom", "id", false);
-    fillSelect(byId("f-cat"), state.categories, "nom", "id", "Toutes");
+    const fCat = byId("f-cat"); if (fCat) fillCatSelect(fCat, "Toutes", true);
     fillSelect(byId("f-pers"), state.personnes, "nom", "id", "Toutes");
     const fCompte = byId("f-compte"); if (fCompte) fillSelect(fCompte, state.comptes, "nom", "id", "Tous");
-    // Always populate wishlist category selects
+    // Also populate the parent-only select for adding sub-cats
+    const newSubParent = byId("new-subcat-parent");
+    if (newSubParent) fillSelect(newSubParent, getRootCats(), "nom", "id", "— Choisir une catégorie —");
+    // Wishlist selects
     const wlCats = state.wishlistCategories || defaultState().wishlistCategories;
     const wlCatSel = byId("wl-cat"); if (wlCatSel) fillSelect(wlCatSel, wlCats, "nom", "id", false);
     const wlFCat  = byId("wl-f-cat"); if (wlFCat)  fillSelect(wlFCat, wlCats, "nom", "id", "Toutes");
+    // Edit modals
+    const editCatSel = byId("edit-categorie"); if (editCatSel) fillCatSelect(editCatSel, false, false);
+    // Factures
+    const facCat = byId("fac-categorie"); if (facCat) fillCatSelect(facCat, "— Catégorie —", false);
   }
 
   function renderDashboard() {
@@ -1829,6 +2844,68 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>`;
     }).join("");
 
+    // ── New mobile hero dashboard ─────────────────────
+    const dhAmount = byId("dh-amount");
+    const dhSub    = byId("dh-sub");
+    const dhPills  = byId("dh-pills");
+    const dhStats  = byId("dash-stat-row");
+    const dhAccs   = byId("dash-accounts-scroll");
+
+    if (dhAmount) dhAmount.textContent = formatMoney(totalMois);
+    if (dhSub) {
+      const evo = evoPct !== null ? ` · ${evoPct > 0 ? "+" : ""}${evoPct}% vs mois préc.` : "";
+      dhSub.textContent = `${depMois.length} dépense(s) en ${mk}${evo}`;
+    }
+    if (dhPills) {
+      const pills = [];
+      pills.push(`<span class="dash-hero-pill"><span class="ph-icon">📅</span> Auj. ${formatMoney(totalAujourd)}</span>`);
+      pills.push(`<span class="dash-hero-pill"><span class="ph-icon">📆</span> Sem. ${formatMoney(totalSemaine)}</span>`);
+      if (bud) pills.push(`<span class="dash-hero-pill"><span class="ph-icon">🎯</span> Budget ${budPct}%</span>`);
+      dhPills.innerHTML = pills.join("");
+    }
+    if (dhStats) {
+      const budBar = bud ? `<div class="dash-stat-bar"><div class="dash-stat-bar-fill" style="width:${Math.min(100,budPct||0)}%"></div></div>` : "";
+      dhStats.innerHTML = `
+        <div class="dash-stat">
+          <span class="dash-stat-icon">📊</span>
+          <span class="dash-stat-label">Moy. par jour</span>
+          <span class="dash-stat-value">${formatMoney(avgParJour)}</span>
+          <span class="dash-stat-sub">Jour ${dayOfMonth}/${daysInMonth}</span>
+        </div>
+        <div class="dash-stat">
+          <span class="dash-stat-icon">🔮</span>
+          <span class="dash-stat-label">Prévision fin mois</span>
+          <span class="dash-stat-value" style="color:${bud && prevision>bud?'var(--red)':'var(--text)'}">${formatMoney(prevision)}</span>
+          ${bud ? `<span class="dash-stat-sub">Budget: ${formatMoney(bud)}</span>` : '<span class="dash-stat-sub">Pas de budget fixé</span>'}
+        </div>
+        <div class="dash-stat ${budCls}">
+          <span class="dash-stat-icon">🎯</span>
+          <span class="dash-stat-label">Budget global</span>
+          <span class="dash-stat-value">${budPct !== null ? budPct + "%" : "—"}</span>
+          <span class="dash-stat-sub">${bud ? formatMoney(totalMois) + " / " + formatMoney(bud) : "Non défini"}</span>
+          ${budBar}
+        </div>
+        <div class="dash-stat">
+          <span class="dash-stat-icon">🏆</span>
+          <span class="dash-stat-label">Top catégorie</span>
+          <span class="dash-stat-value" style="font-size:14px">${topCat ? escapeHtml(topCat[0]) : "—"}</span>
+          <span class="dash-stat-sub">${topCat ? formatMoney(topCat[1]) : ""}</span>
+        </div>
+      `;
+    }
+    if (dhAccs) {
+      dhAccs.innerHTML = state.comptes.length ? state.comptes.map(cc => {
+        const s = soldeCompte(cc);
+        const cls = s < 0 ? "danger" : (cc.soldeInitial > 0 && s < cc.soldeInitial * 0.1) ? "warn" : "";
+        return `<div class="dash-acc-card ${cls}">
+          <span class="dash-acc-name">💳 ${escapeHtml(cc.nom)}</span>
+          <span class="dash-acc-balance">${formatMoney(s)}</span>
+          <span class="dash-acc-spent">Dépensé: ${formatMoney(totalDepensesSurCompte(cc.id))}</span>
+        </div>`;
+      }).join("") : '<span style="color:var(--muted);font-size:13px;padding:8px">Aucun compte. Ajoutez-en un dans Comptes.</span>';
+    }
+
+    // ── Legacy kpi cards (hidden, kept for compat) ─────────
     const cards = byId("dash-cards");
     cards.innerHTML = `
       <div class="card">
@@ -2115,7 +3192,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const recBadge = d.recurrent ? `<span class="badge-rec">🔁</span>` : "";
       return `<tr>
         <td>${escapeHtml(new Date(d.date).toLocaleDateString("fr-FR"))}</td>
-        <td><span class="badge">${escapeHtml(nomCategorie(d.categorieId))}</span></td>
+        <td><span class="badge">${(() => {
+            const cat = state.categories.find(c => c.id === d.categorieId);
+            if (cat && cat.parentId) {
+              const par = state.categories.find(c => c.id === cat.parentId);
+              return par
+                ? `<span style="opacity:.65">${escapeHtml(par.nom)}</span> <span style="opacity:.5;font-size:9px">›</span> ${escapeHtml(cat.nom)}`
+                : escapeHtml(cat.nom);
+            }
+            return escapeHtml(nomCategorie(d.categorieId));
+          })()}</span></td>
         <td>${escapeHtml(nomPersonne(d.personneId))}</td>
         <td>${escapeHtml(nomCompte(d.compteId))}</td>
         <td>${escapeHtml(d.description || "—")}${recBadge}</td>
@@ -2322,19 +3408,49 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const lc = byId("list-categories");
-    lc.innerHTML = state.categories.map((cat) =>
-      `<li style="${liStyle}">
-        <span>${escapeHtml(cat.nom)}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm btn-edit btn-edit-c" data-cid="${escapeHtml(cat.id)}" data-nom="${escapeHtml(cat.nom)}">✏️</button>
-          <button class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(cat.id)}">🗑️</button>
-        </div>
-      </li>`).join("");
+    if (!lc) return;
+
+    // Build tree: roots with their sub-cats
+    const roots = getRootCats();
+    let html = "";
+    roots.forEach(parent => {
+      const subs = getSubCats(parent.id);
+      const subCount = subs.length;
+      html += `<div class="cat-tree-item">
+        <div class="cat-tree-parent">
+          <span class="cat-parent-name">
+            🏷️ ${escapeHtml(parent.nom)}
+            ${subCount ? `<span class="badge-subcat">${subCount} sous-cat.</span>` : ""}
+          </span>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm btn-edit btn-edit-c" data-cid="${escapeHtml(parent.id)}" data-nom="${escapeHtml(parent.nom)}">✏️</button>
+            <button class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(parent.id)}">🗑️</button>
+          </div>
+        </div>`;
+      if (subs.length) {
+        html += `<div class="cat-subcats">`;
+        subs.forEach(sub => {
+          html += `<div class="cat-subcat-row">
+            <span class="cat-subcat-name">${escapeHtml(sub.nom)}</span>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-sm btn-edit btn-edit-c" data-cid="${escapeHtml(sub.id)}" data-nom="${escapeHtml(sub.nom)}">✏️</button>
+              <button class="btn btn-sm btn-danger btn-del-c" data-cid="${escapeHtml(sub.id)}">🗑️</button>
+            </div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
+    lc.innerHTML = html || '<p style="color:var(--muted);font-size:13px;padding:8px">Aucune catégorie. Ajoutez-en une ci-dessus.</p>';
 
     lc.querySelectorAll(".btn-del-c").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-cid");
+        const cat = state.categories.find(c => c.id === id);
+        const subs = getSubCats(id);
         if (state.depenses.some((d) => d.categorieId === id)) { alert("Impossible : des dépenses utilisent cette catégorie."); return; }
+        if (subs.length) { alert("Impossible : cette catégorie a des sous-catégories. Supprimez-les d'abord."); return; }
         confirmAction("Supprimer cette catégorie ?", () => {
           delete state.budgetsCategorie[id];
           state.categories = state.categories.filter((c) => c.id !== id);
@@ -2500,6 +3616,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAll() {
+    // Refresh sub-cat picker in form
+    setTimeout(() => { if (window.updateSubcatPicker) window.updateSubcatPicker(); }, 0);
     refreshSelects();
     const today = new Date().toISOString().slice(0, 10);
     if (!byId("add-date").value) byId("add-date").value = today;
@@ -2755,8 +3873,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const [id, nom] = splitCsvLine(line);
         if (id && nom) personnes.push({ id, nom });
       } else if (mode === "CATEGORIES") {
-        const [id, nom] = splitCsvLine(line);
-        if (id && nom) categories.push({ id, nom });
+        const _cp = splitCsvLineFull ? splitCsvLineFull(line) : splitCsvLine(line);
+        const [_cid, _cnom, _cpid] = Array.isArray(_cp) ? _cp : [_cp[0], _cp[1]];
+        if (_cid && _cnom) categories.push({ id: _cid, nom: _cnom, parentId: _cpid || undefined });
       } else if (mode === "COMPTES") {
         const parts = splitCsvLineFull(line);
         if (parts.length >= 4) comptes.push({ id: parts[0], nom: parts[1], type: parts[2], soldeInitial: Number(parts[3]) || 0 });
@@ -2893,10 +4012,11 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("btn-add-depense").addEventListener("click", () => {
     const montant = Number(byId("add-montant").value);
     if (!montant || montant <= 0) return;
+    const catId = window._getEffectiveCatId ? window._getEffectiveCatId() : byId("add-categorie").value;
     state.depenses.push({
       id: uid(),
       date: new Date(byId("add-date").value + "T12:00:00").toISOString(),
-      categorieId: byId("add-categorie").value,
+      categorieId: catId,
       personneId: byId("add-personne").value,
       compteId: byId("add-compte").value,
       description: byId("add-desc").value.trim(),
@@ -2905,6 +4025,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     byId("add-montant").value = "";
     byId("add-desc").value = "";
+    if (window._resetSubcatPicker) window._resetSubcatPicker();
     saveState();
     renderAll();
   });
@@ -2922,11 +4043,26 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("btn-add-categorie").addEventListener("click", () => {
     const n = byId("new-cat-nom").value.trim();
     if (!n) return;
-    if (state.categories.some((c) => c.nom.toLowerCase() === n.toLowerCase())) return;
+    if (state.categories.some((c) => !c.parentId && c.nom.toLowerCase() === n.toLowerCase())) return;
     state.categories.push({ id: uid(), nom: n });
     byId("new-cat-nom").value = "";
     saveState();
     renderAll();
+  });
+
+  byId("btn-add-subcat").addEventListener("click", () => {
+    const parentId = byId("new-subcat-parent")?.value;
+    const n = byId("new-subcat-nom")?.value.trim();
+    if (!parentId) { alert("Choisissez une catégorie parente."); return; }
+    if (!n) return;
+    // Check duplicate within same parent
+    if (state.categories.some(c => c.parentId === parentId && c.nom.toLowerCase() === n.toLowerCase())) return;
+    state.categories.push({ id: uid(), nom: n, parentId });
+    if (byId("new-subcat-nom")) byId("new-subcat-nom").value = "";
+    saveState();
+    renderAll();
+    // Re-open sub-cat picker in form if that parent is selected
+    updateSubcatPicker();
   });
 
   byId("btn-add-compte").addEventListener("click", () => {
@@ -5399,6 +6535,221 @@ document.addEventListener("DOMContentLoaded", () => {
 
     
 
+</script>
+
+<script>
+/* ── Mobile navigation ── */
+(function() {
+  const isMobile = () => window.innerWidth <= 720;
+
+  /* Bottom nav tab switching */
+  const mobTabs = document.querySelectorAll('.mob-tab[data-page]');
+  mobTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const page = tab.getAttribute('data-page');
+      // Reuse existing nav-btn click logic: find the matching sidebar button
+      const sideBtn = document.querySelector('.nav-btn[data-page="' + page + '"]');
+      if (sideBtn) sideBtn.click();
+      // Update active state on bottom tabs
+      mobTabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  /* Sync bottom tabs when sidebar nav-btns are clicked */
+  document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.getAttribute('data-page');
+      document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+      const matchTab = document.querySelector('.mob-tab[data-page="' + page + '"]');
+      if (matchTab) matchTab.classList.add('active');
+    });
+  });
+
+  /* More drawer */
+  const moreBackdrop = document.getElementById('mob-more-backdrop');
+  const moreSheet = document.getElementById('mob-more-sheet');
+  const moreTrigger = document.getElementById('mob-more-trigger');
+
+  function openMore() {
+    moreBackdrop.classList.add('show');
+    moreSheet.classList.add('show');
+  }
+  function closeMore() {
+    moreBackdrop.classList.remove('show');
+    moreSheet.classList.remove('show');
+  }
+
+  if (moreTrigger) moreTrigger.addEventListener('click', openMore);
+  if (moreBackdrop) moreBackdrop.addEventListener('click', closeMore);
+
+  document.querySelectorAll('.mob-more-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.getAttribute('data-page');
+      const sideBtn = document.querySelector('.nav-btn[data-page="' + page + '"]');
+      if (sideBtn) sideBtn.click();
+      // Update more sheet active state
+      document.querySelectorAll('.mob-more-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // Clear bottom tab active
+      document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('mob-more-trigger')?.classList.add('active');
+      closeMore();
+    });
+  });
+
+  /* Save button in drawer */
+  const mobSaveBtn = document.getElementById('mob-save-btn');
+  if (mobSaveBtn) {
+    mobSaveBtn.addEventListener('click', () => {
+      closeMore();
+      const saveBtn = document.getElementById('btn-save-local');
+      if (saveBtn) saveBtn.click();
+    });
+  }
+
+  /* FAB: navigate to depenses page and scroll to form */
+  const fab = document.getElementById('btn-fab');
+  if (fab) {
+    fab.addEventListener('click', () => {
+      const sideBtn = document.querySelector('.nav-btn[data-page="depenses"]');
+      if (sideBtn) sideBtn.click();
+      // Sync bottom tab
+      document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+      const depTab = document.querySelector('.mob-tab[data-page="depenses"]');
+      if (depTab) depTab.classList.add('active');
+      // Scroll to add form
+      setTimeout(() => {
+        const addSection = document.getElementById('page-depenses');
+        if (addSection) addSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const firstInput = document.getElementById('add-montant');
+        if (firstInput) firstInput.focus();
+      }, 120);
+    });
+  }
+
+  /* Hide FAB when keyboard is up (prevents overlap on iOS) */
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (!fab) return;
+      const keyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
+      fab.style.display = keyboardOpen ? 'none' : '';
+    });
+  }
+
+  /* Swipe-to-close the more sheet */
+  let touchStartY = 0;
+  if (moreSheet) {
+    moreSheet.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    moreSheet.addEventListener('touchend', e => {
+      if (e.changedTouches[0].clientY - touchStartY > 60) closeMore();
+    }, { passive: true });
+  }
+})();
+</script>
+
+<script>
+/* Topbar save button */
+(function(){
+  const saveTopBtn = document.getElementById('btn-save-local-top');
+  const mainSaveBtn = document.getElementById('btn-save-local');
+  if (saveTopBtn && mainSaveBtn) {
+    saveTopBtn.addEventListener('click', () => mainSaveBtn.click());
+  }
+})();
+</script>
+
+<script>
+/* ── Sub-category picker (depense form) ── */
+(function() {
+  // The "real" categorieId used when saving — could be the sub or the parent
+  let _selectedSubcatId = null;
+
+  function updateSubcatPicker() {
+    const parentId = document.getElementById("add-categorie")?.value;
+    const picker   = document.getElementById("add-subcat-picker");
+    const chips    = document.getElementById("add-subcat-chips");
+    if (!picker || !chips || !parentId) return;
+
+    // Get sub-cats of selected parent
+    const subs = (window._state ? window._state() : []).filter(c => c.parentId === parentId);
+    if (subs.length === 0) {
+      picker.classList.remove("show");
+      _selectedSubcatId = null;
+      return;
+    }
+
+    // Build chips
+    chips.innerHTML = subs.map(s =>
+      `<button type="button" class="subcat-chip${_selectedSubcatId===s.id ? " selected" : ""}" data-scid="${s.id}">`+
+      `<span>${s.nom}</span></button>`
+    ).join("");
+
+    // Chip click
+    chips.querySelectorAll(".subcat-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-scid");
+        if (_selectedSubcatId === id) {
+          // Deselect
+          _selectedSubcatId = null;
+          btn.classList.remove("selected");
+        } else {
+          _selectedSubcatId = id;
+          chips.querySelectorAll(".subcat-chip").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+        }
+      });
+    });
+
+    picker.classList.add("show");
+  }
+  window.updateSubcatPicker = updateSubcatPicker;
+
+  // Wire to category select change
+  document.addEventListener("DOMContentLoaded", () => {
+    const sel = document.getElementById("add-categorie");
+    if (sel) {
+      sel.addEventListener("change", () => {
+        _selectedSubcatId = null;
+        updateSubcatPicker();
+      });
+    }
+
+    // "Add sub-category" inline button in picker
+    const addBtn = document.getElementById("add-subcat-new-btn");
+    const addInp = document.getElementById("add-subcat-new-inp");
+    if (addBtn && addInp) {
+      const doAdd = () => {
+        const parentId = document.getElementById("add-categorie")?.value;
+        const nom = addInp.value.trim();
+        if (!parentId || !nom) return;
+        // Access state via the global helper exposed by the app
+        if (window._fintrack_addSubcat) {
+          window._fintrack_addSubcat(parentId, nom);
+          addInp.value = "";
+        }
+      };
+      addBtn.addEventListener("click", doAdd);
+      addInp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
+    }
+  });
+
+  // Expose getter so the app can read the final cat ID (sub if chosen, else parent)
+  window._getEffectiveCatId = function() {
+    const parentId = document.getElementById("add-categorie")?.value;
+    return _selectedSubcatId || parentId || "";
+  };
+
+  // Reset after save
+  window._resetSubcatPicker = function() {
+    _selectedSubcatId = null;
+    const picker = document.getElementById("add-subcat-picker");
+    if (picker) picker.classList.remove("show");
+    const chips = document.getElementById("add-subcat-chips");
+    if (chips) chips.innerHTML = "";
+  };
+})();
 </script>
 </body>
 </html>
