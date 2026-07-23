@@ -1,0 +1,105 @@
+/* ============================================================
+   LifeHub — mise en page de l'application (shell + navigation)
+   ============================================================ */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar__brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px 22px;
+  font-weight: 800; font-size: 17px;
+}
+.sidebar__brand .logo {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px;
+}
+
+.nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  color: var(--muted); cursor: pointer; font-size: 14px; font-weight: 600;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--blue); color: #fff; }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar__footer {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px 60px;
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px; gap: 12px; flex-wrap: wrap;
+}
+.topbar h1 { font-size: 22px; margin: 0; }
+.topbar .actions { display: flex; gap: 10px; align-items: center; }
+
+.view { display: none; }
+.view.active { display: block; animation: fadeIn .18s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 980px) {
+  .grid--3, .grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .app-shell { flex-direction: column; }
+  .sidebar {
+    width: 100%; height: auto; position: static;
+    flex-direction: row; align-items: center; padding: 10px 12px;
+    overflow-x: auto;
+  }
+  .sidebar__brand { display: none; }
+  .nav-list { flex-direction: row; flex: none; }
+  .nav-item { white-space: nowrap; }
+  .sidebar__footer { display: none; }
+  .main { padding: 16px; }
+  .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+}
+
+.mobile-topbar { display: none; }
+@media (max-width: 760px) {
+  .mobile-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+}

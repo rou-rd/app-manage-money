@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeHub — Tableau de bord</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.svg">
+<link rel="stylesheet" href="css/base.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .hub-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+  }
+  .hub-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .hub-brand .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px;
+  }
+  .hub-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+  .hub-main h1 { font-size: 30px; margin: 0 0 8px; }
+  .hub-main p { color: var(--muted); margin: 0 0 40px; font-size: 15.5px; }
+  .hub-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; width: 100%; max-width: 760px; }
+  @media (max-width: 640px) { .hub-cards { grid-template-columns: 1fr; } }
+  .hub-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 32px 26px; text-align: left; transition: transform .15s ease, border-color .15s ease;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .hub-card:hover { transform: translateY(-4px); border-color: var(--blue); }
+  .hub-card .icon {
+    width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 24px;
+  }
+  .hub-card--finance .icon { background: rgba(29,158,117,.15); }
+  .hub-card--tasks .icon { background: rgba(61,114,216,.15); }
+  .hub-card h2 { margin: 0; font-size: 19px; }
+  .hub-card p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .hub-card .go { font-size: 13px; font-weight: 700; color: var(--blue); }
+  .hub-footer { text-align: center; padding: 18px; color: var(--muted2); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="hub-top">
+  <div class="hub-brand">
+    <div class="logo">LH</div>
+    <span>LifeHub</span>
+  </div>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">🌙</button>
+</div>
+
+<div class="hub-main">
+  <h1>Bienvenue sur LifeHub</h1>
+  <p>Une seule plateforme pour centraliser tes finances, tes tâches, tes routines et tes objectifs.</p>
+
+  <div class="hub-cards">
+    <a class="hub-card hub-card--finance" href="index.html">
+      <div class="icon">💰</div>
+      <h2>Gestion financière</h2>
+      <p>Comptes, dépenses, budgets, épargne et statistiques — synchronisés en temps réel.</p>
+      <span class="go">Ouvrir Finances →</span>
+    </a>
+
+    <a class="hub-card hub-card--tasks" href="tasks.html">
+      <div class="icon">✅</div>
+      <h2>Tâches &amp; organisation</h2>
+      <p>Tâches, routines, objectifs, calendrier, notifications et statistiques de productivité.</p>
+      <span class="go">Ouvrir Tâches →</span>
+    </a>
+  </div>
+</div>
+
+<div class="hub-footer">LifeHub — gratuit, privé, hébergé sur GitHub Pages</div>
+
+<script type="module">
+  import { initTheme, toggleTheme, currentTheme } from "./js/utils/theme.js";
+  initTheme();
+  const btn = document.getElementById("theme-toggle");
+  function syncIcon() { btn.textContent = currentTheme() === "dark" ? "☀️" : "🌙"; }
+  syncIcon();
+  btn.addEventListener("click", () => { toggleTheme(); syncIcon(); });
+</script>
+</body>
+</html>
