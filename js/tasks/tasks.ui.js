@@ -97,7 +97,12 @@ function taskCard(task) {
       onclick: async () => {
         const uid = getCurrentUser()?.uid;
         if (!uid) return;
-        await setTaskStatus(uid, task, task.status === "done" ? "todo" : "done");
+        try {
+          await setTaskStatus(uid, task, task.status === "done" ? "todo" : "done");
+        } catch (e) {
+          console.error("[Tasks] setTaskStatus:", e);
+          toast(`Erreur : ${e.message || "impossible de mettre à jour la tâche"}`, "error");
+        }
       }
     }, task.status === "done" ? "✓" : ""),
     el("div", { style: "flex:1;min-width:0;" }, [
@@ -162,17 +167,34 @@ function openTaskForm(existing) {
     { label: "Annuler", onClick: closeModal }
   ];
   if (existing) {
-    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => { await deleteTask(uid, existing.id); toast("Tâche supprimée", "info"); closeModal(); } });
+    actions.push({
+      label: "Supprimer", variant: "danger",
+      onClick: async () => {
+        try {
+          await deleteTask(uid, existing.id);
+          toast("Tâche supprimée", "info");
+          closeModal();
+        } catch (e) {
+          console.error("[Tasks] deleteTask:", e);
+          toast(`Erreur : ${e.message || "impossible de supprimer la tâche"}`, "error");
+        }
+      }
+    });
   }
   actions.push({
     label: existing ? "Enregistrer" : "Créer",
     variant: "primary",
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
-      if (existing) await updateTask(uid, existing.id, data);
-      else await createTask(uid, data);
-      toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
-      closeModal();
+      try {
+        if (existing) await updateTask(uid, existing.id, data);
+        else await createTask(uid, data);
+        toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
+        closeModal();
+      } catch (e) {
+        console.error("[Tasks] createTask/updateTask:", e);
+        toast(`Erreur : ${e.message || "impossible d'enregistrer la tâche"}`, "error");
+      }
     }
   });
 
@@ -191,11 +213,20 @@ function subtasksEditor(existing, uid) {
         el("div", {
           class: `checkbox ${s.done ? "checked" : ""}`,
           style: "width:16px;height:16px;",
-          onclick: async () => { if (existing) await toggleSubtask(uid, existing, s.id); }
+          onclick: async () => {
+            if (!existing) return;
+            try { await toggleSubtask(uid, existing, s.id); }
+            catch (e) { console.error("[Tasks] toggleSubtask:", e); toast(`Erreur : ${e.message || "impossible de mettre à jour la sous-tâche"}`, "error"); }
+          }
         }, s.done ? "✓" : ""),
         el("span", { style: "flex:1;" }, s.title),
         el("button", {
-          class: "btn btn--sm btn--ghost", onclick: async () => { if (existing) await removeSubtask(uid, existing, s.id); }
+          class: "btn btn--sm btn--ghost",
+          onclick: async () => {
+            if (!existing) return;
+            try { await removeSubtask(uid, existing, s.id); }
+            catch (e) { console.error("[Tasks] removeSubtask:", e); toast(`Erreur : ${e.message || "impossible de supprimer la sous-tâche"}`, "error"); }
+          }
         }, "✕")
       ]);
       list.appendChild(row);
@@ -211,7 +242,8 @@ function subtasksEditor(existing, uid) {
       const title = newInput.value.trim();
       if (!title) return;
       if (existing) {
-        await addSubtask(uid, existing, title);
+        try { await addSubtask(uid, existing, title); }
+        catch (e) { console.error("[Tasks] addSubtask:", e); toast(`Erreur : ${e.message || "impossible d'ajouter la sous-tâche"}`, "error"); return; }
       } else {
         toast("Enregistre d'abord la tâche pour ajouter des sous-tâches", "info");
       }
