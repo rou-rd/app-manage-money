@@ -1,0 +1,127 @@
+/* ============================================================
+   Vue Tâches — habillage "pro" inspiré de l'app Finance.
+   Scopé à #view-tasks : n'affecte aucune autre vue (Dashboard,
+   Routines, Objectifs, Calendrier, Analyses, Progression).
+   ============================================================ */
+
+#view-tasks {
+  --surface: #111827;
+  --surface-2: #172036;
+  --bg-alt: #0d1220;
+  --border: rgba(255,255,255,.08);
+  --blue: #4f8fff;
+  --green: #10d9a0;
+  --orange: #f59e0b;
+  --red: #f43f5e;
+  --purple: #a78bfa;
+  font-family: 'DM Sans', var(--font);
+}
+
+:root[data-theme="light"] #view-tasks {
+  --surface: #ffffff;
+  --surface-2: #f3f5fb;
+  --bg-alt: #ffffff;
+  --border: rgba(20,30,60,.08);
+  --blue: #3b6fe0;
+  --green: #0ba876;
+  --orange: #d97706;
+  --red: #e11d48;
+  --purple: #7c3aed;
+}
+
+/* Toolbar */
+#view-tasks .topbar h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+}
+#view-tasks .search-input {
+  font-family: 'DM Sans', var(--font) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  min-width: 220px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+#view-tasks .search-input:focus {
+  outline: none;
+  border-color: var(--blue) !important;
+  box-shadow: 0 0 0 3px rgba(79,143,255,.15);
+}
+
+#view-tasks .btn--primary {
+  background: linear-gradient(135deg, var(--blue), #6a5cf6);
+  border: none;
+  box-shadow: 0 6px 18px rgba(79,143,255,.35);
+  font-weight: 700;
+  transition: filter .15s ease, transform .1s ease;
+}
+#view-tasks .btn--primary:hover { filter: brightness(1.08); }
+#view-tasks .btn--primary:active { transform: scale(.97); }
+
+/* Filtres (chips) */
+#view-tasks .btn--sm.btn--ghost,
+#view-tasks .btn--sm.btn--primary {
+  border-radius: 999px;
+  font-weight: 700;
+  padding: 7px 14px;
+}
+#view-tasks .btn--sm.btn--primary {
+  background: var(--blue);
+  box-shadow: 0 4px 12px rgba(79,143,255,.3);
+}
+
+/* Cartes tâche */
+#view-tasks .task-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: transform .15s ease, box-shadow .15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+#view-tasks .task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+}
+#view-tasks .task-card.done { opacity: .5; }
+#view-tasks .task-card__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -.1px;
+}
+
+/* Checkbox */
+#view-tasks .checkbox {
+  border-radius: 7px;
+  border-width: 2px;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+#view-tasks .checkbox.checked {
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(16,217,160,.18);
+}
+
+/* Badges */
+#view-tasks .badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+#view-tasks .badge--low    { background: rgba(16,217,160,.14); color: var(--green); }
+#view-tasks .badge--medium { background: rgba(245,158,11,.16); color: var(--orange); }
+#view-tasks .badge--high   { background: rgba(244,63,94,.14);  color: var(--red); }
+#view-tasks .badge--info   { background: rgba(79,143,255,.14); color: var(--blue); }
+#view-tasks .badge--muted  { background: var(--surface-2); color: var(--muted); }
+
+/* État vide */
+#view-tasks .empty-state {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  padding: 48px 24px;
+}
+#view-tasks .empty-state .icon { font-size: 40px; }
