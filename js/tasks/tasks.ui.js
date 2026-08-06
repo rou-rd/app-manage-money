@@ -189,6 +189,8 @@ function openTaskForm(existing) {
       try {
         if (existing) await updateTask(uid, existing.id, data);
         else await createTask(uid, data);
+        filters = { scope: "all", status: "all", query: "" };
+        render(root);
         toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
         closeModal();
       } catch (e) {
