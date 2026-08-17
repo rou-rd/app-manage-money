@@ -62,6 +62,36 @@ function currentTasks(state) {
   return list.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
 }
 
+/** Regroupe les instances d'une même routine sous une seule ligne : garde la plus
+ *  pertinente (aujourd'hui, sinon la prochaine à faire, sinon la plus récente non
+ *  faite) en tête, et les autres dates apparaissent en petite liste juste dessous. */
+function buildRenderItems(list) {
+  const today = todayStr();
+  const routineGroups = new Map();
+  const items = [];
+
+  list.forEach((t) => {
+    if (t.routineId) {
+      if (!routineGroups.has(t.routineId)) routineGroups.set(t.routineId, []);
+      routineGroups.get(t.routineId).push(t);
+    } else {
+      items.push({ type: "task", date: t.date, task: t });
+    }
+  });
+
+  routineGroups.forEach((tasks) => {
+    const sorted = [...tasks].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const primary = sorted.find((t) => t.date === today)
+      || sorted.find((t) => t.date > today && t.status !== "done")
+      || [...sorted].reverse().find((t) => t.status !== "done")
+      || sorted[sorted.length - 1];
+    const others = sorted.filter((t) => t.id !== primary.id);
+    items.push({ type: "routineGroup", date: primary.date, primary, others });
+  });
+
+  return items.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+}
+
 function render(container) {
   clear(container);
   const state = latestState;
@@ -97,7 +127,26 @@ function render(container) {
   }
 
   const listNode = el("div", {});
-  list.forEach((task) => listNode.appendChild(taskCard(task)));
+  buildRenderItems(list).forEach((item) => {
+    if (item.type === "task") {
+      listNode.appendChild(taskCard(item.task));
+      return;
+    }
+    listNode.appendChild(taskCard(item.primary));
+    if (item.others.length) {
+      const sub = el("div", { style: "margin:2px 0 10px 30px;display:flex;flex-direction:column;gap:2px;" });
+      item.others.forEach((t) => {
+        sub.appendChild(el("div", {
+          style: "font-size:11.5px;color:var(--muted2);cursor:pointer;padding:3px 0;display:flex;align-items:center;gap:6px;",
+          onclick: () => openTaskForm(t)
+        }, [
+          el("span", { style: `width:6px;height:6px;border-radius:50%;background:${t.status === "done" ? "var(--green)" : "var(--muted2)"};display:inline-block;flex-shrink:0;` }),
+          formatHuman(t.date) + (t.status === "done" ? " · fait" : "")
+        ]));
+      });
+      listNode.appendChild(sub);
+    }
+  });
   container.appendChild(listNode);
 }
 
