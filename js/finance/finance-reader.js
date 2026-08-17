@@ -3,6 +3,7 @@
 // que le lire pour afficher un résumé synthétique (solde, dépenses du mois) dans son
 // propre dashboard/analyses — voir index.html pour la logique d'écriture d'origine.
 import { db, doc, onSnapshot } from "../firebase/firebase-config.js";
+import { todayStr } from "../utils/date.js";
 
 export function watchFinanceState(uid, callback) {
   return onSnapshot(doc(db, "users", uid), (snap) => {
@@ -66,4 +67,35 @@ export function summarizeFinance(state) {
     budgetRestant,
     nbComptes: (state.comptes || []).length
   };
+}
+
+/**
+ * Convertit les factures Finance (lecture seule) en tâches virtuelles pour la vue
+ * Tâches. Jamais écrites dans Firestore : calculées à l'affichage uniquement, le
+ * statut de paiement (Finance) pilote le statut de la tâche, jamais l'inverse.
+ */
+export function financeInvoicesToTasks(state) {
+  if (!state || !Array.isArray(state.factures)) return [];
+  const today = todayStr();
+  return state.factures.map((f) => {
+    const overdue = f.statut !== "payee" && f.dateEcheance && f.dateEcheance < today;
+    return {
+      id: `facture-${f.id}`,
+      title: f.description || "Facture",
+      category: "Facture",
+      priority: overdue ? "high" : "medium",
+      date: f.dateEcheance || "",
+      time: "",
+      duration: null,
+      color: "#f59e0b",
+      status: f.statut === "payee" ? "done" : "todo",
+      subtasks: [],
+      notes: "",
+      routineId: null,
+      goalId: null,
+      notified: {},
+      isFacture: true,
+      montant: f.montant || 0
+    };
+  });
 }
