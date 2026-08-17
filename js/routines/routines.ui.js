@@ -3,7 +3,7 @@ import { openModal, closeModal } from "../utils/modal.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser } from "../auth/auth.js";
 import { subscribe } from "../store.js";
-import { dayOfWeek, todayStr } from "../utils/date.js";
+import { dayOfWeek, todayStr, formatHuman } from "../utils/date.js";
 import { FREQUENCIES, WEEKDAY_LABELS, newRoutineDefaults } from "./routines.model.js";
 import { createRoutine, updateRoutine, deleteRoutine } from "./routines.service.js";
 import { DEFAULT_COLORS } from "../tasks/tasks.model.js";
@@ -45,14 +45,34 @@ function frequencyLabel(routine) {
   return "";
 }
 
+function latestInstance(routine, tasks) {
+  const instances = tasks.filter((t) => t.routineId === routine.id).sort((a, b) => b.date.localeCompare(a.date));
+  return instances[0] || null;
+}
+
+function instanceStatusBadge(task) {
+  const map = { done: ["badge--low", "✓ Faite"], doing: ["badge--medium", "En cours"] };
+  const [cls, label] = map[task.status] || ["badge--muted", "À faire"];
+  return el("span", { class: `badge ${cls}` }, label);
+}
+
 function routineCard(routine) {
   const uid = getCurrentUser()?.uid;
+  const tasks = latestState.tasks || [];
+  const latest = latestInstance(routine, tasks);
   const card = el("div", { class: "card", style: `border-left:4px solid ${routine.color};` });
   card.append(
     el("h3", {}, routine.title),
     el("div", { class: "badge badge--info", style: "margin-bottom:8px;" }, frequencyLabel(routine)),
-    el("div", { style: "font-size:12.5px;color:var(--muted);margin-bottom:12px;" },
+    el("div", { style: "font-size:12.5px;color:var(--muted);margin-bottom:10px;" },
       `${routine.category} · ${routine.time || "--:--"}${routine.duration ? " · " + routine.duration + " min" : ""}`),
+    latest
+      ? el("div", { style: "display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12.5px;" }, [
+          el("span", { style: "color:var(--muted2);" }, "Dernière : " + formatHuman(latest.date)),
+          instanceStatusBadge(latest)
+        ])
+      : el("div", { style: "font-size:12.5px;color:var(--muted2);margin-bottom:10px;" }, "Aucune occurrence pour l'instant."),
+    el("button", { class: "btn btn--sm btn--ghost", style: "margin-bottom:10px;", onclick: () => openHistoryModal(routine) }, "🕘 Voir l'historique"),
     el("div", { style: "display:flex;gap:8px;" }, [
       el("button", { class: "btn btn--sm btn--ghost", onclick: () => openRoutineForm(routine) }, "Modifier"),
       el("button", {
@@ -67,6 +87,27 @@ function routineCard(routine) {
   );
   if (!routine.active) card.style.opacity = "0.55";
   return card;
+}
+
+function openHistoryModal(routine) {
+  const instances = (latestState.tasks || [])
+    .filter((t) => t.routineId === routine.id)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const body = el("div", {});
+  if (!instances.length) {
+    body.appendChild(el("div", { style: "color:var(--muted);font-size:13px;" }, "Aucune occurrence enregistrée."));
+  } else {
+    instances.forEach((t) => {
+      body.appendChild(el("div", {
+        style: "display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;"
+      }, [
+        el("span", {}, formatHuman(t.date)),
+        instanceStatusBadge(t)
+      ]));
+    });
+  }
+  openModal(`Historique — ${routine.title}`, body, [{ label: "Fermer", onClick: closeModal }]);
 }
 
 function openRoutineForm(existing) {

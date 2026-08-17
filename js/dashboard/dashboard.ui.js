@@ -60,18 +60,27 @@ function render(container) {
 
   container.appendChild(el("div", { class: "card", style: "margin-top:16px;" }, [
     el("h3", {}, "🎯 Objectifs en cours"),
+    goalsSummaryRow(goals),
     goalsInProgress.length === 0
       ? el("div", { style: "color:var(--muted);font-size:13px;" }, "Aucun objectif en cours.")
       : el("div", {}, goalsInProgress.map((g) => goalRow(g)))
   ]));
 }
 
-function statCard(label, value, sub) {
-  return el("div", { class: "card stat-card" }, [
+function statCard(label, value, sub, trend) {
+  const children = [
     el("div", { class: "stat-label" }, label),
     el("div", { class: "stat-value" }, String(value)),
     el("div", { class: "stat-sub" }, sub)
-  ]);
+  ];
+  if (trend) {
+    const color = trend.direction === "flat" ? "var(--muted2)"
+      : (trend.direction === "up") === trend.badIsUp ? "var(--red)" : "var(--green)";
+    const arrow = trend.direction === "up" ? "▲" : trend.direction === "down" ? "▼" : "→";
+    children.push(el("div", { style: `font-size:11.5px;font-weight:700;color:${color};margin-top:2px;` },
+      `${arrow} ${trend.pct > 0 ? "+" : ""}${trend.pct}% vs mois dernier`));
+  }
+  return el("div", { class: "card stat-card" }, children);
 }
 
 function formatMinutes(min) {
@@ -96,25 +105,47 @@ function listCard(title, items, emptyLabel) {
   return card;
 }
 
+function goalsSummaryRow(goals) {
+  if (!goals.length) return el("div", {});
+  const done = goals.filter((g) => g.status === "completed").length;
+  const late = goals.filter((g) => g.status !== "completed" && g.deadline && isPast(g.deadline)).length;
+  const active = goals.length - done - late;
+  return el("div", { style: "display:flex;gap:14px;font-size:12px;color:var(--muted2);margin-bottom:10px;flex-wrap:wrap;" }, [
+    el("span", {}, `🏆 ${done} atteint(s)`),
+    el("span", {}, `🔵 ${active} en cours`),
+    el("span", { style: late ? "color:var(--red);font-weight:700;" : "" }, `🔴 ${late} en retard`)
+  ]);
+}
+
 function goalRow(goal) {
   const progress = goalProgress(goal);
+  const overdue = goal.deadline && isPast(goal.deadline) && goal.status !== "completed";
+  const statusColor = goal.status === "completed" ? "var(--green)" : overdue ? "var(--red)" : progress >= 50 ? "var(--blue)" : "var(--orange)";
+  const statusLabel = goal.status === "completed" ? "Atteint" : overdue ? "En retard" : "En cours";
   return el("div", { style: "margin-bottom:12px;" }, [
-    el("div", { style: "display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;" }, [
-      el("span", {}, goal.title), el("span", { style: "color:var(--muted);" }, `${progress}%`)
+    el("div", { style: "display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;" }, [
+      el("span", { style: "display:flex;align-items:center;gap:6px;" }, [
+        el("span", { style: `width:8px;height:8px;border-radius:50%;background:${statusColor};flex-shrink:0;display:inline-block;` }),
+        goal.title
+      ]),
+      el("span", { style: "color:var(--muted);" }, `${progress}% · ${statusLabel}`)
     ]),
-    el("div", { class: "progress-bar" }, [el("div", { style: `width:${progress}%` })])
+    el("div", { class: "progress-bar" }, [el("div", { style: `width:${progress}%;background:${statusColor};` })])
   ]);
 }
 
 function financeCard() {
   const f = financeSummary;
+  const trend = f.evolutionDepensesPct !== null
+    ? { pct: f.evolutionDepensesPct, direction: f.evolutionDepensesPct > 0 ? "up" : f.evolutionDepensesPct < 0 ? "down" : "flat", badIsUp: true }
+    : null;
   return el("div", { class: "grid grid--3", style: "margin-bottom:20px;" }, [
     statCard("Solde actuel", formatMoney(f.soldeTotal), `${f.nbComptes} compte(s)`),
-    statCard("Dépenses ce mois", formatMoney(f.totalDepensesMois), "Finances"),
+    statCard("Dépenses ce mois", formatMoney(f.totalDepensesMois), "Finances", trend),
     statCard("Budget restant", f.budgetRestant !== null ? formatMoney(f.budgetRestant) : "—", f.budgetGlobal > 0 ? "sur le mois" : "Aucun budget défini")
   ]);
 }
 
 function formatMoney(amount) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amount || 0);
+  return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
 }
