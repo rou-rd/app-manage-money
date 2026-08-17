@@ -1,5 +1,6 @@
-// FinTrack Service Worker — cache-first for offline use
-const CACHE = 'fintrack-v1';
+// FinTrack Service Worker — network-first so deployed updates are always picked
+// up when online; cache is only a fallback for offline use.
+const CACHE = 'fintrack-v2';
 const ASSETS = ['/', '/index.html', '/finance.html', '/tasks.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -19,20 +20,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first for Firebase calls, cache-first for app files
   if (e.request.url.includes('firebase') || e.request.url.includes('gstatic')) {
     return; // Let Firebase handle its own requests
   }
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => cached);
-    })
+    fetch(e.request).then(res => {
+      if (res.status === 200) {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
