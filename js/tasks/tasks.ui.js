@@ -4,7 +4,6 @@ import { toast } from "../utils/toast.js";
 import { getCurrentUser, onAuthChange } from "../auth/auth.js";
 import { subscribe } from "../store.js";
 import { formatHuman, isPast, isToday, todayStr } from "../utils/date.js";
-import { watchFinanceState, financeInvoicesToTasks } from "../finance/finance-reader.js";
 import { watchViews, createView, deleteView } from "./views.service.js";
 import {
   PRIORITIES, STATUSES, DEFAULT_COLORS, newTaskDefaults, taskProgress
@@ -16,37 +15,28 @@ import {
 let root = null;
 let latestState = { tasks: [] };
 let filters = { scope: "all", status: "all", priority: "all", category: "all", hideDone: false, query: "" };
-let financeState = null;
 let savedViews = [];
-let unsubFinance = null;
 let unsubViews = null;
 
 export function initTasksView(container) {
   root = container;
   subscribe((state) => { latestState = state; render(container); });
   onAuthChange((user) => {
-    if (unsubFinance) unsubFinance();
     if (unsubViews) unsubViews();
     if (user) {
-      unsubFinance = watchFinanceState(user.uid, (fs) => { financeState = fs; render(root); });
       unsubViews = watchViews(user.uid, (views) => { savedViews = views; render(root); });
     } else {
-      financeState = null;
       savedViews = [];
     }
   });
 }
 
-function allTasksWithFactures(state) {
-  return [...state.tasks, ...financeInvoicesToTasks(financeState)];
-}
-
 function categoryOptions(state) {
-  return Array.from(new Set(allTasksWithFactures(state).map((t) => t.category || "Général"))).sort();
+  return Array.from(new Set((state.tasks || []).map((t) => t.category || "Général"))).sort();
 }
 
 function currentTasks(state) {
-  let list = allTasksWithFactures(state);
+  let list = [...state.tasks];
   const today = todayStr();
   if (filters.scope === "today") list = list.filter((t) => t.date === today);
   else if (filters.scope === "upcoming") list = list.filter((t) => t.date && t.date >= today);
@@ -175,10 +165,6 @@ function scopeChip(label, value) {
   }, label);
 }
 
-function formatMoney(amount) {
-  return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
-}
-
 function taskCard(task) {
   const progress = taskProgress(task);
   const overdue = task.date && isPast(task.date) && task.status !== "done";
@@ -186,7 +172,6 @@ function taskCard(task) {
     class: `task-card ${task.status === "done" ? "done" : ""}`,
     onclick: (e) => {
       if (e.target.closest(".checkbox")) return;
-      if (task.isFacture) { toast("Gère cette facture depuis Finances → Factures.", "info"); return; }
       openTaskForm(task);
     }
   });
@@ -196,7 +181,6 @@ function taskCard(task) {
     el("div", {
       class: `checkbox ${task.status === "done" ? "checked" : ""}`,
       onclick: async () => {
-        if (task.isFacture) { toast("Le statut d'une facture se gère depuis Finances.", "info"); return; }
         const uid = getCurrentUser()?.uid;
         if (!uid) return;
         try {
@@ -208,14 +192,13 @@ function taskCard(task) {
       }
     }, task.status === "done" ? "✓" : ""),
     el("div", { style: "flex:1;min-width:0;" }, [
-      el("div", { class: "task-card__title" }, task.isFacture ? `🧾 ${task.title}` : task.title),
+      el("div", { class: "task-card__title" }, task.title),
       el("div", { class: "task-card__meta" }, [
         priorityBadge(task.priority),
         task.category ? el("span", { class: "badge badge--muted" }, task.category) : null,
         task.date ? el("span", { class: `badge ${overdue ? "badge--high" : "badge--info"}` }, formatHuman(task.date) + (task.time ? ` · ${task.time}` : "")) : null,
         task.duration ? el("span", { class: "badge badge--muted" }, `${task.duration} min`) : null,
-        task.routineId ? el("span", { class: "badge badge--info" }, "🔁 routine") : null,
-        task.isFacture ? el("span", { class: "badge badge--muted" }, formatMoney(task.montant)) : null
+        task.routineId ? el("span", { class: "badge badge--info" }, "🔁 routine") : null
       ])
     ])
   ]);
@@ -237,7 +220,6 @@ function priorityBadge(priority) {
 function openTaskForm(existing) {
   const uid = getCurrentUser()?.uid;
   if (!uid) { toast("Connecte-toi pour gérer tes tâches.", "error"); return; }
-  if (existing?.isFacture) { toast("Gère cette facture depuis Finances → Factures.", "info"); return; }
 
   const data = existing ? { ...existing } : newTaskDefaults();
   const body = el("div", {});

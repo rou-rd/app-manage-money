@@ -42,7 +42,7 @@ function goalCard(goal) {
   const progress = goalProgress(goal);
   const remaining = goal.deadline ? diffDays(todayStr(), goal.deadline) : null;
   const card = el("div", { class: "card", onclick: () => openGoalForm(goal), style: "cursor:pointer;" });
-  card.append(
+  card.append(...[
     el("div", { style: "display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;" }, [
       el("h3", { style: "margin:0;" }, goal.title),
       el("span", { class: "badge badge--info" }, termLabel(goal.term))
@@ -52,7 +52,7 @@ function goalCard(goal) {
     el("div", { class: "progress-bar", style: "margin-bottom:6px;" }, [el("div", { style: `width:${progress}%` })]),
     el("div", { style: "font-size:12px;color:var(--muted);" }, `${progress}% complété · ${(goal.steps || []).filter(s => s.done).length}/${(goal.steps || []).length} étapes`),
     goal.status === "completed" ? el("span", { class: "badge badge--low", style: "margin-top:8px;" }, "🏆 Atteint") : null
-  );
+  ].filter(Boolean));
   return card;
 }
 
