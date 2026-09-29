@@ -1287,6 +1287,8 @@ select option.subcat-option {
   <button class="mob-more-btn" data-page="factures"><span class="mob-more-icon">🧾</span> Factures</button>
   <button class="mob-more-btn" data-page="wishlist"><span class="mob-more-icon">🛒</span> Liste d'achats</button>
   <button class="mob-more-btn" data-page="saving-planner"><span class="mob-more-icon">🧮</span> Planificateur épargne</button>
+  <button class="mob-more-btn" data-page="dettes"><span class="mob-more-icon">🏦</span> Suivi des dettes</button>
+  <button class="mob-more-btn" data-page="bilan"><span class="mob-more-icon">📋</span> Bilan mensuel</button>
   <button class="mob-more-btn" data-page="referentiels"><span class="mob-more-icon">👥</span> Référentiels</button>
   <button class="mob-more-btn" data-page="fichiers"><span class="mob-more-icon">📁</span> Fichiers &amp; Import</button>
   <hr style="border:none;border-top:1px solid var(--border);margin:8px 0"/>
@@ -1319,6 +1321,8 @@ select option.subcat-option {
     <button class="nav-btn" data-page="factures"><span class="nav-icon">🧾</span><span class="nav-label">Factures</span></button>
     <button class="nav-btn" data-page="wishlist"><span class="nav-icon">🛒</span><span class="nav-label">Liste d'achats</span></button>
     <button class="nav-btn" data-page="saving-planner"><span class="nav-icon">🧮</span><span class="nav-label">Planificateur épargne</span></button>
+    <button class="nav-btn" data-page="dettes"><span class="nav-icon">🏦</span><span class="nav-label">Suivi des dettes</span></button>
+    <button class="nav-btn" data-page="bilan"><span class="nav-icon">📋</span><span class="nav-label">Bilan mensuel</span></button>
     <div class="nav-section">Applications</div>
     <a class="nav-btn" href="index.html"><span class="nav-icon">🏠</span><span class="nav-label">Accueil</span></a>
     <a class="nav-btn" href="tasks.html"><span class="nav-icon">✅</span><span class="nav-label">Tâches</span></a>
@@ -2130,6 +2134,84 @@ select option.subcat-option {
 
     </section>
 
+    <!-- ══════════ DETTES ══════════ -->
+    <section id="page-dettes" class="page">
+
+      <div class="kpi-grid" id="dettes-kpi"></div>
+
+      <div class="panel">
+        <div class="panel-title"><span class="icon">➕</span> Ajouter une dette</div>
+        <div class="form-grid">
+          <div class="field"><label>Créancier</label><input type="text" id="dette-nom" placeholder="Ex: Imed, Mariem…"/></div>
+          <div class="field"><label>Montant total (TND)</label><input type="number" id="dette-montant" min="0" step="1" placeholder="15000"/></div>
+          <div class="field"><label>Versement mensuel prévu</label><input type="number" id="dette-mensuel" min="0" step="1" placeholder="500"/></div>
+          <div class="field"><label>Début accumulation</label><input type="date" id="dette-debut"/></div>
+          <div class="field"><label>Compte d'accumulation</label><select id="dette-compte"></select></div>
+          <div class="field"><label>Mode</label>
+            <select id="dette-mode">
+              <option value="accumulate">Accumuler puis payer</option>
+              <option value="installment">Paiement mensuel direct</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-primary" id="btn-add-dette">Ajouter la dette</button></div>
+      </div>
+
+      <div id="dettes-list"></div>
+
+    </section>
+
+    <!-- ══════════ BILAN MENSUEL ══════════ -->
+    <section id="page-bilan" class="page">
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-title"><span class="icon">📅</span> Période</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+          <div class="field"><label>Mois</label><select id="bilan-mois"></select></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="bilan-kpi"></div>
+
+      <div class="panel" id="bilan-revenus-panel">
+        <div class="panel-title"><span class="icon">💰</span> Revenus</div>
+        <div id="bilan-revenus-body"></div>
+      </div>
+
+      <div class="panel" id="bilan-fixes-panel">
+        <div class="panel-title"><span class="icon">📌</span> Charges fixes</div>
+        <div id="bilan-fixes-body"></div>
+      </div>
+
+      <div class="panel" id="bilan-variable-panel">
+        <div class="panel-title"><span class="icon">🛒</span> Dépenses variables par catégorie</div>
+        <div id="bilan-variable-body"></div>
+      </div>
+
+      <div class="panel" id="bilan-dettes-panel">
+        <div class="panel-title"><span class="icon">🏦</span> Progression des dettes</div>
+        <div id="bilan-dettes-body"></div>
+      </div>
+
+      <div class="panel" id="bilan-epargne-panel">
+        <div class="panel-title"><span class="icon">🐷</span> Épargne nette</div>
+        <div id="bilan-epargne-body"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span class="icon">➕</span> Gérer les revenus récurrents</div>
+        <p class="hint">Enregistrez vos sources de revenus mensuels (salaire, Sodexo, etc.) pour le bilan.</p>
+        <div class="form-grid">
+          <div class="field"><label>Libellé</label><input type="text" id="revenu-nom" placeholder="Ex: Salaire, Sodexo…"/></div>
+          <div class="field"><label>Montant mensuel (TND)</label><input type="number" id="revenu-montant" min="0" step="0.001" placeholder="2585"/></div>
+          <div class="field"><label>Compte</label><select id="revenu-compte"></select></div>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-primary" id="btn-add-revenu">Ajouter</button></div>
+        <div id="revenus-list" style="margin-top:14px"></div>
+      </div>
+
+    </section>
+
   </div>
 </div>
 
@@ -2352,7 +2434,8 @@ select option.subcat-option {
         s.wishlist, s.wishlistCategories,
         s.factures, s.factureCategories, s.factureCustomFields, s.factureLabels,
         s.budgetMensuelGlobal, s.budgetsCategorie,
-        s.spMonthlyBudget, s.spLocks
+        s.spMonthlyBudget, s.spLocks,
+        s.dettes, s.revenus
       ]);
       // FNV-1a 32-bit over the payload (fast, tiny, collision-safe enough here)
       let h = 0x811c9dc5;
@@ -2691,6 +2774,8 @@ document.addEventListener("DOMContentLoaded", () => {
     factures:     ["Factures",            "Gestion des factures et échéances de paiement"],
     wishlist:     ["Liste d'achats",       "Planifiez et suivez vos achats prévus"],
     "saving-planner": ["Planificateur d'épargne", "Répartissez votre budget mensuel vers vos achats"],
+    dettes:           ["Suivi des dettes",      "Progression et calendrier de remboursement"],
+    bilan:            ["Bilan mensuel",          "Revenus, charges fixes, dépenses et épargne nette"],
   };
 
   function showPage(name) {
@@ -2710,6 +2795,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (name === "dashboard") { try { renderDashboard(); } catch(e) {} }
     if (name === "wishlist") { try { renderWishlist(); } catch(e) {} }
     if (name === "saving-planner") { try { renderSavingPlanner(); } catch(e) {} }
+    if (name === "dettes") { try { renderDettes(); } catch(e) {} }
+    if (name === "bilan") { try { renderBilan(); } catch(e) {} }
     sidebar.classList.remove("open");
     overlay.classList.remove("show");
   }
@@ -2773,6 +2860,8 @@ document.addEventListener("DOMContentLoaded", () => {
       transfers: [],
       spMonthlyBudget: 0,
       spLocks: {},
+      dettes: [],
+      revenus: [],
       factures: [],
       factureCategories: [
         { id: "fcat_elec",    nom: "Électricité",  icon: "⚡" },
@@ -2816,6 +2905,8 @@ document.addEventListener("DOMContentLoaded", () => {
       state.wishlistCategories = defaultState().wishlistCategories;
     if (typeof state.spMonthlyBudget !== 'number') state.spMonthlyBudget = 0;
     if (!state.spLocks || typeof state.spLocks !== 'object') state.spLocks = {};
+    if (!Array.isArray(state.dettes))               state.dettes = [];
+    if (!Array.isArray(state.revenus))              state.revenus = [];
     if (!Array.isArray(state.factures))            state.factures = [];
     if (!Array.isArray(state.factureCategories) || state.factureCategories.length === 0)
       state.factureCategories = defaultState().factureCategories;
@@ -4506,7 +4597,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try { renderWlCategories(); } catch (e) { console.error("renderWlCategories:", e); }
     try { renderWishlist(); } catch (e) { console.error("renderWishlist:", e); }      // always render so cards are ready when page opens
     try { renderFactures(); } catch (e) { console.error("renderFactures:", e); }      // factures must render on Firebase load too
-    try { renderSavingPlanner(); } catch (e) { console.error("renderSavingPlanner:", e); } // savings planner likewise
+    try { renderSavingPlanner(); } catch (e) { console.error("renderSavingPlanner:", e); }
+    try { renderDettes(); } catch (e) { console.error("renderDettes:", e); }
+    try { renderBilan(); } catch (e) { console.error("renderBilan:", e); }
 
     // Dashboard must ALWAYS refresh on any data change, even when the user is on
     // another page — otherwise its KPIs/charts stay stale until a full page reload.
@@ -4529,6 +4622,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (name === "wishlist") renderWishlist(); // ✅ FIX
     if (name === "factures") { try { renderFactures(); } catch (e) {} }
     if (name === "saving-planner") { try { renderSavingPlanner(); } catch (e) {} }
+    if (name === "dettes") { try { renderDettes(); } catch (e) {} }
+    if (name === "bilan") { try { renderBilan(); } catch (e) {} }
     requestAnimationFrame(() => resizeVisibleCharts());
     // close mobile nav
     const sb = document.getElementById("sidebar");
@@ -6827,6 +6922,413 @@ document.addEventListener("DOMContentLoaded", () => {
       saveState();
       if (byId("page-saving-planner")?.classList.contains("active")) renderSavingPlanner();
     });
+  })();
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ██  SUIVI DES DETTES
+  // ══════════════════════════════════════════════════════════════════════
+
+  function renderDettes() {
+    if (!byId("page-dettes")) return;
+
+    const sel = byId("dette-compte");
+    if (sel) {
+      const prev = sel.value;
+      sel.innerHTML = state.comptes.map(c => `<option value="${c.id}">${c.nom}</option>`).join("");
+      if (prev) sel.value = prev;
+    }
+
+    const dettes = state.dettes || [];
+    const totalDette = dettes.reduce((s, d) => s + (d.montant || 0), 0);
+    const totalAccumule = dettes.reduce((s, d) => s + computeDetteAccumule(d), 0);
+    const totalRestant = totalDette - totalAccumule;
+    const kpi = byId("dettes-kpi");
+    if (kpi) kpi.innerHTML = `
+      <div class="kpi" style="--kc:var(--red)">
+        <span class="kpi-icon">💳</span>
+        <span class="kpi-label">Total dettes</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(totalDette)}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--green)">
+        <span class="kpi-icon">✅</span>
+        <span class="kpi-label">Accumulé</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(totalAccumule)}</span>
+      </div>
+      <div class="kpi ${totalRestant > 0 ? 'danger' : 'green'}">
+        <span class="kpi-icon">⏳</span>
+        <span class="kpi-label">Restant</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(totalRestant)}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--purple)">
+        <span class="kpi-icon">📦</span>
+        <span class="kpi-label">Nb dettes</span>
+        <span class="kpi-value">${dettes.length}</span>
+      </div>
+    `;
+
+    const list = byId("dettes-list");
+    if (!list) return;
+    if (dettes.length === 0) {
+      list.innerHTML = `<div class="panel" style="text-align:center;color:var(--muted);padding:40px">Aucune dette enregistrée.</div>`;
+      return;
+    }
+    list.innerHTML = dettes.map(d => {
+      const acc = computeDetteAccumule(d);
+      const pct = d.montant > 0 ? Math.min(100, Math.round(acc / d.montant * 100)) : 0;
+      const remaining = d.montant - acc;
+      const monthsLeft = d.mensuel > 0 ? Math.ceil(remaining / d.mensuel) : Infinity;
+      const now = new Date();
+      let dateEstimee = "—";
+      if (monthsLeft !== Infinity && monthsLeft > 0) {
+        const est = new Date(now.getFullYear(), now.getMonth() + monthsLeft, 1);
+        dateEstimee = est.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      } else if (remaining <= 0) {
+        dateEstimee = "Terminé !";
+      }
+      const modeLabel = d.mode === "installment" ? "Paiement direct" : "Accumulation";
+      const barColor = pct >= 100 ? "var(--green)" : pct >= 50 ? "var(--amber)" : "var(--red)";
+
+      const mk = currentMonthKey();
+      const paid = dettePaymentExistsForMonth(d, mk);
+      const alertHtml = !paid && d.mensuel > 0 && remaining > 0
+        ? `<div style="margin-top:8px;padding:8px 12px;border-radius:var(--r);background:var(--amber-d);border:1px solid var(--amber);font-size:12px">⚠️ Versement de ce mois non détecté (${formatMoney(d.mensuel)} attendu)</div>`
+        : "";
+
+      return `
+        <div class="panel" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <span style="font-size:16px;font-weight:600">${d.nom || "Sans nom"}</span>
+              <span style="font-size:12px;color:var(--muted2);margin-left:8px">${modeLabel}</span>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteDette('${d.id}')">Supprimer</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px">
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Total</span><br><strong>${formatMoney(d.montant)}</strong></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Accumulé</span><br><strong style="color:var(--green)">${formatMoney(acc)}</strong></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Restant</span><br><strong style="color:var(--red)">${formatMoney(remaining)}</strong></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Mensuel</span><br><strong>${formatMoney(d.mensuel)}</strong></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Fin estimée</span><br><strong>${dateEstimee}</strong></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase">Compte</span><br><strong>${nomCompte(d.compteId)}</strong></div>
+          </div>
+          <div style="background:var(--s3);border-radius:99px;height:20px;overflow:hidden;position:relative">
+            <div style="height:100%;border-radius:99px;background:${barColor};width:${pct}%;transition:width .5s var(--ease);min-width:${pct > 0 ? '2px' : '0'}"></div>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)">${pct}%</span>
+          </div>
+          ${alertHtml}
+        </div>`;
+    }).join("");
+  }
+
+  function computeDetteAccumule(dette) {
+    if (!dette.compteId || !dette.debut) return 0;
+    const transfers = (state.transfers || []).filter(t =>
+      t.toCompteId === dette.compteId &&
+      t.date >= dette.debut &&
+      t.montant === dette.mensuel
+    );
+    const ops = (state.operations || []).filter(o =>
+      o.compteId === dette.compteId &&
+      o.type === "credit" &&
+      o.date >= dette.debut &&
+      o.montant === dette.mensuel
+    );
+    return (transfers.length + ops.length) * dette.mensuel;
+  }
+
+  function dettePaymentExistsForMonth(dette, monthKey) {
+    if (!dette.compteId) return true;
+    const transfers = (state.transfers || []).filter(t =>
+      t.toCompteId === dette.compteId &&
+      (t.date || "").startsWith(monthKey) &&
+      t.montant === dette.mensuel
+    );
+    const ops = (state.operations || []).filter(o =>
+      o.compteId === dette.compteId &&
+      o.type === "credit" &&
+      (o.date || "").startsWith(monthKey) &&
+      o.montant === dette.mensuel
+    );
+    return (transfers.length + ops.length) > 0;
+  }
+
+  window.deleteDette = function(id) {
+    state.dettes = (state.dettes || []).filter(d => d.id !== id);
+    saveState();
+    renderDettes();
+  };
+
+  (function initDettes() {
+    const btn = byId("btn-add-dette");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const nom = byId("dette-nom").value.trim();
+      const montant = parseFloat(byId("dette-montant").value) || 0;
+      const mensuel = parseFloat(byId("dette-mensuel").value) || 0;
+      const debut = byId("dette-debut").value;
+      const compteId = byId("dette-compte").value;
+      const mode = byId("dette-mode").value;
+      if (!nom || montant <= 0) return;
+      state.dettes.push({ id: uid(), nom, montant, mensuel, debut, compteId, mode });
+      saveState();
+      byId("dette-nom").value = "";
+      byId("dette-montant").value = "";
+      byId("dette-mensuel").value = "";
+      byId("dette-debut").value = "";
+      renderDettes();
+    });
+  })();
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ██  BILAN MENSUEL
+  // ══════════════════════════════════════════════════════════════════════
+
+  function getAllMonthKeys() {
+    const keys = new Set();
+    state.depenses.forEach(d => { const mk = monthKeyFromIso(d.date); if (mk) keys.add(mk); });
+    (state.operations || []).forEach(o => { const mk = monthKeyFromIso(o.date); if (mk) keys.add(mk); });
+    (state.transfers || []).forEach(t => { const mk = monthKeyFromIso(t.date); if (mk) keys.add(mk); });
+    return [...keys].sort().reverse();
+  }
+
+  function renderBilan() {
+    if (!byId("page-bilan")) return;
+
+    const moisSel = byId("bilan-mois");
+    if (moisSel) {
+      const prev = moisSel.value;
+      const months = getAllMonthKeys();
+      if (months.length === 0) months.push(currentMonthKey());
+      moisSel.innerHTML = months.map(mk => {
+        const [y, m] = mk.split("-");
+        const label = new Date(+y, +m - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        return `<option value="${mk}">${label}</option>`;
+      }).join("");
+      if (prev && months.includes(prev)) moisSel.value = prev;
+      else moisSel.value = months[0] || currentMonthKey();
+    }
+
+    const revCompte = byId("revenu-compte");
+    if (revCompte) {
+      const prev = revCompte.value;
+      revCompte.innerHTML = state.comptes.map(c => `<option value="${c.id}">${c.nom}</option>`).join("");
+      if (prev) revCompte.value = prev;
+    }
+
+    const mk = moisSel?.value || currentMonthKey();
+    const [y, m] = mk.split("-").map(Number);
+
+    const revenus = state.revenus || [];
+    const totalRevenus = revenus.reduce((s, r) => s + (r.montant || 0), 0);
+    const opsCredits = (state.operations || []).filter(o => o.type === "credit" && (o.date || "").startsWith(mk) && !o.factureId);
+    const totalOpsCredits = opsCredits.reduce((s, o) => s + o.montant, 0);
+    const revEffectif = totalRevenus > 0 ? totalRevenus : totalOpsCredits;
+
+    const revBody = byId("bilan-revenus-body");
+    if (revBody) {
+      let html = `<table style="width:100%;font-size:13px"><tbody>`;
+      if (revenus.length > 0) {
+        revenus.forEach(r => {
+          html += `<tr><td>${r.nom}</td><td style="text-align:right;font-weight:600;color:var(--green)">${formatMoney(r.montant)}</td></tr>`;
+        });
+        html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total revenus</td><td style="text-align:right;font-weight:700;color:var(--green)">${formatMoney(totalRevenus)}</td></tr>`;
+      } else {
+        opsCredits.forEach(o => {
+          html += `<tr><td>${o.description || nomCompte(o.compteId)}</td><td style="text-align:right;color:var(--green)">${formatMoney(o.montant)}</td></tr>`;
+        });
+        if (opsCredits.length === 0) html += `<tr><td colspan="2" style="color:var(--muted)">Aucun revenu enregistré. Ajoutez-les ci-dessous.</td></tr>`;
+        else html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total crédits</td><td style="text-align:right;font-weight:700;color:var(--green)">${formatMoney(totalOpsCredits)}</td></tr>`;
+      }
+      html += `</tbody></table>`;
+      revBody.innerHTML = html;
+    }
+
+    const dettes = state.dettes || [];
+    const chargesDettes = dettes.filter(d => d.mensuel > 0 && computeDetteAccumule(d) < d.montant);
+    const totalChargesDettes = chargesDettes.reduce((s, d) => s + d.mensuel, 0);
+
+    const depMois = depensesDuMois(mk);
+    const fixBody = byId("bilan-fixes-body");
+    if (fixBody) {
+      let html = `<table style="width:100%;font-size:13px"><tbody>`;
+      chargesDettes.forEach(d => {
+        html += `<tr><td>🏦 ${d.nom} (dette)</td><td style="text-align:right;color:var(--red)">${formatMoney(d.mensuel)}</td></tr>`;
+      });
+      const facturesMois = (state.factures || []).filter(f =>
+        f.recurrence && f.statut === "payee" && (f.datePaiement || f.dateEcheance || "").startsWith(mk)
+      );
+      facturesMois.forEach(f => {
+        html += `<tr><td>🧾 ${f.description}</td><td style="text-align:right;color:var(--red)">${formatMoney(f.montant)}</td></tr>`;
+      });
+      const totalFactFixes = facturesMois.reduce((s, f) => s + f.montant, 0);
+      const totalFixes = totalChargesDettes + totalFactFixes;
+      html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total charges fixes</td><td style="text-align:right;font-weight:700;color:var(--red)">${formatMoney(totalFixes)}</td></tr>`;
+      html += `</tbody></table>`;
+      fixBody.innerHTML = html;
+    }
+
+    const byCat = {};
+    depMois.forEach(d => {
+      const cat = nomCategorie(d.categorieId, true);
+      byCat[cat] = (byCat[cat] || 0) + d.montant;
+    });
+    const totalDep = depMois.reduce((s, d) => s + d.montant, 0);
+    const varBody = byId("bilan-variable-body");
+    if (varBody) {
+      const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+      let html = `<table style="width:100%;font-size:13px"><tbody>`;
+      sorted.forEach(([cat, total]) => {
+        const pct = totalDep > 0 ? Math.round(total / totalDep * 100) : 0;
+        html += `<tr>
+          <td>${cat}</td>
+          <td style="width:120px"><div style="background:var(--s3);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:var(--accent);width:${pct}%;border-radius:99px"></div></div></td>
+          <td style="text-align:right;font-weight:500;white-space:nowrap">${formatMoney(total)}</td>
+          <td style="text-align:right;color:var(--muted2);font-size:11px;white-space:nowrap">${pct}%</td>
+        </tr>`;
+      });
+      html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total dépenses</td><td></td><td style="text-align:right;font-weight:700;color:var(--red)">${formatMoney(totalDep)}</td><td></td></tr>`;
+      html += `</tbody></table>`;
+      varBody.innerHTML = html;
+    }
+
+    const dettesBody = byId("bilan-dettes-body");
+    if (dettesBody) {
+      if (dettes.length === 0) {
+        dettesBody.innerHTML = `<div style="color:var(--muted);font-size:13px">Aucune dette. Ajoutez-en depuis la page "Suivi des dettes".</div>`;
+      } else {
+        let html = "";
+        dettes.forEach(d => {
+          const acc = computeDetteAccumule(d);
+          const pct = d.montant > 0 ? Math.min(100, Math.round(acc / d.montant * 100)) : 0;
+          const remaining = d.montant - acc;
+          const monthsLeft = d.mensuel > 0 ? Math.ceil(remaining / d.mensuel) : 0;
+          const barColor = pct >= 100 ? "var(--green)" : pct >= 50 ? "var(--amber)" : "var(--red)";
+          const paid = dettePaymentExistsForMonth(d, mk);
+          const statusIcon = remaining <= 0 ? "✅" : paid ? "👍" : "⚠️";
+          html += `
+            <div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-weight:500">${statusIcon} ${d.nom}</span>
+                <span style="font-size:12px;color:var(--muted2)">${formatMoney(acc)} / ${formatMoney(d.montant)} (${pct}%)</span>
+              </div>
+              <div style="background:var(--s3);border-radius:99px;height:14px;overflow:hidden;position:relative">
+                <div style="height:100%;border-radius:99px;background:${barColor};width:${pct}%;transition:width .5s var(--ease)"></div>
+                <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)">${pct}%</span>
+              </div>
+              ${monthsLeft > 0 ? `<div style="font-size:11px;color:var(--muted2);margin-top:3px">~${monthsLeft} mois restants</div>` : ""}
+            </div>`;
+        });
+        dettesBody.innerHTML = html;
+      }
+    }
+
+    const transfersMois = (state.transfers || []).filter(t => (t.date || "").startsWith(mk));
+    const epargneComptes = state.comptes.filter(c => (c.nom || "").toLowerCase().includes("pargne") || c.type === "epargne");
+    const versEpargne = transfersMois.filter(t => epargneComptes.some(c => c.id === t.toCompteId)).reduce((s, t) => s + t.montant, 0);
+    const retEpargne = transfersMois.filter(t => epargneComptes.some(c => c.id === t.fromCompteId)).reduce((s, t) => s + t.montant, 0);
+    const versementsDettes = dettes.reduce((s, d) => {
+      if (!d.compteId) return s;
+      return s + transfersMois.filter(t => t.toCompteId === d.compteId && t.montant === d.mensuel).length * d.mensuel;
+    }, 0);
+    const epargnePerso = versEpargne - retEpargne - versementsDettes;
+    const epargneTotale = revEffectif - totalDep - totalChargesDettes;
+
+    const epBody = byId("bilan-epargne-body");
+    if (epBody) {
+      const tauxEpargne = revEffectif > 0 ? Math.round(epargneTotale / revEffectif * 100) : 0;
+      const tauxColor = tauxEpargne >= 15 ? "var(--green)" : tauxEpargne >= 5 ? "var(--amber)" : "var(--red)";
+      epBody.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+          <div style="text-align:center;padding:14px;background:var(--s2);border-radius:var(--r2)">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase">Taux d'épargne</div>
+            <div style="font-size:28px;font-weight:700;color:${tauxColor}">${tauxEpargne}%</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:var(--s2);border-radius:var(--r2)">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase">Épargne théorique</div>
+            <div style="font-size:18px;font-weight:600;color:${epargneTotale >= 0 ? 'var(--green)' : 'var(--red)'}">${formatMoney(epargneTotale)}</div>
+            <div style="font-size:11px;color:var(--muted2)">Revenus − dépenses − dettes</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:var(--s2);border-radius:var(--r2)">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase">Vers épargne (perso)</div>
+            <div style="font-size:18px;font-weight:600;color:var(--green)">${formatMoney(epargnePerso > 0 ? epargnePerso : 0)}</div>
+            <div style="font-size:11px;color:var(--muted2)">Hors argent dettes</div>
+          </div>
+        </div>`;
+    }
+
+    const totalChargesFixes = totalChargesDettes;
+    const resteVivre = revEffectif - totalDep - totalChargesFixes;
+    const kpi = byId("bilan-kpi");
+    if (kpi) kpi.innerHTML = `
+      <div class="kpi" style="--kc:var(--green)">
+        <span class="kpi-icon">💰</span>
+        <span class="kpi-label">Revenus</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(revEffectif)}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--red)">
+        <span class="kpi-icon">💸</span>
+        <span class="kpi-label">Dépenses</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(totalDep)}</span>
+      </div>
+      <div class="kpi" style="--kc:var(--amber)">
+        <span class="kpi-icon">🏦</span>
+        <span class="kpi-label">Dettes</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(totalChargesFixes)}</span>
+      </div>
+      <div class="kpi ${resteVivre >= 0 ? 'green' : 'danger'}">
+        <span class="kpi-icon">🐷</span>
+        <span class="kpi-label">Reste</span>
+        <span class="kpi-value" style="font-size:16px">${formatMoney(resteVivre)}</span>
+      </div>
+    `;
+
+    renderRevenusList();
+  }
+
+  function renderRevenusList() {
+    const container = byId("revenus-list");
+    if (!container) return;
+    const revenus = state.revenus || [];
+    if (revenus.length === 0) {
+      container.innerHTML = `<div style="color:var(--muted);font-size:13px">Aucun revenu récurrent configuré.</div>`;
+      return;
+    }
+    container.innerHTML = `<table style="width:100%;font-size:13px"><thead><tr>
+      <th>Libellé</th><th>Montant</th><th>Compte</th><th></th>
+    </tr></thead><tbody>${revenus.map(r => `<tr>
+      <td>${r.nom}</td>
+      <td style="font-weight:600;color:var(--green)">${formatMoney(r.montant)}</td>
+      <td>${nomCompte(r.compteId)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRevenu('${r.id}')">×</button></td>
+    </tr>`).join("")}</tbody></table>`;
+  }
+
+  window.deleteRevenu = function(id) {
+    state.revenus = (state.revenus || []).filter(r => r.id !== id);
+    saveState();
+    renderBilan();
+  };
+
+  (function initBilan() {
+    const btnR = byId("btn-add-revenu");
+    if (btnR) {
+      btnR.addEventListener("click", () => {
+        const nom = byId("revenu-nom").value.trim();
+        const montant = parseFloat(byId("revenu-montant").value) || 0;
+        const compteId = byId("revenu-compte").value;
+        if (!nom || montant <= 0) return;
+        state.revenus.push({ id: uid(), nom, montant, compteId });
+        saveState();
+        byId("revenu-nom").value = "";
+        byId("revenu-montant").value = "";
+        renderBilan();
+      });
+    }
+
+    const moisSel = byId("bilan-mois");
+    if (moisSel) {
+      moisSel.addEventListener("change", () => renderBilan());
+    }
   })();
 
   // ── THEME TOGGLE ──────────────────────────────────────────────────────
