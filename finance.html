@@ -2179,8 +2179,22 @@ select option.subcat-option {
       </div>
 
       <div class="panel" id="bilan-fixes-panel">
-        <div class="panel-title"><span class="icon">📌</span> Charges fixes</div>
+        <div class="panel-title"><span class="icon">📌</span> Charges fixes mensuelles</div>
         <div id="bilan-fixes-body"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--muted2)">Gérer les charges fixes</span>
+          <button class="btn btn-sm" id="btn-toggle-charges" onclick="document.getElementById('charges-fixes-form').classList.toggle('hidden')">+ Ajouter</button>
+        </div>
+        <div id="charges-fixes-form" class="hidden">
+          <div class="form-grid" style="margin-bottom:10px">
+            <div class="field"><label>Libellé</label><input type="text" id="charge-nom" placeholder="Ex: Ooredoo, STEG, Essence…"/></div>
+            <div class="field"><label>Montant (TND/mois)</label><input type="number" id="charge-montant" min="0" step="0.001" placeholder="69.900"/></div>
+            <div class="field"><label>Catégorie</label><select id="charge-categorie"></select></div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-add-charge">Ajouter la charge</button>
+        </div>
+        <div id="charges-fixes-list" style="margin-top:10px"></div>
       </div>
 
       <div class="panel" id="bilan-variable-panel">
@@ -2435,7 +2449,7 @@ select option.subcat-option {
         s.factures, s.factureCategories, s.factureCustomFields, s.factureLabels,
         s.budgetMensuelGlobal, s.budgetsCategorie,
         s.spMonthlyBudget, s.spLocks,
-        s.dettes, s.revenus
+        s.dettes, s.revenus, s.chargesFixes
       ]);
       // FNV-1a 32-bit over the payload (fast, tiny, collision-safe enough here)
       let h = 0x811c9dc5;
@@ -2862,6 +2876,7 @@ document.addEventListener("DOMContentLoaded", () => {
       spLocks: {},
       dettes: [],
       revenus: [],
+      chargesFixes: [],
       factures: [],
       factureCategories: [
         { id: "fcat_elec",    nom: "Électricité",  icon: "⚡" },
@@ -2907,6 +2922,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!state.spLocks || typeof state.spLocks !== 'object') state.spLocks = {};
     if (!Array.isArray(state.dettes))               state.dettes = [];
     if (!Array.isArray(state.revenus))              state.revenus = [];
+    if (!Array.isArray(state.chargesFixes))         state.chargesFixes = [];
     if (!Array.isArray(state.factures))            state.factures = [];
     if (!Array.isArray(state.factureCategories) || state.factureCategories.length === 0)
       state.factureCategories = defaultState().factureCategories;
@@ -7115,6 +7131,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (prev) revCompte.value = prev;
     }
 
+    const chargeCatSel = byId("charge-categorie");
+    if (chargeCatSel) {
+      const prev = chargeCatSel.value;
+      const parents = state.categories.filter(c => !c.parentId);
+      chargeCatSel.innerHTML = parents.map(c => `<option value="${c.id}">${c.nom}</option>`).join("");
+      if (prev) chargeCatSel.value = prev;
+    }
+
     const mk = moisSel?.value || currentMonthKey();
     const [y, m] = mk.split("-").map(Number);
 
@@ -7146,23 +7170,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const dettes = state.dettes || [];
     const chargesDettes = dettes.filter(d => d.mensuel > 0 && computeDetteAccumule(d) < d.montant);
     const totalChargesDettes = chargesDettes.reduce((s, d) => s + d.mensuel, 0);
+    const charges = state.chargesFixes || [];
+    const totalChargesFixes_cf = charges.reduce((s, c) => s + (c.montant || 0), 0);
 
     const depMois = depensesDuMois(mk);
     const fixBody = byId("bilan-fixes-body");
     if (fixBody) {
       let html = `<table style="width:100%;font-size:13px"><tbody>`;
+      charges.forEach(c => {
+        const paid = chargeFixePayeeThisMonth(c, mk);
+        const icon = paid ? "✅" : "⚠️";
+        html += `<tr><td>${icon} ${c.nom}</td><td style="text-align:right;color:var(--red)">${formatMoney(c.montant)}</td><td style="font-size:11px;color:${paid ? 'var(--green)' : 'var(--amber)'};text-align:right">${paid ? 'Payée' : 'Non détectée'}</td></tr>`;
+      });
       chargesDettes.forEach(d => {
-        html += `<tr><td>🏦 ${d.nom} (dette)</td><td style="text-align:right;color:var(--red)">${formatMoney(d.mensuel)}</td></tr>`;
+        html += `<tr><td>🏦 ${d.nom} (dette)</td><td style="text-align:right;color:var(--red)">${formatMoney(d.mensuel)}</td><td></td></tr>`;
       });
-      const facturesMois = (state.factures || []).filter(f =>
-        f.recurrence && f.statut === "payee" && (f.datePaiement || f.dateEcheance || "").startsWith(mk)
-      );
-      facturesMois.forEach(f => {
-        html += `<tr><td>🧾 ${f.description}</td><td style="text-align:right;color:var(--red)">${formatMoney(f.montant)}</td></tr>`;
-      });
-      const totalFactFixes = facturesMois.reduce((s, f) => s + f.montant, 0);
-      const totalFixes = totalChargesDettes + totalFactFixes;
-      html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total charges fixes</td><td style="text-align:right;font-weight:700;color:var(--red)">${formatMoney(totalFixes)}</td></tr>`;
+      const totalFixes = totalChargesDettes + totalChargesFixes_cf;
+      html += `<tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total charges fixes</td><td style="text-align:right;font-weight:700;color:var(--red)">${formatMoney(totalFixes)}</td><td></td></tr>`;
       html += `</tbody></table>`;
       fixBody.innerHTML = html;
     }
@@ -7231,7 +7255,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return s + transfersMois.filter(t => t.toCompteId === d.compteId && t.montant === d.mensuel).length * d.mensuel;
     }, 0);
     const epargnePerso = versEpargne - retEpargne - versementsDettes;
-    const epargneTotale = revEffectif - totalDep - totalChargesDettes;
+    const epargneTotale = revEffectif - totalDep - totalChargesDettes - totalChargesFixes_cf;
 
     const epBody = byId("bilan-epargne-body");
     if (epBody) {
@@ -7256,7 +7280,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>`;
     }
 
-    const totalChargesFixes = totalChargesDettes;
+    const totalChargesFixes = totalChargesDettes + totalChargesFixes_cf;
     const resteVivre = revEffectif - totalDep - totalChargesFixes;
     const kpi = byId("bilan-kpi");
     if (kpi) kpi.innerHTML = `
@@ -7283,6 +7307,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     renderRevenusList();
+    renderChargesFixesList();
   }
 
   function renderRevenusList() {
@@ -7309,6 +7334,50 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBilan();
   };
 
+  function chargeFixePayeeThisMonth(charge, monthKey) {
+    const deps = state.depenses.filter(d =>
+      (d.date || "").startsWith(monthKey) &&
+      charge.categorieId &&
+      d.categorieId === charge.categorieId &&
+      Math.abs(d.montant - charge.montant) < 5
+    );
+    if (deps.length > 0) return true;
+    const facs = (state.factures || []).filter(f =>
+      f.statut === "payee" &&
+      ((f.datePaiement || f.dateEcheance || "").startsWith(monthKey)) &&
+      Math.abs(f.montant - charge.montant) < 5 &&
+      (f.description || "").toLowerCase().includes((charge.nom || "").toLowerCase().slice(0, 4))
+    );
+    return facs.length > 0;
+  }
+
+  function renderChargesFixesList() {
+    const container = byId("charges-fixes-list");
+    if (!container) return;
+    const charges = state.chargesFixes || [];
+    if (charges.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+    const totalCF = charges.reduce((s, c) => s + (c.montant || 0), 0);
+    container.innerHTML = `<table style="width:100%;font-size:12px"><thead><tr>
+      <th>Libellé</th><th>Montant/mois</th><th>Catégorie</th><th></th>
+    </tr></thead><tbody>${charges.map(c => `<tr>
+      <td>${c.nom}</td>
+      <td style="font-weight:600">${formatMoney(c.montant)}</td>
+      <td style="color:var(--muted2)">${nomCategorie(c.categorieId)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteChargeFix('${c.id}')">×</button></td>
+    </tr>`).join("")}
+    <tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total</td><td style="font-weight:700">${formatMoney(totalCF)}</td><td></td><td></td></tr>
+    </tbody></table>`;
+  }
+
+  window.deleteChargeFix = function(id) {
+    state.chargesFixes = (state.chargesFixes || []).filter(c => c.id !== id);
+    saveState();
+    renderBilan();
+  };
+
   (function initBilan() {
     const btnR = byId("btn-add-revenu");
     if (btnR) {
@@ -7321,6 +7390,22 @@ document.addEventListener("DOMContentLoaded", () => {
         saveState();
         byId("revenu-nom").value = "";
         byId("revenu-montant").value = "";
+        renderBilan();
+      });
+    }
+
+    const btnCF = byId("btn-add-charge");
+    if (btnCF) {
+      btnCF.addEventListener("click", () => {
+        const nom = byId("charge-nom").value.trim();
+        const montant = parseFloat(byId("charge-montant").value) || 0;
+        const categorieId = byId("charge-categorie").value;
+        if (!nom || montant <= 0) return;
+        state.chargesFixes.push({ id: uid(), nom, montant, categorieId });
+        saveState();
+        byId("charge-nom").value = "";
+        byId("charge-montant").value = "";
+        byId("charges-fixes-form").classList.add("hidden");
         renderBilan();
       });
     }
