@@ -2191,6 +2191,8 @@ select option.subcat-option {
             <div class="field"><label>Libellé</label><input type="text" id="charge-nom" placeholder="Ex: Ooredoo, STEG, Essence…"/></div>
             <div class="field"><label>Montant (TND/mois)</label><input type="number" id="charge-montant" min="0" step="0.001" placeholder="69.900"/></div>
             <div class="field"><label>Catégorie</label><select id="charge-categorie"></select></div>
+            <div class="field"><label>Débiter depuis</label><select id="charge-compte"></select></div>
+            <div class="field"><label>Jour du mois</label><input type="number" id="charge-jour" min="1" max="28" step="1" value="1" placeholder="1"/></div>
           </div>
           <button class="btn btn-primary btn-sm" id="btn-add-charge">Ajouter la charge</button>
         </div>
@@ -7139,6 +7141,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (prev) chargeCatSel.value = prev;
     }
 
+    const chargeCompteSel = byId("charge-compte");
+    if (chargeCompteSel) {
+      const prev = chargeCompteSel.value;
+      chargeCompteSel.innerHTML = state.comptes.map(c => `<option value="${c.id}">${c.nom}</option>`).join("");
+      if (prev) chargeCompteSel.value = prev;
+    }
+
+    autoGenerateChargesFixes(mk);
+
     const mk = moisSel?.value || currentMonthKey();
     const [y, m] = mk.split("-").map(Number);
 
@@ -7335,6 +7346,11 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function chargeFixePayeeThisMonth(charge, monthKey) {
+    const tag = `cf:${charge.id}`;
+    const autoGen = state.depenses.some(d =>
+      (d.date || "").startsWith(monthKey) && d._chargeFixeId === charge.id
+    );
+    if (autoGen) return true;
     const deps = state.depenses.filter(d =>
       (d.date || "").startsWith(monthKey) &&
       charge.categorieId &&
@@ -7351,6 +7367,32 @@ document.addEventListener("DOMContentLoaded", () => {
     return facs.length > 0;
   }
 
+  function autoGenerateChargesFixes(monthKey) {
+    const charges = state.chargesFixes || [];
+    if (charges.length === 0) return;
+    const mk = currentMonthKey();
+    if (monthKey !== mk) return;
+    let changed = false;
+    charges.forEach(c => {
+      if (chargeFixePayeeThisMonth(c, mk)) return;
+      const [y, m] = mk.split("-").map(Number);
+      const jour = Math.min(c.jour || 1, 28);
+      const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(jour).padStart(2, "0")}`;
+      state.depenses.push({
+        id: uid(),
+        description: `${c.nom} (auto)`,
+        montant: c.montant,
+        date: dateStr,
+        categorieId: c.categorieId || "",
+        compteId: c.compteId || (state.comptes[0]?.id || ""),
+        personneId: state.personnes[0]?.id || "",
+        _chargeFixeId: c.id
+      });
+      changed = true;
+    });
+    if (changed) saveState();
+  }
+
   function renderChargesFixesList() {
     const container = byId("charges-fixes-list");
     if (!container) return;
@@ -7361,14 +7403,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const totalCF = charges.reduce((s, c) => s + (c.montant || 0), 0);
     container.innerHTML = `<table style="width:100%;font-size:12px"><thead><tr>
-      <th>Libellé</th><th>Montant/mois</th><th>Catégorie</th><th></th>
+      <th>Libellé</th><th>Montant</th><th>Compte</th><th>Jour</th><th></th>
     </tr></thead><tbody>${charges.map(c => `<tr>
       <td>${c.nom}</td>
       <td style="font-weight:600">${formatMoney(c.montant)}</td>
-      <td style="color:var(--muted2)">${nomCategorie(c.categorieId)}</td>
+      <td style="color:var(--muted2)">${nomCompte(c.compteId)}</td>
+      <td style="color:var(--muted2)">${c.jour || 1}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deleteChargeFix('${c.id}')">×</button></td>
     </tr>`).join("")}
-    <tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total</td><td style="font-weight:700">${formatMoney(totalCF)}</td><td></td><td></td></tr>
+    <tr style="border-top:1px solid var(--border)"><td style="font-weight:600">Total</td><td style="font-weight:700">${formatMoney(totalCF)}</td><td></td><td></td><td></td></tr>
     </tbody></table>`;
   }
 
@@ -7400,11 +7443,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const nom = byId("charge-nom").value.trim();
         const montant = parseFloat(byId("charge-montant").value) || 0;
         const categorieId = byId("charge-categorie").value;
+        const compteId = byId("charge-compte").value;
+        const jour = parseInt(byId("charge-jour").value) || 1;
         if (!nom || montant <= 0) return;
-        state.chargesFixes.push({ id: uid(), nom, montant, categorieId });
+        state.chargesFixes.push({ id: uid(), nom, montant, categorieId, compteId, jour });
         saveState();
         byId("charge-nom").value = "";
         byId("charge-montant").value = "";
+        byId("charge-jour").value = "1";
         byId("charges-fixes-form").classList.add("hidden");
         renderBilan();
       });
