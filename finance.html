@@ -7148,10 +7148,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (prev) chargeCompteSel.value = prev;
     }
 
-    autoGenerateChargesFixes(mk);
-
     const mk = moisSel?.value || currentMonthKey();
     const [y, m] = mk.split("-").map(Number);
+
+    autoGenerateChargesFixes(mk);
 
     const revenus = state.revenus || [];
     const totalRevenus = revenus.reduce((s, r) => s + (r.montant || 0), 0);
@@ -7184,7 +7184,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const charges = state.chargesFixes || [];
     const totalChargesFixes_cf = charges.reduce((s, c) => s + (c.montant || 0), 0);
 
-    const depMois = depensesDuMois(mk);
+    const depMoisAll = depensesDuMois(mk);
+    const depMois = depMoisAll.filter(d => !d._chargeFixeId);
     const fixBody = byId("bilan-fixes-body");
     if (fixBody) {
       let html = `<table style="width:100%;font-size:13px"><tbody>`;
