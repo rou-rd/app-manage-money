@@ -13,7 +13,7 @@ export function occursOn(routine, dateStr) {
  * Dates où la routine doit avoir une tâche générée mais n'en a pas encore,
  * sur une fenêtre glissante [aujourd'hui - backDays, aujourd'hui + aheadDays].
  */
-export function pendingInstanceDates(routine, existingTasks, backDays = 3, aheadDays = 6) {
+export function pendingInstanceDates(routine, existingTasks, backDays = 14, aheadDays = 7) {
   const today = todayStr();
   const from = addDays(today, -backDays);
   const to = addDays(today, aheadDays);

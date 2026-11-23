@@ -1,5 +1,6 @@
-import { todayStr, startOfWeek, addDays, dayOfWeek, weekdayLabel, diffDays } from "../utils/date.js";
+import { todayStr, startOfWeek, addDays, dayOfWeek, weekdayLabel, diffDays, parseDateStr } from "../utils/date.js";
 import { goalProgress } from "../goals/goals.model.js";
+import { occursOn } from "../routines/routines.generator.js";
 
 export function taskAnalytics(tasks) {
   const today = todayStr();
@@ -53,4 +54,55 @@ export function goalAnalytics(goals) {
     stepsDone: (g.steps || []).filter((s) => s.done).length,
     stepsTotal: (g.steps || []).length
   }));
+}
+
+export function tasksPerDayThisWeek(tasks) {
+  const today = todayStr();
+  const ws = startOfWeek(today);
+  const result = [];
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(ws, i);
+    const dayTasks = tasks.filter((t) => t.date === d);
+    result.push({ day: weekdayLabel(i), date: d, total: dayTasks.length, done: dayTasks.filter((t) => t.status === "done").length });
+  }
+  return result;
+}
+
+export function tasksPerWeekHistory(tasks, weeks = 8) {
+  const today = todayStr();
+  const currentWs = startOfWeek(today);
+  const result = [];
+  for (let w = weeks - 1; w >= 0; w--) {
+    const ws = addDays(currentWs, -7 * w);
+    const we = addDays(ws, 6);
+    const count = tasks.filter((t) => t.status === "done" && t.date >= ws && t.date <= we).length;
+    const d = parseDateStr(ws);
+    result.push({ weekLabel: `${d.getDate()}/${d.getMonth() + 1}`, count });
+  }
+  return result;
+}
+
+export function tasksByCategory(tasks) {
+  const map = {};
+  tasks.forEach((t) => { const c = t.category || "Général"; map[c] = (map[c] || 0) + 1; });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  if (sorted.length <= 6) return sorted.map(([category, count]) => ({ category, count }));
+  const top = sorted.slice(0, 5);
+  const other = sorted.slice(5).reduce((s, e) => s + e[1], 0);
+  return [...top.map(([category, count]) => ({ category, count })), { category: "Autres", count: other }];
+}
+
+export function routineHeatmap(routine, tasks, days = 30) {
+  const today = todayStr();
+  const result = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = addDays(today, -i);
+    const scheduled = occursOn(routine, d);
+    if (!scheduled) { result.push({ date: d, status: "none" }); continue; }
+    const inst = tasks.find((t) => t.routineId === routine.id && t.date === d);
+    if (inst && inst.status === "done") result.push({ date: d, status: "done" });
+    else if (d < today) result.push({ date: d, status: "missed" });
+    else result.push({ date: d, status: "pending" });
+  }
+  return result;
 }

@@ -28,7 +28,9 @@ export function newTaskDefaults() {
     routineId: null,
     goalId: null,
     goalMilestoneId: null,
-    notified: {}
+    notified: {},
+    archived: false,
+    timeSpent: 0
   };
 }
 

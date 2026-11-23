@@ -1,7 +1,7 @@
 import { initTheme, toggleTheme, currentTheme } from "./utils/theme.js";
 import { onAuthChange, login, logout } from "./auth/auth.js";
 import { subscribe } from "./store.js";
-import { generateAllInstances } from "./routines/routines.service.js";
+import { generateAllInstances, cleanupOldRoutineTasks } from "./routines/routines.service.js";
 import { toast } from "./utils/toast.js";
 
 import { initDashboardView } from "./dashboard/dashboard.ui.js";
@@ -12,11 +12,13 @@ import { initCalendarView } from "./calendar/calendar.ui.js";
 import { initAnalyticsView } from "./analytics/analytics.ui.js";
 import { initGamificationView } from "./gamification/gamification.ui.js";
 import { initDataView } from "./data/data.ui.js";
+import { initPomodoro } from "./pomodoro/pomodoro.ui.js";
 import {
   notificationsSupported, notificationsEnabled, requestPermission, startNotificationScheduler
 } from "./notifications/notifications.js";
 
 initTheme();
+initPomodoro();
 
 const views = {
   dashboard: document.getElementById("view-dashboard"),
@@ -90,6 +92,7 @@ onAuthChange((user) => {
 subscribe((state) => {
   if (!routineGenerationTriggered && state.ready) {
     routineGenerationTriggered = true;
+    cleanupOldRoutineTasks(state.uid, state.tasks).catch((e) => console.error("[Routines] cleanup:", e));
     generateAllInstances(state.uid, state.routines, state.tasks).catch((e) => console.error("[Routines] génération:", e));
   }
 });

@@ -40,3 +40,11 @@ export async function removeSubtask(uid, task, subtaskId) {
   const subtasks = (task.subtasks || []).filter((s) => s.id !== subtaskId);
   return updateTask(uid, task.id, { subtasks });
 }
+
+export async function archiveTask(uid, taskId, archived = true) {
+  return updateTask(uid, taskId, { archived });
+}
+
+export async function addTimeSpent(uid, task, seconds) {
+  return updateTask(uid, task.id, { timeSpent: (task.timeSpent || 0) + seconds });
+}

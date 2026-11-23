@@ -116,3 +116,87 @@
   border: none;
   padding: 60px 20px;
 }
+
+/* Vue toggle — boutons Liste/Kanban/Stats */
+#view-tasks .view-toggle .btn--sm {
+  border-bottom: none !important;
+  padding: 6px 12px;
+  border-radius: 8px !important;
+}
+#view-tasks .view-toggle .btn--sm.btn--primary {
+  background: var(--blue) !important;
+  color: #fff !important;
+}
+
+/* Kanban — cartes dans les colonnes */
+#view-tasks .kanban { margin-top: 8px; }
+#view-tasks .kanban-col { transition: background .15s ease; }
+#view-tasks .kanban-col--over {
+  background: var(--surface-2);
+  border-color: var(--blue);
+}
+#view-tasks .kanban-task {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: grab;
+  transition: box-shadow .15s ease, opacity .15s ease;
+}
+#view-tasks .kanban-task:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+#view-tasks .kanban-task.dragging { opacity: .4; }
+#view-tasks .kanban-task .badge {
+  background: var(--bg-alt) !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* Drag on list cards */
+#view-tasks .task-card.dragging { opacity: .4; }
+#view-tasks .task-card[draggable] { cursor: grab; }
+
+/* Task action buttons (archive, focus) */
+#view-tasks .task-actions {
+  font-size: 14px !important;
+  padding: 4px 6px !important;
+  border: none !important;
+  border-bottom: none !important;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+#view-tasks .task-card:hover .task-actions { opacity: 1; }
+
+/* Pomodoro floating widget */
+#view-tasks .pomodoro-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  z-index: 999;
+  min-width: 200px;
+  text-align: center;
+}
+#view-tasks .pomodoro-float .btn--sm {
+  border-radius: 8px !important;
+  border-bottom: none !important;
+}
+#view-tasks .pomodoro-float .btn--primary {
+  background: var(--blue) !important;
+  color: #fff !important;
+}
+#view-tasks .pomodoro-float .btn--danger {
+  background: var(--red) !important;
+  color: #fff !important;
+}
+
+/* Stats panel */
+#view-tasks .stats-panel .stat-card { text-align: center; }
+#view-tasks .stats-panel .stat-value { color: var(--blue); }
+#view-tasks .stats-panel .card { background: var(--surface); }
