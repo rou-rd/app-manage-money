@@ -4,8 +4,13 @@ import { getCurrentUser } from "../auth/auth.js";
 import { subscribe, getState } from "../store.js";
 import { addItem, removeItem } from "../utils/firestore.js";
 import { uid as genId } from "../utils/id.js";
+import { formatHuman } from "../utils/date.js";
 
 let root = null;
+let selectedTasks = new Set();
+let selectedGoals = new Set();
+let selectedRoutines = new Set();
+let openSections = { routineTasks: false, manualTasks: false, routines: false, goals: false };
 
 export function initDataView(container) {
   root = container;
@@ -227,61 +232,295 @@ async function clearAllData() {
   toast("Toutes les données supprimées", "success");
 }
 
+async function bulkDelete(collection, ids) {
+  const user = getCurrentUser();
+  if (!user) { toast("Connecte-toi d'abord", "error"); return; }
+  const uid = user.uid;
+  let count = 0;
+  for (const id of ids) {
+    await removeItem(uid, collection, id);
+    count++;
+  }
+  return count;
+}
+
+function groupRoutineTasks(tasks, routines) {
+  const routineMap = new Map(routines.map(r => [r.id, r.title]));
+  const groups = new Map();
+  const manual = [];
+  tasks.forEach(t => {
+    if (t.routineId) {
+      if (!groups.has(t.routineId)) groups.set(t.routineId, { title: routineMap.get(t.routineId) || t.title, tasks: [] });
+      groups.get(t.routineId).tasks.push(t);
+    } else {
+      manual.push(t);
+    }
+  });
+  return { groups, manual };
+}
+
+function collapsibleSection(key, title, badge, contentFn) {
+  const open = openSections[key];
+  const header = el("div", {
+    style: "display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;",
+    onclick: () => { openSections[key] = !openSections[key]; render(); }
+  }, [
+    el("div", { style: "display:flex;align-items:center;gap:10px;" }, [
+      el("span", { style: "font-size:12px;color:var(--muted);transition:transform .2s;" + (open ? "transform:rotate(90deg);" : "") }, "▶"),
+      el("h3", { style: "margin:0;font-size:15px;font-weight:600;" }, title),
+      el("span", { class: "badge badge--info", style: "font-size:11px;" }, String(badge))
+    ])
+  ]);
+  const body = el("div", { style: open ? "" : "display:none;" });
+  if (open) body.appendChild(contentFn());
+  const wrap = el("div", { class: "card", style: "margin-bottom:16px;padding:14px 20px;" });
+  wrap.append(header, body);
+  return wrap;
+}
+
+function routineTasksContent(groups) {
+  const uid = getCurrentUser()?.uid;
+  const wrap = el("div", {});
+  groups.forEach((group, routineId) => {
+    const todoCount = group.tasks.filter(t => t.status !== "done").length;
+    const doneCount = group.tasks.filter(t => t.status === "done").length;
+    const row = el("div", {
+      style: "display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"
+    }, [
+      el("div", {}, [
+        el("div", { style: "font-weight:600;font-size:13.5px;" }, group.title),
+        el("div", { style: "font-size:11.5px;color:var(--muted2);" }, `${group.tasks.length} instances · ${doneCount} faites · ${todoCount} en attente`)
+      ]),
+      el("div", { style: "display:flex;gap:6px;" }, [
+        el("button", {
+          class: "btn btn--sm btn--ghost",
+          style: "color:var(--red);border-color:var(--red);",
+          onclick: async () => {
+            const todoTasks = group.tasks.filter(t => t.status !== "done");
+            if (!todoTasks.length) { toast("Aucune tâche en attente à supprimer", "info"); return; }
+            if (!confirm(`Supprimer ${todoTasks.length} tâche(s) "${group.title}" non terminées ?`)) return;
+            const n = await bulkDelete("tasks", todoTasks.map(t => t.id));
+            toast(`${n} tâche(s) supprimée(s)`, "success");
+          }
+        }, `Suppr. todo (${todoCount})`),
+        el("button", {
+          class: "btn btn--sm btn--ghost",
+          style: "color:var(--red);border-color:var(--red);",
+          onclick: async () => {
+            if (!confirm(`Supprimer les ${group.tasks.length} tâche(s) "${group.title}" ?`)) return;
+            const n = await bulkDelete("tasks", group.tasks.map(t => t.id));
+            toast(`${n} tâche(s) supprimée(s)`, "success");
+          }
+        }, `Suppr. tout (${group.tasks.length})`)
+      ])
+    ]);
+    wrap.appendChild(row);
+  });
+  if (groups.size === 0) wrap.appendChild(el("div", { style: "color:var(--muted);font-size:13px;padding:8px 0;" }, "Aucune tâche de routine."));
+  return wrap;
+}
+
+function manualTasksContent(tasks) {
+  const wrap = el("div", {});
+  if (!tasks.length) {
+    wrap.appendChild(el("div", { style: "color:var(--muted);font-size:13px;padding:8px 0;" }, "Aucune tâche manuelle."));
+    return wrap;
+  }
+  const toolbar = el("div", { style: "display:flex;gap:8px;margin-bottom:10px;align-items:center;" }, [
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { tasks.forEach(t => selectedTasks.add(t.id)); render(); } }, "Tout cocher"),
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { selectedTasks.clear(); render(); } }, "Tout décocher"),
+    el("button", {
+      class: "btn btn--sm btn--ghost", style: selectedTasks.size ? "color:var(--red);border-color:var(--red);" : "opacity:.4;pointer-events:none;",
+      onclick: async () => {
+        const ids = [...selectedTasks].filter(id => tasks.some(t => t.id === id));
+        if (!ids.length) return;
+        if (!confirm(`Supprimer ${ids.length} tâche(s) sélectionnée(s) ?`)) return;
+        const n = await bulkDelete("tasks", ids);
+        selectedTasks.clear();
+        toast(`${n} tâche(s) supprimée(s)`, "success");
+      }
+    }, `Supprimer sélectionnées (${[...selectedTasks].filter(id => tasks.some(t => t.id === id)).length})`)
+  ]);
+  wrap.appendChild(toolbar);
+
+  const list = el("div", { style: "max-height:400px;overflow-y:auto;" });
+  tasks.forEach(t => {
+    const checked = selectedTasks.has(t.id);
+    list.appendChild(el("div", {
+      style: "display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;",
+      onclick: () => { if (checked) selectedTasks.delete(t.id); else selectedTasks.add(t.id); render(); }
+    }, [
+      el("div", {
+        class: `checkbox ${checked ? "checked" : ""}`,
+        style: "width:18px;height:18px;flex-shrink:0;"
+      }, checked ? "✓" : ""),
+      el("div", { style: "flex:1;min-width:0;" }, [
+        el("div", { style: "font-size:13.5px;font-weight:600;" + (t.status === "done" ? "text-decoration:line-through;opacity:.5;" : "") }, t.title),
+        el("div", { style: "font-size:11px;color:var(--muted2);" },
+          [t.date ? formatHuman(t.date) : "Pas de date", t.category || "", t.status === "done" ? "fait" : ""].filter(Boolean).join(" · "))
+      ]),
+      el("span", { class: `badge ${t.priority === "high" ? "badge--high" : t.priority === "low" ? "badge--low" : "badge--medium"}`, style: "font-size:10px;" },
+        t.priority === "high" ? "Haute" : t.priority === "low" ? "Basse" : "Moy.")
+    ]));
+  });
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function routinesListContent(routines) {
+  const wrap = el("div", {});
+  if (!routines.length) {
+    wrap.appendChild(el("div", { style: "color:var(--muted);font-size:13px;padding:8px 0;" }, "Aucune routine."));
+    return wrap;
+  }
+  const toolbar = el("div", { style: "display:flex;gap:8px;margin-bottom:10px;align-items:center;" }, [
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { routines.forEach(r => selectedRoutines.add(r.id)); render(); } }, "Tout cocher"),
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { selectedRoutines.clear(); render(); } }, "Tout décocher"),
+    el("button", {
+      class: "btn btn--sm btn--ghost", style: selectedRoutines.size ? "color:var(--red);border-color:var(--red);" : "opacity:.4;pointer-events:none;",
+      onclick: async () => {
+        const ids = [...selectedRoutines].filter(id => routines.some(r => r.id === id));
+        if (!ids.length) return;
+        if (!confirm(`Supprimer ${ids.length} routine(s) sélectionnée(s) et leurs tâches liées ?`)) return;
+        const st = getState();
+        const linkedTaskIds = st.tasks.filter(t => ids.includes(t.routineId)).map(t => t.id);
+        const nR = await bulkDelete("routines", ids);
+        const nT = await bulkDelete("tasks", linkedTaskIds);
+        selectedRoutines.clear();
+        toast(`${nR} routine(s) + ${nT} tâche(s) liée(s) supprimées`, "success");
+      }
+    }, `Supprimer sélectionnées (${[...selectedRoutines].filter(id => routines.some(r => r.id === id)).length})`)
+  ]);
+  wrap.appendChild(toolbar);
+
+  routines.forEach(r => {
+    const checked = selectedRoutines.has(r.id);
+    const taskCount = getState().tasks.filter(t => t.routineId === r.id).length;
+    wrap.appendChild(el("div", {
+      style: "display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;",
+      onclick: () => { if (checked) selectedRoutines.delete(r.id); else selectedRoutines.add(r.id); render(); }
+    }, [
+      el("div", { class: `checkbox ${checked ? "checked" : ""}`, style: "width:18px;height:18px;flex-shrink:0;" }, checked ? "✓" : ""),
+      el("div", { style: `width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;` }),
+      el("div", { style: "flex:1;" }, [
+        el("div", { style: "font-size:13.5px;font-weight:600;" + (!r.active ? "opacity:.5;" : "") }, r.title + (!r.active ? " (en pause)" : "")),
+        el("div", { style: "font-size:11px;color:var(--muted2);" }, `${r.frequency} · ${taskCount} tâche(s) liée(s)`)
+      ])
+    ]));
+  });
+  return wrap;
+}
+
+function goalsListContent(goals) {
+  const wrap = el("div", {});
+  if (!goals.length) {
+    wrap.appendChild(el("div", { style: "color:var(--muted);font-size:13px;padding:8px 0;" }, "Aucun objectif."));
+    return wrap;
+  }
+  const toolbar = el("div", { style: "display:flex;gap:8px;margin-bottom:10px;align-items:center;" }, [
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { goals.forEach(g => selectedGoals.add(g.id)); render(); } }, "Tout cocher"),
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { selectedGoals.clear(); render(); } }, "Tout décocher"),
+    el("button", {
+      class: "btn btn--sm btn--ghost", style: selectedGoals.size ? "color:var(--red);border-color:var(--red);" : "opacity:.4;pointer-events:none;",
+      onclick: async () => {
+        const ids = [...selectedGoals].filter(id => goals.some(g => g.id === id));
+        if (!ids.length) return;
+        if (!confirm(`Supprimer ${ids.length} objectif(s) sélectionné(s) ?`)) return;
+        const n = await bulkDelete("goals", ids);
+        selectedGoals.clear();
+        toast(`${n} objectif(s) supprimé(s)`, "success");
+      }
+    }, `Supprimer sélectionnés (${[...selectedGoals].filter(id => goals.some(g => g.id === id)).length})`)
+  ]);
+  wrap.appendChild(toolbar);
+
+  goals.forEach(g => {
+    const checked = selectedGoals.has(g.id);
+    const stepsDone = (g.steps || []).filter(s => s.done).length;
+    const stepsTotal = (g.steps || []).length;
+    wrap.appendChild(el("div", {
+      style: "display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;",
+      onclick: () => { if (checked) selectedGoals.delete(g.id); else selectedGoals.add(g.id); render(); }
+    }, [
+      el("div", { class: `checkbox ${checked ? "checked" : ""}`, style: "width:18px;height:18px;flex-shrink:0;" }, checked ? "✓" : ""),
+      el("div", { style: "flex:1;" }, [
+        el("div", { style: "font-size:13.5px;font-weight:600;" + (g.status === "completed" ? "text-decoration:line-through;opacity:.5;" : "") }, g.title),
+        el("div", { style: "font-size:11px;color:var(--muted2);" },
+          [g.term, stepsTotal ? `${stepsDone}/${stepsTotal} étapes` : "", g.deadline ? formatHuman(g.deadline) : ""].filter(Boolean).join(" · "))
+      ]),
+      g.status === "completed"
+        ? el("span", { class: "badge badge--low", style: "font-size:10px;" }, "Atteint")
+        : el("span", { class: "badge badge--medium", style: "font-size:10px;" }, "En cours")
+    ]));
+  });
+  return wrap;
+}
+
 function render() {
   if (!root) return;
   try {
+  clear(root);
   const st = getState();
+  const { groups, manual } = groupRoutineTasks(st.tasks, st.routines);
 
-  root.innerHTML = `
-    <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;">📦 Import / Export</h2>
+  const topbar = el("div", { class: "topbar" }, [el("h1", {}, "Import / Export")]);
+  root.appendChild(topbar);
 
-    <div class="card" style="margin-bottom:16px;padding:20px;">
-      <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;">📊 Données actuelles</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0;">
-        ${st.tasks.length} tâches · ${st.routines.length} routines · ${st.goals.length} objectifs
-      </p>
-    </div>
+  const statsCard = el("div", { class: "card", style: "margin-bottom:16px;padding:20px;" }, [
+    el("h3", { style: "margin:0 0 8px;font-size:15px;font-weight:600;" }, "Données actuelles"),
+    el("p", { style: "color:var(--muted);font-size:13px;margin:0;" },
+      `${st.tasks.length} tâches · ${st.routines.length} routines · ${st.goals.length} objectifs`)
+  ]);
+  root.appendChild(statsCard);
 
-    <div class="card" style="margin-bottom:16px;padding:20px;">
-      <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;">📤 Exporter</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">
-        Télécharge toutes tes tâches, routines et objectifs en CSV.
-      </p>
-      <button class="btn btn--primary" id="btn-data-export">Télécharger lifehub-tasks.csv</button>
-    </div>
+  const exportCard = el("div", { class: "card", style: "margin-bottom:16px;padding:20px;" }, [
+    el("h3", { style: "margin:0 0 8px;font-size:15px;font-weight:600;" }, "Exporter"),
+    el("p", { style: "color:var(--muted);font-size:13px;margin:0 0 12px;" }, "Télécharge toutes tes tâches, routines et objectifs en CSV."),
+    el("button", { class: "btn btn--primary", onclick: downloadCsv }, "Télécharger lifehub-tasks.csv")
+  ]);
+  root.appendChild(exportCard);
 
-    <div class="card" style="margin-bottom:16px;padding:20px;">
-      <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;">📥 Importer</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">
-        Importe un fichier CSV exporté précédemment. Les données importées s'ajoutent aux données existantes.
-      </p>
-      <label style="display:flex;flex-direction:column;align-items:center;padding:24px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;text-align:center;">
-        <span style="font-size:28px;margin-bottom:6px;">📂</span>
-        <span style="font-size:13px;color:var(--muted);">Cliquer ou déposer un fichier CSV</span>
-        <input type="file" id="file-data-import" accept=".csv,text/csv" style="display:none;" />
-      </label>
-    </div>
-
-    <div class="card" style="padding:20px;border-color:var(--red,#e24b4a);">
-      <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;color:var(--red,#e24b4a);">🗑 Supprimer tout</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">
-        Efface toutes les tâches, routines et objectifs. Irréversible.
-      </p>
-      <button class="btn" id="btn-data-clear" style="color:var(--red,#e24b4a);border-color:var(--red,#e24b4a);">Tout supprimer</button>
-    </div>
-  `;
-
-  root.querySelector("#btn-data-export").addEventListener("click", downloadCsv);
-
-  root.querySelector("#file-data-import").addEventListener("change", (e) => {
+  const importLabel = el("label", { style: "display:flex;flex-direction:column;align-items:center;padding:24px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;text-align:center;" }, [
+    el("span", { style: "font-size:28px;margin-bottom:6px;" }, "📂"),
+    el("span", { style: "font-size:13px;color:var(--muted);" }, "Cliquer ou déposer un fichier CSV")
+  ]);
+  const fileInput = el("input", { type: "file", accept: ".csv,text/csv", style: "display:none;" });
+  fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => importCsv(reader.result);
     reader.readAsText(file, "utf-8");
   });
+  importLabel.appendChild(fileInput);
+  const importCard = el("div", { class: "card", style: "margin-bottom:16px;padding:20px;" }, [
+    el("h3", { style: "margin:0 0 8px;font-size:15px;font-weight:600;" }, "Importer"),
+    el("p", { style: "color:var(--muted);font-size:13px;margin:0 0 12px;" }, "Importe un fichier CSV. Les données s'ajoutent aux existantes."),
+    importLabel
+  ]);
+  root.appendChild(importCard);
 
-  root.querySelector("#btn-data-clear").addEventListener("click", clearAllData);
+  root.appendChild(el("h2", { style: "margin:28px 0 14px;font-size:18px;font-weight:700;" }, "Gestion des données"));
+
+  root.appendChild(collapsibleSection("routineTasks", "Tâches de routine", groups.size + " groupes",
+    () => routineTasksContent(groups)));
+
+  root.appendChild(collapsibleSection("manualTasks", "Tâches manuelles", manual.length,
+    () => manualTasksContent(manual)));
+
+  root.appendChild(collapsibleSection("routines", "Routines", st.routines.length,
+    () => routinesListContent(st.routines)));
+
+  root.appendChild(collapsibleSection("goals", "Objectifs", st.goals.length,
+    () => goalsListContent(st.goals)));
+
+  const dangerCard = el("div", { class: "card", style: "margin-top:20px;padding:20px;border-color:var(--red,#e24b4a);" }, [
+    el("h3", { style: "margin:0 0 8px;font-size:15px;font-weight:600;color:var(--red,#e24b4a);" }, "Supprimer tout"),
+    el("p", { style: "color:var(--muted);font-size:13px;margin:0 0 12px;" }, "Efface toutes les tâches, routines et objectifs. Irréversible."),
+    el("button", { class: "btn", style: "color:var(--red,#e24b4a);border-color:var(--red,#e24b4a);", onclick: clearAllData }, "Tout supprimer")
+  ]);
+  root.appendChild(dangerCard);
+
   } catch (e) {
     console.error("[DataView] render error:", e);
     root.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div>Erreur d'affichage. Ouvre la console (F12) pour les détails.</div></div>`;
