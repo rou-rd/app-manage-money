@@ -98,8 +98,12 @@ function openGoalForm(existing) {
     variant: "primary",
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
-      if (existing) await updateGoal(uid, existing.id, data);
-      else await createGoal(uid, data);
+      if (existing) {
+        const { steps, ...fields } = data;
+        await updateGoal(uid, existing.id, fields);
+      } else {
+        await createGoal(uid, data);
+      }
       toast(existing ? "Objectif mis à jour" : "Objectif créé", "success");
       closeModal();
     }

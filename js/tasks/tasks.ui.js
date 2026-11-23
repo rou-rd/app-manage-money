@@ -613,8 +613,12 @@ function openTaskForm(existing) {
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
       try {
-        if (existing) await updateTask(uid, existing.id, data);
-        else await createTask(uid, data);
+        if (existing) {
+          const { subtasks, ...fields } = data;
+          await updateTask(uid, existing.id, fields);
+        } else {
+          await createTask(uid, data);
+        }
         toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
         closeModal();
       } catch (e) {
