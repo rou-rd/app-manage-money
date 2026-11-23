@@ -2,7 +2,8 @@ import { el, clear } from "../utils/dom.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser } from "../auth/auth.js";
 import { subscribe, getState } from "../store.js";
-import { listItems, addItem, removeItem } from "../utils/firestore.js";
+import { addItem, removeItem } from "../utils/firestore.js";
+import { uid as genId } from "../utils/id.js";
 
 let root = null;
 
@@ -27,8 +28,8 @@ function parseSubtasks(str) {
   if (!str) return [];
   return str.split("|").filter(Boolean).map(part => {
     const sep = part.indexOf("::");
-    if (sep === -1) return { title: part, done: false };
-    return { done: part.slice(0, sep) === "1", title: part.slice(sep + 2).replace(/⏐/g, "|") };
+    if (sep === -1) return { id: genId(), title: part, done: false };
+    return { id: genId(), done: part.slice(0, sep) === "1", title: part.slice(sep + 2).replace(/⏐/g, "|") };
   });
 }
 
@@ -41,8 +42,8 @@ function parseSteps(str) {
   if (!str) return [];
   return str.split("|").filter(Boolean).map(part => {
     const sep = part.indexOf("::");
-    if (sep === -1) return { title: part, done: false };
-    return { done: part.slice(0, sep) === "1", title: part.slice(sep + 2).replace(/⏐/g, "|") };
+    if (sep === -1) return { id: genId(), title: part, done: false };
+    return { id: genId(), done: part.slice(0, sep) === "1", title: part.slice(sep + 2).replace(/⏐/g, "|") };
   });
 }
 
@@ -228,6 +229,7 @@ async function clearAllData() {
 
 function render() {
   if (!root) return;
+  try {
   const st = getState();
 
   root.innerHTML = `
@@ -280,4 +282,8 @@ function render() {
   });
 
   root.querySelector("#btn-data-clear").addEventListener("click", clearAllData);
+  } catch (e) {
+    console.error("[DataView] render error:", e);
+    root.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><div>Erreur d'affichage. Ouvre la console (F12) pour les détails.</div></div>`;
+  }
 }

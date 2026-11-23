@@ -103,16 +103,17 @@ function renderMonth() {
 function renderWeek() {
   const from = startOfWeek(anchor);
   const days = daysInRange(from, addDays(from, 6));
-  const grid = el("div", { class: "grid grid--4" }, days.map((d) => {
+  const grid = el("div", { class: "grid", style: "grid-template-columns:repeat(7,1fr);min-width:700px;" }, days.map((d) => {
     const events = eventsForDay(d);
-    const col = el("div", { class: `card card--pad-sm ${d === todayStr() ? "" : ""}`, style: d === todayStr() ? "border-color:var(--blue);" : "" });
+    const col = el("div", { class: `card card--pad-sm`, style: d === todayStr() ? "border-color:var(--blue);" : "" });
     col.appendChild(el("div", { style: "font-weight:800;font-size:12.5px;margin-bottom:8px;" }, `${weekdayLabel(dayOfWeek(d))} ${parseDateStr(d).getDate()}`));
     if (events.length === 0) col.appendChild(el("div", { style: "font-size:11.5px;color:var(--muted2);" }, "—"));
     events.forEach((ev) => col.appendChild(eventChip(ev, true)));
     return col;
   }));
-  grid.style.gridTemplateColumns = "repeat(7, 1fr)";
-  return grid;
+  const wrapper = el("div", { style: "overflow-x:auto;" });
+  wrapper.appendChild(grid);
+  return wrapper;
 }
 
 function renderDay() {

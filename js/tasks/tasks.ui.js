@@ -1,9 +1,9 @@
-import { el, clear, escapeHtml } from "../utils/dom.js";
+import { el, clear } from "../utils/dom.js";
 import { openModal, closeModal } from "../utils/modal.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser, onAuthChange } from "../auth/auth.js";
 import { subscribe } from "../store.js";
-import { formatHuman, isPast, isToday, todayStr, addDays } from "../utils/date.js";
+import { formatHuman, isPast, todayStr, addDays } from "../utils/date.js";
 import { watchFinanceState, financeInvoicesToTasks } from "../finance/finance-reader.js";
 import { watchViews, createView, deleteView } from "./views.service.js";
 import {
@@ -208,7 +208,8 @@ function filtersBar(state) {
       if (!uid) { toast("Connecte-toi pour enregistrer une vue.", "error"); return; }
       const name = prompt("Nom de cette vue (ex : Tâches urgentes) :");
       if (!name || !name.trim()) return;
-      createView(uid, { name: name.trim(), filters: { ...filters } }).catch((e) => {
+      const { query: _q, ...savedFilters } = filters;
+      createView(uid, { name: name.trim(), filters: savedFilters }).catch((e) => {
         console.error("[Tasks] createView:", e);
         toast(`Erreur : ${e.message || "impossible d'enregistrer la vue"}`, "error");
       });
@@ -384,8 +385,6 @@ function openTaskForm(existing) {
       try {
         if (existing) await updateTask(uid, existing.id, data);
         else await createTask(uid, data);
-        filters = { scope: "all", status: "all", priority: "all", category: "all", hideDone: false, query: "" };
-        render(root);
         toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
         closeModal();
       } catch (e) {

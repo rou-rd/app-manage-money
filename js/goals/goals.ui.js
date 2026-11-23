@@ -87,7 +87,11 @@ function openGoalForm(existing) {
 
   const actions = [{ label: "Fermer", onClick: closeModal }];
   if (existing) {
-    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => { await deleteGoal(uid, existing.id); toast("Objectif supprimé", "info"); closeModal(); } });
+    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => {
+      if (!confirm("Supprimer cet objectif ?")) return;
+      try { await deleteGoal(uid, existing.id); toast("Objectif supprimé", "info"); closeModal(); }
+      catch (e) { console.error("[Goals] deleteGoal:", e); toast(`Erreur : ${e.message || "impossible de supprimer l'objectif"}`, "error"); }
+    } });
   }
   actions.push({
     label: existing ? "Enregistrer" : "Créer",
