@@ -81,7 +81,13 @@ function routineCard(routine) {
       }, routine.active ? "Mettre en pause" : "Réactiver"),
       el("button", {
         class: "btn btn--sm btn--danger",
-        onclick: async () => { if (confirm("Supprimer cette routine ?")) await deleteRoutine(uid, routine.id); }
+        onclick: async () => {
+          const linked = (latestState.tasks || []).filter(t => t.routineId === routine.id);
+          const msg = linked.length
+            ? `Supprimer cette routine et ses ${linked.length} tâche(s) liée(s) ?`
+            : "Supprimer cette routine ?";
+          if (confirm(msg)) await deleteRoutine(uid, routine.id, linked);
+        }
       }, "✕")
     ])
   );
@@ -175,7 +181,13 @@ function openRoutineForm(existing) {
 
   const actions = [{ label: "Annuler", onClick: closeModal }];
   if (existing) {
-    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => { await deleteRoutine(uid, existing.id); closeModal(); } });
+    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => {
+      const linked = (latestState.tasks || []).filter(t => t.routineId === existing.id);
+      const msg = linked.length
+        ? `Supprimer cette routine et ses ${linked.length} tâche(s) liée(s) ?`
+        : "Supprimer cette routine ?";
+      if (confirm(msg)) { await deleteRoutine(uid, existing.id, linked); closeModal(); }
+    } });
   }
   actions.push({
     label: existing ? "Enregistrer" : "Créer",

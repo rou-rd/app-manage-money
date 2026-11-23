@@ -11,6 +11,7 @@ import { initGoalsView } from "./goals/goals.ui.js";
 import { initCalendarView } from "./calendar/calendar.ui.js";
 import { initAnalyticsView } from "./analytics/analytics.ui.js";
 import { initGamificationView } from "./gamification/gamification.ui.js";
+import { initDataView } from "./data/data.ui.js";
 import {
   notificationsSupported, notificationsEnabled, requestPermission, startNotificationScheduler
 } from "./notifications/notifications.js";
@@ -24,7 +25,8 @@ const views = {
   goals: document.getElementById("view-goals"),
   calendar: document.getElementById("view-calendar"),
   analytics: document.getElementById("view-analytics"),
-  gamification: document.getElementById("view-gamification")
+  gamification: document.getElementById("view-gamification"),
+  data: document.getElementById("view-data")
 };
 
 let viewsInitialized = false;
@@ -40,6 +42,7 @@ function initAllViews() {
   initCalendarView(views.calendar);
   initAnalyticsView(views.analytics);
   initGamificationView(views.gamification);
+  initDataView(views.data);
 }
 
 function showView(name) {

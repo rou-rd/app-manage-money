@@ -14,7 +14,10 @@ export async function updateRoutine(uid, id, patch) {
   return setItem(uid, COL, id, patch);
 }
 
-export async function deleteRoutine(uid, id) {
+export async function deleteRoutine(uid, id, linkedTasks = []) {
+  for (const t of linkedTasks) {
+    await removeItem(uid, "tasks", t.id);
+  }
   return removeItem(uid, COL, id);
 }
 

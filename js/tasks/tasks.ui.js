@@ -3,7 +3,7 @@ import { openModal, closeModal } from "../utils/modal.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser, onAuthChange } from "../auth/auth.js";
 import { subscribe } from "../store.js";
-import { formatHuman, isPast, isToday, todayStr } from "../utils/date.js";
+import { formatHuman, isPast, isToday, todayStr, addDays } from "../utils/date.js";
 import { watchFinanceState, financeInvoicesToTasks } from "../finance/finance-reader.js";
 import { watchViews, createView, deleteView } from "./views.service.js";
 import {
@@ -16,6 +16,7 @@ import {
 let root = null;
 let latestState = { tasks: [] };
 let filters = { scope: "all", status: "all", priority: "all", category: "all", hideDone: false, query: "" };
+let dailyDate = todayStr();
 let financeState = null;
 let savedViews = [];
 let unsubFinance = null;
@@ -49,6 +50,7 @@ function currentTasks(state) {
   let list = allTasksWithFactures(state);
   const today = todayStr();
   if (filters.scope === "today") list = list.filter((t) => t.date === today);
+  else if (filters.scope === "daily") list = list.filter((t) => t.date === dailyDate);
   else if (filters.scope === "upcoming") list = list.filter((t) => t.date && t.date >= today);
   else if (filters.scope === "overdue") list = list.filter((t) => t.date && t.date < today && t.status !== "done");
   if (filters.status !== "all") list = list.filter((t) => t.status === filters.status);
@@ -111,11 +113,36 @@ function render(container) {
   const chips = el("div", { style: "display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" }, [
     scopeChip("Toutes", "all"),
     scopeChip("Aujourd'hui", "today"),
+    scopeChip("Journée", "daily"),
     scopeChip("À venir", "upcoming"),
     scopeChip("En retard", "overdue")
   ]);
 
-  container.append(toolbar, chips, filtersBar(state), savedViewsBar());
+  container.append(toolbar, chips);
+
+  if (filters.scope === "daily") {
+    const dayNav = el("div", {
+      style: "display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);"
+    }, [
+      el("button", {
+        class: "btn btn--sm btn--ghost",
+        onclick: () => { dailyDate = addDays(dailyDate, -1); render(container); }
+      }, "◀"),
+      el("span", { style: "font-weight:600;font-size:14px;flex:1;text-align:center;" }, formatHuman(dailyDate)),
+      el("button", {
+        class: "btn btn--sm btn--ghost",
+        onclick: () => { dailyDate = addDays(dailyDate, 1); render(container); }
+      }, "▶"),
+      el("button", {
+        class: "btn btn--sm btn--ghost",
+        style: dailyDate === todayStr() ? "opacity:0.3;pointer-events:none;" : "",
+        onclick: () => { dailyDate = todayStr(); render(container); }
+      }, "Aujourd'hui")
+    ]);
+    container.appendChild(dayNav);
+  }
+
+  container.append(filtersBar(state), savedViewsBar());
 
   const list = currentTasks(state);
   if (list.length === 0) {
