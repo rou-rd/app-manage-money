@@ -3036,6 +3036,50 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(state.spLocks || {}).forEach(([wid, v]) => {
       lines.push(`lock,${wid},${v}`);
     });
+    // Dettes
+    if (state.dettes && state.dettes.length) {
+      lines.push("");
+      lines.push("##DETTES");
+      lines.push("id,creancier,montant,mensuel,debut,compteId,mode");
+      state.dettes.forEach(d => lines.push([
+        d.id, csvEsc(d.creancier), d.montant, d.mensuel||0, d.debut||"",
+        d.compteId||"", csvEsc(d.mode||"accumulate")
+      ].join(",")));
+    }
+    // Revenus r\u00e9currents
+    if (state.revenus && state.revenus.length) {
+      lines.push("");
+      lines.push("##REVENUS");
+      lines.push("id,nom,montant,compteId,jour");
+      state.revenus.forEach(r => lines.push([
+        r.id, csvEsc(r.nom), r.montant, r.compteId||"", r.jour||1
+      ].join(",")));
+    }
+    // Charges fixes
+    if (state.chargesFixes && state.chargesFixes.length) {
+      lines.push("");
+      lines.push("##CHARGES_FIXES");
+      lines.push("id,nom,montant,categorieId,compteId,jour");
+      state.chargesFixes.forEach(c => lines.push([
+        c.id, csvEsc(c.nom), c.montant, c.categorieId||"", c.compteId||"", c.jour||1
+      ].join(",")));
+    }
+    // Produits (registre)
+    if (state.produits && state.produits.length) {
+      lines.push("");
+      lines.push("##PRODUITS");
+      lines.push("id,nom,categorieId,unite");
+      state.produits.forEach(p => lines.push([
+        p.id, csvEsc(p.nom), p.categorieId||"", csvEsc(p.unite||"")
+      ].join(",")));
+    }
+    // Cat\u00e9gories favorites
+    if (state.categoriesFavoris && state.categoriesFavoris.length) {
+      lines.push("");
+      lines.push("##CATEGORIES_FAVORIS");
+      lines.push("id");
+      state.categoriesFavoris.forEach(id => lines.push(id));
+    }
     return "\ufeff" + lines.join("\n");
   }
 
@@ -4939,6 +4983,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rows.push(`<div style="font-weight:600;margin-bottom:6px">✅ Base importée</div>`);
       rows.push(`<div>${s.depenses||0} dépenses · ${s.comptes||0} comptes · ${s.categories||0} catégories</div>`);
       rows.push(`<div>${s.operations||0} opérations · ${s.transfers||0} transferts · ${s.factures||0} factures · ${s.wishlist||0} achats</div>`);
+      if (s.dettes || s.revenus || s.chargesFixes) rows.push(`<div>${s.dettes||0} dettes · ${s.revenus||0} revenus · ${s.chargesFixes||0} charges fixes</div>`);
       if (r.repaired) rows.push(`<div style="color:var(--amber,#f59e0b)">🔧 ${r.repaired} référence(s) réparée(s)</div>`);
     } else {
       rows.push(`<div style="font-weight:600;margin-bottom:6px">✅ Import terminé</div>`);
@@ -4967,6 +5012,7 @@ document.addEventListener("DOMContentLoaded", () => {
       PERSONNES: [], CATEGORIES: [], COMPTES: [], BUDGETS: [],
       DEPENSES: [], WISHLIST_CATEGORIES: [], WISHLIST: [],
       OPERATIONS: [], TRANSFERS: [], FACTURE_CATEGORIES: [], FACTURES: [],
+      DETTES: [], REVENUS: [], CHARGES_FIXES: [], PRODUITS: [], CATEGORIES_FAVORIS: [],
     };
     let mode = null;
     for (const row of matrix) {
@@ -5018,11 +5064,32 @@ document.addEventListener("DOMContentLoaded", () => {
         typePaiement: p[7] || "autre", statut: p[8] || "en_attente", notes: p[9] || "", datePaiement: p[10] || null, createdAt: p[11] || "",
         depCatId: p[12] || "", labelId: p[13] || "", linkedDepenseId: p[14] || "", linkedOperationId: p[15] || "" });
     });
+    const dettes = [], revenus = [], chargesFixes = [], produits = [], categoriesFavoris = [];
+    buckets.DETTES.forEach((p) => {
+      if (p.length >= 3 && p[0]) dettes.push({ id: p[0], creancier: p[1]||"", montant: num(p[2]),
+        mensuel: num(p[3]), debut: p[4]||"", compteId: p[5]||"", mode: p[6]||"accumulate" });
+    });
+    buckets.REVENUS.forEach((p) => {
+      if (p.length >= 3 && p[0]) revenus.push({ id: p[0], nom: p[1]||"", montant: num(p[2]),
+        compteId: p[3]||"", jour: num(p[4])||1 });
+    });
+    buckets.CHARGES_FIXES.forEach((p) => {
+      if (p.length >= 3 && p[0]) chargesFixes.push({ id: p[0], nom: p[1]||"", montant: num(p[2]),
+        categorieId: p[3]||"", compteId: p[4]||"", jour: num(p[5])||1 });
+    });
+    buckets.PRODUITS.forEach((p) => {
+      if (p.length >= 2 && p[0]) produits.push({ id: p[0], nom: p[1]||"", categorieId: p[2]||"", unite: p[3]||"" });
+    });
+    buckets.CATEGORIES_FAVORIS.forEach((p) => {
+      if (p[0]) categoriesFavoris.push(p[0]);
+    });
 
     report.sections = {
       personnes: personnes.length, categories: categories.length, comptes: comptes.length,
       depenses: depenses.length, operations: operations.length, transfers: transfers.length,
       wishlist: wishlist.length, factures: factures.length,
+      dettes: dettes.length, revenus: revenus.length, chargesFixes: chargesFixes.length,
+      produits: produits.length,
     };
     report.rowsRead = Object.values(report.sections).reduce((a, b) => a + b, 0);
 
@@ -5049,6 +5116,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (factureCats.length) state.factureCategories = factureCats;
     if (spMonthlyBudget !== null) state.spMonthlyBudget = spMonthlyBudget;
     if (Object.keys(spLocks).length) state.spLocks = spLocks;
+    if (dettes.length) state.dettes = dettes;
+    if (revenus.length) state.revenus = revenus;
+    if (chargesFixes.length) state.chargesFixes = chargesFixes;
+    if (produits.length) state.produits = produits;
+    if (categoriesFavoris.length) state.categoriesFavoris = categoriesFavoris;
     state.version = 2;
 
     report.repaired = reconcileReferences();
