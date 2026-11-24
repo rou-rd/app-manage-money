@@ -3,92 +3,109 @@ import { onAuthChange, login, logout } from "./auth/auth.js";
 import { subscribe } from "./store.js";
 import { generateAllInstances, cleanupOldRoutineTasks } from "./routines/routines.service.js";
 import { toast } from "./utils/toast.js";
-
-import { initDashboardView } from "./dashboard/dashboard.ui.js";
-import { initTasksView } from "./tasks/tasks.ui.js";
-import { initRoutinesView } from "./routines/routines.ui.js";
-import { initGoalsView } from "./goals/goals.ui.js";
-import { initCalendarView } from "./calendar/calendar.ui.js";
-import { initAnalyticsView } from "./analytics/analytics.ui.js";
-import { initGamificationView } from "./gamification/gamification.ui.js";
-import { initDataView } from "./data/data.ui.js";
 import { initPomodoro } from "./pomodoro/pomodoro.ui.js";
 import {
   notificationsSupported, notificationsEnabled, requestPermission, startNotificationScheduler
 } from "./notifications/notifications.js";
 
+import { initTodayView } from "./views/today.js";
+import { initTasksView } from "./tasks/tasks.ui.js";
+import { initHabitsView } from "./routines/routines.ui.js";
+import { initGoalsView } from "./goals/goals.ui.js";
+import { initCalendarView } from "./calendar/calendar.ui.js";
+import { initAnalyticsView } from "./analytics/analytics.ui.js";
+import { initFinanceView } from "./finance/finance.ui.js";
+import { initSettingsView } from "./views/settings.js";
+
 initTheme();
 initPomodoro();
 
 const views = {
-  dashboard: document.getElementById("view-dashboard"),
+  today: document.getElementById("view-today"),
   tasks: document.getElementById("view-tasks"),
-  routines: document.getElementById("view-routines"),
+  habits: document.getElementById("view-habits"),
   goals: document.getElementById("view-goals"),
   calendar: document.getElementById("view-calendar"),
   analytics: document.getElementById("view-analytics"),
-  gamification: document.getElementById("view-gamification"),
-  data: document.getElementById("view-data")
+  finance: document.getElementById("view-finance"),
+  settings: document.getElementById("view-settings")
 };
+
+const loginGate = document.getElementById("login-gate");
+const appShell = document.getElementById("app");
 
 let viewsInitialized = false;
 let routineGenerationTriggered = false;
 
+function showView(name) {
+  Object.entries(views).forEach(([key, node]) => node.classList.toggle("active", key === name));
+  document.querySelectorAll(".nav-item[data-view]").forEach((btn) =>
+    btn.classList.toggle("active", btn.dataset.view === name)
+  );
+  document.querySelectorAll(".bnav-item[data-view]").forEach((btn) =>
+    btn.classList.toggle("active", btn.dataset.view === name)
+  );
+}
+
 function initAllViews() {
   if (viewsInitialized) return;
   viewsInitialized = true;
-  initDashboardView(views.dashboard);
+  initTodayView(views.today);
   initTasksView(views.tasks);
-  initRoutinesView(views.routines);
+  initHabitsView(views.habits);
   initGoalsView(views.goals);
   initCalendarView(views.calendar);
   initAnalyticsView(views.analytics);
-  initGamificationView(views.gamification);
-  initDataView(views.data);
-}
-
-function showView(name) {
-  Object.entries(views).forEach(([key, node]) => node.classList.toggle("active", key === name));
-  document.querySelectorAll(".nav-item[data-view]").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === name));
+  initFinanceView(views.finance);
+  initSettingsView(views.settings);
 }
 
 document.querySelectorAll(".nav-item[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => showView(btn.dataset.view));
 });
+document.querySelectorAll(".bnav-item[data-view]").forEach((btn) => {
+  btn.addEventListener("click", () => showView(btn.dataset.view));
+});
 
-// Thème
 const themeBtn = document.getElementById("theme-toggle");
-function syncThemeIcon() { themeBtn.textContent = currentTheme() === "dark" ? "☀️" : "🌙"; }
+const themeBtnM = document.getElementById("theme-toggle-m");
+function syncThemeIcon() {
+  const icon = currentTheme() === "dark" ? "☀️" : "🌙";
+  if (themeBtn) themeBtn.textContent = icon;
+  if (themeBtnM) themeBtnM.textContent = icon;
+}
 syncThemeIcon();
-themeBtn.addEventListener("click", () => { toggleTheme(); syncThemeIcon(); });
+function onThemeToggle() { toggleTheme(); syncThemeIcon(); }
+if (themeBtn) themeBtn.addEventListener("click", onThemeToggle);
+if (themeBtnM) themeBtnM.addEventListener("click", onThemeToggle);
 
-// Authentification
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const userBlock = document.getElementById("user-block");
-const userName = document.getElementById("user-name");
+document.getElementById("login-btn").addEventListener("click", () =>
+  login().catch((e) => toast(e.message || "Erreur de connexion", "error"))
+);
+document.getElementById("logout-btn").addEventListener("click", () => logout());
+
 const userPhoto = document.getElementById("user-photo");
-
-loginBtn.addEventListener("click", () => login().catch((e) => toast(e.message || "Erreur de connexion", "error")));
-logoutBtn.addEventListener("click", () => logout());
+const userPhotoM = document.getElementById("user-photo-m");
+const userName = document.getElementById("user-name");
 
 onAuthChange((user) => {
   if (user) {
-    document.body.classList.remove("app-hidden");
-    userBlock.style.display = "flex";
+    loginGate.style.display = "none";
+    appShell.classList.remove("app-hidden");
     userName.textContent = user.displayName || user.email || "";
-    if (user.photoURL) userPhoto.src = user.photoURL;
+    if (user.photoURL) {
+      userPhoto.src = user.photoURL;
+      userPhotoM.src = user.photoURL;
+    }
     initAllViews();
     maybeShowNotificationBanner();
     if (notificationsEnabled()) startNotificationScheduler();
   } else {
-    document.body.classList.add("app-hidden");
-    userBlock.style.display = "none";
+    loginGate.style.display = "";
+    appShell.classList.add("app-hidden");
   }
 });
 
-// Génération automatique des instances de routines — une fois par session, dès que
-// tâches/routines/objectifs ont livré leur premier instantané Firestore.
 subscribe((state) => {
   if (!routineGenerationTriggered && state.ready) {
     routineGenerationTriggered = true;
@@ -97,7 +114,6 @@ subscribe((state) => {
   }
 });
 
-// Notifications navigateur
 const notifBanner = document.getElementById("notif-banner");
 const notifEnableBtn = document.getElementById("notif-enable-btn");
 const notifDismissBtn = document.getElementById("notif-dismiss-btn");
@@ -114,7 +130,7 @@ notifEnableBtn.addEventListener("click", async () => {
   const result = await requestPermission();
   notifBanner.classList.remove("show");
   if (result === "granted") {
-    toast("Notifications activées ✅", "success");
+    toast("Notifications activées", "success");
     startNotificationScheduler();
   } else {
     toast("Notifications refusées — tu peux les réactiver depuis les réglages du navigateur.", "info");
@@ -126,4 +142,4 @@ notifDismissBtn.addEventListener("click", () => {
   notifBanner.classList.remove("show");
 });
 
-showView("dashboard");
+showView("today");

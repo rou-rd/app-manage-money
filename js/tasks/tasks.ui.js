@@ -10,8 +10,8 @@ import {
   PRIORITIES, STATUSES, DEFAULT_COLORS, newTaskDefaults, taskProgress
 } from "./tasks.model.js";
 import {
-  createTask, updateTask, deleteTask, setTaskStatus, addSubtask, toggleSubtask, removeSubtask,
-  archiveTask
+  createTask, updateTask, deleteTask, setTaskStatus,
+  addSubtask, toggleSubtask, removeSubtask, archiveTask
 } from "./tasks.service.js";
 import { startPomodoro } from "../pomodoro/pomodoro.ui.js";
 
@@ -41,6 +41,8 @@ export function initTasksView(container) {
   });
 }
 
+/* ── Data helpers ── */
+
 function allTasksWithFactures(state) {
   return [...state.tasks, ...financeInvoicesToTasks(financeState)];
 }
@@ -69,14 +71,10 @@ function currentTasks(state) {
   return list.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
 }
 
-/** Regroupe les instances d'une même routine sous une seule ligne : garde la plus
- *  pertinente (aujourd'hui, sinon la prochaine à faire, sinon la plus récente non
- *  faite) en tête, et les autres dates apparaissent en petite liste juste dessous. */
 function buildRenderItems(list) {
   const today = todayStr();
   const routineGroups = new Map();
   const items = [];
-
   list.forEach((t) => {
     if (t.routineId) {
       if (!routineGroups.has(t.routineId)) routineGroups.set(t.routineId, []);
@@ -85,7 +83,6 @@ function buildRenderItems(list) {
       items.push({ type: "task", date: t.date, task: t });
     }
   });
-
   routineGroups.forEach((tasks) => {
     const sorted = [...tasks].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     const primary = sorted.find((t) => t.date === today)
@@ -95,75 +92,23 @@ function buildRenderItems(list) {
     const others = sorted.filter((t) => t.id !== primary.id);
     items.push({ type: "routineGroup", date: primary.date, primary, others });
   });
-
   return items.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
 }
+
+/* ── Main render ── */
 
 function render(container) {
   clear(container);
   const state = latestState;
 
-  const toolbar = el("div", { class: "topbar" }, [
-    el("h1", {}, "Tâches"),
-    el("div", { class: "actions" }, [
-      el("input", {
-        class: "search-input", placeholder: "Rechercher...",
-        oninput: (e) => { filters.query = e.target.value; render(container); }
-      }),
-      el("button", { class: "btn btn--primary", onclick: () => openTaskForm() }, "+ Nouvelle tâche")
-    ])
-  ]);
-  toolbar.querySelector(".search-input").style.cssText = "padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);";
+  container.appendChild(renderHeader());
+  container.appendChild(renderViewToggle());
+  container.appendChild(renderScopeChips());
 
-  const viewToggle = el("div", { class: "view-toggle", style: "display:flex;gap:4px;margin-bottom:12px;" }, [
-    el("button", {
-      class: `btn btn--sm ${viewMode === "list" ? "btn--primary" : "btn--ghost"}`,
-      onclick: () => { viewMode = "list"; render(container); }
-    }, "Liste"),
-    el("button", {
-      class: `btn btn--sm ${viewMode === "kanban" ? "btn--primary" : "btn--ghost"}`,
-      onclick: () => { viewMode = "kanban"; render(container); }
-    }, "Kanban"),
-    el("button", {
-      class: `btn btn--sm ${viewMode === "stats" ? "btn--primary" : "btn--ghost"}`,
-      onclick: () => { viewMode = "stats"; render(container); }
-    }, "Stats")
-  ]);
+  if (filters.scope === "daily") container.appendChild(renderDayNav());
 
-  const chips = el("div", { style: "display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" }, [
-    scopeChip("Toutes", "all"),
-    scopeChip("Aujourd'hui", "today"),
-    scopeChip("Journée", "daily"),
-    scopeChip("À venir", "upcoming"),
-    scopeChip("En retard", "overdue"),
-    scopeChip("Archives", "archived")
-  ]);
-
-  container.append(toolbar, viewToggle, chips);
-
-  if (filters.scope === "daily") {
-    const dayNav = el("div", {
-      style: "display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);"
-    }, [
-      el("button", {
-        class: "btn btn--sm btn--ghost",
-        onclick: () => { dailyDate = addDays(dailyDate, -1); render(container); }
-      }, "◀"),
-      el("span", { style: "font-weight:600;font-size:14px;flex:1;text-align:center;" }, formatHuman(dailyDate)),
-      el("button", {
-        class: "btn btn--sm btn--ghost",
-        onclick: () => { dailyDate = addDays(dailyDate, 1); render(container); }
-      }, "▶"),
-      el("button", {
-        class: "btn btn--sm btn--ghost",
-        style: dailyDate === todayStr() ? "opacity:0.3;pointer-events:none;" : "",
-        onclick: () => { dailyDate = todayStr(); render(container); }
-      }, "Aujourd'hui")
-    ]);
-    container.appendChild(dayNav);
-  }
-
-  container.append(filtersBar(state), savedViewsBar());
+  container.appendChild(renderFiltersBar(state));
+  container.appendChild(renderSavedViews());
 
   if (viewMode === "stats") {
     container.appendChild(renderStats(state));
@@ -172,45 +117,282 @@ function render(container) {
 
   const list = currentTasks(state);
   if (list.length === 0) {
-    container.appendChild(el("div", { class: "empty-state" }, [
-      el("div", { class: "icon" }, "🗒️"),
-      el("div", {}, filters.scope === "archived" ? "Aucune tâche archivée." : "Aucune tâche pour l'instant. Crée ta première tâche !")
+    container.appendChild(el("div", { class: "empty" }, [
+      el("div", { class: "empty__icon" }, "🗒️"),
+      el("div", { class: "empty__text" },
+        filters.scope === "archived" ? "Aucune tâche archivée." : "Aucune tâche pour l'instant.")
     ]));
-    return;
-  }
-
-  if (viewMode === "kanban") {
+  } else if (viewMode === "kanban") {
     container.appendChild(renderKanban(list));
   } else {
     container.appendChild(renderList(list));
   }
 
+  container.appendChild(el("button", {
+    class: "btn btn--fab",
+    onclick: () => openTaskForm(),
+    title: "Nouvelle tâche"
+  }, "+"));
 }
 
+/* ── Header ── */
+
+function renderHeader() {
+  const searchInput = el("input", {
+    type: "text",
+    placeholder: "Rechercher...",
+    value: filters.query,
+    oninput: (e) => { filters.query = e.target.value; render(root); }
+  });
+  searchInput.style.cssText = "padding:8px 14px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.85rem;width:200px;";
+
+  return el("div", { class: "view-header" }, [
+    el("h1", {}, "Tâches"),
+    el("div", { class: "flex gap-sm items-center" }, [
+      searchInput,
+      el("button", { class: "btn btn--primary", onclick: () => openTaskForm() }, "+ Nouvelle tâche")
+    ])
+  ]);
+}
+
+/* ── View toggle ── */
+
+function renderViewToggle() {
+  return el("div", { class: "chip-bar" }, [
+    viewChip("Liste", "list"),
+    viewChip("Kanban", "kanban"),
+    viewChip("Stats", "stats")
+  ]);
+}
+
+function viewChip(label, mode) {
+  return el("button", {
+    class: `chip ${viewMode === mode ? "active" : ""}`,
+    onclick: () => { viewMode = mode; render(root); }
+  }, label);
+}
+
+/* ── Scope chips ── */
+
+function renderScopeChips() {
+  return el("div", { class: "chip-bar" }, [
+    scopeChip("Toutes", "all"),
+    scopeChip("Aujourd'hui", "today"),
+    scopeChip("Journée", "daily"),
+    scopeChip("À venir", "upcoming"),
+    scopeChip("En retard", "overdue"),
+    scopeChip("Archives", "archived")
+  ]);
+}
+
+function scopeChip(label, value) {
+  return el("button", {
+    class: `chip ${filters.scope === value ? "active" : ""}`,
+    onclick: () => { filters.scope = value; render(root); }
+  }, label);
+}
+
+/* ── Daily date navigator ── */
+
+function renderDayNav() {
+  return el("div", { class: "card flex items-center gap-md mb-md", style: "padding:10px 16px;" }, [
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { dailyDate = addDays(dailyDate, -1); render(root); } }, "◀"),
+    el("span", { style: "flex:1;text-align:center;font-weight:700;font-size:.9rem;" }, formatHuman(dailyDate)),
+    el("button", { class: "btn btn--sm btn--ghost", onclick: () => { dailyDate = addDays(dailyDate, 1); render(root); } }, "▶"),
+    el("button", {
+      class: "btn btn--sm btn--outline",
+      style: dailyDate === todayStr() ? "opacity:.35;pointer-events:none;" : "",
+      onclick: () => { dailyDate = todayStr(); render(root); }
+    }, "Aujourd'hui")
+  ]);
+}
+
+/* ── Filters bar ── */
+
+function renderFiltersBar(state) {
+  const wrap = el("div", { class: "card flex gap-sm items-center mb-md", style: "padding:10px 14px;flex-wrap:wrap;" });
+
+  wrap.appendChild(filterSelect(
+    [{ value: "all", label: "Toute priorité" }, ...PRIORITIES],
+    filters.priority,
+    (v) => { filters.priority = v; render(root); }
+  ));
+  wrap.appendChild(filterSelect(
+    [{ value: "all", label: "Toute catégorie" }, ...categoryOptions(state).map((c) => ({ value: c, label: c }))],
+    filters.category,
+    (v) => { filters.category = v; render(root); }
+  ));
+
+  wrap.appendChild(el("label", { class: "flex items-center gap-xs text-sm text-muted", style: "cursor:pointer;" }, [
+    el("input", {
+      type: "checkbox",
+      checked: filters.hideDone ? "checked" : null,
+      onchange: (e) => { filters.hideDone = e.target.checked; render(root); }
+    }),
+    "Masquer terminées"
+  ]));
+
+  wrap.appendChild(el("button", {
+    class: "btn btn--sm btn--ghost",
+    onclick: () => {
+      const uid = getCurrentUser()?.uid;
+      if (!uid) { toast("Connecte-toi d'abord.", "error"); return; }
+      const name = prompt("Nom de cette vue :");
+      if (!name?.trim()) return;
+      const { query: _q, ...saved } = filters;
+      createView(uid, { name: name.trim(), filters: saved }).catch((e) => toast(`Erreur : ${e.message}`, "error"));
+    }
+  }, "💾 Sauvegarder"));
+
+  return wrap;
+}
+
+function filterSelect(options, current, onChange) {
+  const sel = el("select", { onchange: (e) => onChange(e.target.value) },
+    options.map((o) => el("option", { value: o.value, selected: o.value === current ? "selected" : null }, o.label))
+  );
+  sel.style.cssText = "padding:6px 10px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.8rem;";
+  return sel;
+}
+
+/* ── Saved views ── */
+
+function renderSavedViews() {
+  if (!savedViews.length) return el("div", {});
+  return el("div", { class: "flex gap-sm mb-md", style: "flex-wrap:wrap;" },
+    savedViews.map((v) =>
+      el("div", { class: "flex items-center gap-xs" }, [
+        el("button", {
+          class: "chip",
+          onclick: () => { filters = { ...filters, ...v.filters }; render(root); }
+        }, `⭐ ${v.name}`),
+        el("button", {
+          class: "btn btn--icon sm btn--ghost",
+          onclick: async () => {
+            const uid = getCurrentUser()?.uid;
+            if (!uid) return;
+            try { await deleteView(uid, v.id); }
+            catch (e) { toast(`Erreur : ${e.message}`, "error"); }
+          }
+        }, "✕")
+      ])
+    )
+  );
+}
+
+/* ── List view ── */
+
 function renderList(list) {
-  const listNode = el("div", {});
+  const wrap = el("div", { class: "flex flex-col gap-sm" });
   buildRenderItems(list).forEach((item) => {
     if (item.type === "task") {
-      listNode.appendChild(taskCard(item.task));
+      wrap.appendChild(taskCard(item.task));
       return;
     }
-    listNode.appendChild(taskCard(item.primary));
+    wrap.appendChild(taskCard(item.primary));
     if (item.others.length) {
-      const sub = el("div", { style: "margin:2px 0 10px 30px;display:flex;flex-direction:column;gap:2px;" });
-      item.others.forEach((t) => {
-        sub.appendChild(el("div", {
-          style: "font-size:11.5px;color:var(--muted2);cursor:pointer;padding:3px 0;display:flex;align-items:center;gap:6px;",
+      const sub = el("div", { style: "margin:2px 0 8px 36px;" }, item.others.map((t) =>
+        el("div", {
+          class: "flex items-center gap-xs text-xs text-muted-2",
+          style: "cursor:pointer;padding:3px 0;",
           onclick: () => openTaskForm(t)
         }, [
-          el("span", { style: `width:6px;height:6px;border-radius:50%;background:${t.status === "done" ? "var(--green)" : "var(--muted2)"};display:inline-block;flex-shrink:0;` }),
+          el("span", { style: `width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0;background:${t.status === "done" ? "var(--green)" : "var(--muted-2)"};` }),
           formatHuman(t.date) + (t.status === "done" ? " · fait" : "")
-        ]));
-      });
-      listNode.appendChild(sub);
+        ])
+      ));
+      wrap.appendChild(sub);
     }
   });
-  return listNode;
+  return wrap;
 }
+
+/* ── Task card ── */
+
+function taskCard(task) {
+  const progress = taskProgress(task);
+  const overdue = task.date && isPast(task.date) && task.status !== "done";
+
+  const card = el("div", {
+    class: `task-item ${task.status === "done" ? "done" : ""}`,
+    draggable: "true",
+    style: `border-left-color:${task.color || "var(--primary)"};`,
+    ondragstart: (e) => { e.dataTransfer.setData("text/plain", task.id); card.classList.add("dragging"); },
+    ondragend: () => card.classList.remove("dragging"),
+    onclick: (e) => {
+      if (e.target.closest(".check") || e.target.closest(".task-item__actions")) return;
+      if (task.isFacture) { toast("Gère cette facture depuis Finances.", "info"); return; }
+      openTaskForm(task);
+    }
+  });
+
+  const checkbox = el("div", {
+    class: `check ${task.status === "done" ? "checked" : ""}`,
+    onclick: async () => {
+      if (task.isFacture) { toast("Statut géré depuis Finances.", "info"); return; }
+      const uid = getCurrentUser()?.uid;
+      if (!uid) return;
+      try { await setTaskStatus(uid, task, task.status === "done" ? "todo" : "done"); }
+      catch (e) { toast(`Erreur : ${e.message}`, "error"); }
+    }
+  }, task.status === "done" ? "✓" : "");
+
+  const body = el("div", { class: "task-item__body" }, [
+    el("div", { class: "task-item__title" }, task.isFacture ? `🧾 ${task.title}` : task.title),
+    el("div", { class: "task-item__meta" }, [
+      priorityBadge(task.priority),
+      task.category ? el("span", { class: "badge" }, task.category) : null,
+      task.date ? el("span", { class: `badge ${overdue ? "badge--red" : "badge--blue"}` },
+        formatHuman(task.date) + (task.time ? ` · ${task.time}` : "")) : null,
+      task.duration ? el("span", { class: "badge" }, `${task.duration} min`) : null,
+      task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null,
+      task.isFacture ? el("span", { class: "badge" }, formatMoney(task.montant)) : null,
+      task.timeSpent ? el("span", { class: "badge badge--blue" }, `⏱ ${Math.round(task.timeSpent / 60)}m`) : null
+    ].filter(Boolean))
+  ]);
+
+  if (task.subtasks?.length) {
+    body.appendChild(el("div", { class: "progress progress--sm mt-sm" }, [
+      el("div", { class: "progress__fill", style: `width:${progress}%` })
+    ]));
+  }
+
+  const actions = el("div", { class: "task-item__actions" });
+  if (!task.isFacture && task.status !== "done") {
+    actions.appendChild(el("button", {
+      class: "btn btn--icon sm btn--ghost", title: "Focus",
+      onclick: () => startPomodoro(task)
+    }, "⏱"));
+  }
+  if (!task.isFacture) {
+    actions.appendChild(el("button", {
+      class: "btn btn--icon sm btn--ghost", title: task.archived ? "Désarchiver" : "Archiver",
+      onclick: async () => {
+        const uid = getCurrentUser()?.uid;
+        if (!uid) return;
+        try {
+          await archiveTask(uid, task.id, !task.archived);
+          toast(task.archived ? "Désarchivée" : "Archivée", "info");
+        } catch (e) { toast(`Erreur : ${e.message}`, "error"); }
+      }
+    }, task.archived ? "↩" : "📦"));
+  }
+
+  card.append(checkbox, body, actions);
+  return card;
+}
+
+function priorityBadge(priority) {
+  const cls = { low: "badge--green", medium: "badge--orange", high: "badge--red" };
+  const lbl = { low: "Basse", medium: "Moyenne", high: "Haute" };
+  return el("span", { class: `badge ${cls[priority] || ""}` }, lbl[priority] || priority);
+}
+
+function formatMoney(amount) {
+  return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
+}
+
+/* ── Kanban view ── */
 
 function renderKanban(list) {
   const columns = [
@@ -240,17 +422,12 @@ function renderKanban(list) {
       }
     });
 
-    const header = el("div", { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" }, [
+    column.appendChild(el("div", { class: "kanban-col__header" }, [
       el("div", { class: "kanban-col__title", style: `color:${col.color};` }, col.label),
-      el("span", { style: "font-size:11px;color:var(--muted2);background:var(--surface);padding:2px 8px;border-radius:10px;" }, String(tasks.length))
-    ]);
-    column.appendChild(header);
+      el("span", { class: "kanban-col__count" }, String(tasks.length))
+    ]));
 
-    tasks.forEach((t) => {
-      const card = kanbanCard(t);
-      column.appendChild(card);
-    });
-
+    tasks.forEach((t) => column.appendChild(kanbanCard(t)));
     board.appendChild(column);
   });
 
@@ -260,34 +437,36 @@ function renderKanban(list) {
 function kanbanCard(task) {
   const progress = taskProgress(task);
   const overdue = task.date && isPast(task.date) && task.status !== "done";
+
   const card = el("div", {
-    class: "kanban-task",
+    class: "kanban-card",
     draggable: "true",
+    style: `border-left-color:${task.color || "var(--primary)"};`,
     ondragstart: (e) => { e.dataTransfer.setData("text/plain", task.id); card.classList.add("dragging"); },
     ondragend: () => card.classList.remove("dragging"),
     onclick: () => {
-      if (task.isFacture) { toast("Gère cette facture depuis Finances → Factures.", "info"); return; }
+      if (task.isFacture) { toast("Gère cette facture depuis Finances.", "info"); return; }
       openTaskForm(task);
     }
   });
-  card.style.borderLeftColor = task.color || "#3d72d8";
 
-  card.append(
-    el("div", { style: "font-size:13px;font-weight:600;margin-bottom:6px;" }, task.title),
-    el("div", { style: "display:flex;gap:4px;flex-wrap:wrap;" }, [
-      priorityBadge(task.priority),
-      task.category ? el("span", { class: "badge badge--muted" }, task.category) : null,
-      task.date ? el("span", { class: `badge ${overdue ? "badge--high" : "badge--info"}` }, formatHuman(task.date)) : null,
-      task.routineId ? el("span", { class: "badge badge--info" }, "🔁") : null
-    ].filter(Boolean))
-  );
+  card.appendChild(el("div", { style: "font-size:.85rem;font-weight:600;margin-bottom:6px;" }, task.title));
+  card.appendChild(el("div", { class: "flex gap-xs", style: "flex-wrap:wrap;" }, [
+    priorityBadge(task.priority),
+    task.category ? el("span", { class: "badge" }, task.category) : null,
+    task.date ? el("span", { class: `badge ${overdue ? "badge--red" : "badge--blue"}` }, formatHuman(task.date)) : null,
+    task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null
+  ].filter(Boolean)));
 
   if (task.subtasks?.length) {
-    card.appendChild(el("div", { class: "task-card__progress", style: "margin-top:6px;" }, [el("div", { style: `width:${progress}%` })]));
+    card.appendChild(el("div", { class: "progress progress--sm mt-sm" }, [
+      el("div", { class: "progress__fill", style: `width:${progress}%` })
+    ]));
   }
-
   return card;
 }
+
+/* ── Stats view ── */
 
 function renderStats(state) {
   const all = allTasksWithFactures(state).filter((t) => !t.archived);
@@ -308,42 +487,36 @@ function renderStats(state) {
   const priCounts = { high: 0, medium: 0, low: 0 };
   all.forEach((t) => { if (priCounts[t.priority] !== undefined) priCounts[t.priority]++; });
 
-  const wrap = el("div", { class: "stats-panel" });
+  const wrap = el("div", {});
 
-  const statCards = el("div", { class: "grid grid--3", style: "margin-bottom:20px;" }, [
+  wrap.appendChild(el("div", { class: "grid grid--3 mb-lg" }, [
     statTile("Total", String(all.length), "tâches"),
     statTile("Terminées", String(done.length), `${completionRate}%`),
     statTile("Cette semaine", String(doneThisWeek.length), "complétées"),
-    statTile("En retard", String(overdue.length), overdue.length > 0 ? "attention" : "tout va bien"),
+    statTile("En retard", String(overdue.length), overdue.length > 0 ? "⚠ attention" : "✓ OK"),
     statTile("En cours", String(doing.length), "actives"),
     statTile("À faire", String(todo.length), "en attente")
-  ]);
-  wrap.appendChild(statCards);
+  ]));
 
   if (totalTime > 0) {
     const hrs = Math.floor(totalTime / 3600);
     const mins = Math.floor((totalTime % 3600) / 60);
-    wrap.appendChild(el("div", { class: "card", style: "margin-bottom:16px;padding:14px;" }, [
-      el("div", { style: "font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:4px;" }, "Temps focus total"),
-      el("div", { style: "font-size:22px;font-weight:800;" }, `${hrs}h ${mins}m`)
+    wrap.appendChild(el("div", { class: "card mb-md" }, [
+      el("div", { class: "text-xs text-muted", style: "font-weight:700;margin-bottom:4px;" }, "TEMPS FOCUS TOTAL"),
+      el("div", { style: "font-size:1.4rem;font-weight:800;color:var(--primary);" }, `${hrs}h ${mins}m`)
     ]));
   }
 
-  const priBar = el("div", { class: "card", style: "margin-bottom:16px;padding:14px;" }, [
-    el("div", { style: "font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:10px;" }, "Par priorité"),
-    progressRow("Haute", priCounts.high, all.length, "var(--red)"),
-    progressRow("Moyenne", priCounts.medium, all.length, "var(--orange)"),
-    progressRow("Basse", priCounts.low, all.length, "var(--green)")
-  ]);
-  wrap.appendChild(priBar);
+  wrap.appendChild(el("div", { class: "card mb-md" }, [
+    el("h4", { class: "mb-sm" }, "Par priorité"),
+    statsBar("Haute", priCounts.high, all.length, "var(--red)"),
+    statsBar("Moyenne", priCounts.medium, all.length, "var(--orange)"),
+    statsBar("Basse", priCounts.low, all.length, "var(--green)")
+  ]));
 
   if (topCats.length) {
-    const catCard = el("div", { class: "card", style: "padding:14px;" }, [
-      el("div", { style: "font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:10px;" }, "Top catégories")
-    ]);
-    topCats.forEach(([name, count]) => {
-      catCard.appendChild(progressRow(name, count, all.length, "var(--blue)"));
-    });
+    const catCard = el("div", { class: "card" }, [el("h4", { class: "mb-sm" }, "Top catégories")]);
+    topCats.forEach(([name, count]) => catCard.appendChild(statsBar(name, count, all.length, "var(--primary)")));
     wrap.appendChild(catCard);
   }
 
@@ -358,218 +531,56 @@ function statTile(label, value, sub) {
   ]);
 }
 
-function progressRow(label, count, total, color) {
+function statsBar(label, count, total, color) {
   const pct = total ? Math.round((count / total) * 100) : 0;
-  return el("div", { style: "margin-bottom:8px;" }, [
-    el("div", { style: "display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px;" }, [
+  return el("div", { class: "mb-sm" }, [
+    el("div", { class: "flex justify-between text-sm mb-sm" }, [
       el("span", {}, label),
-      el("span", { style: "color:var(--muted2);" }, `${count} (${pct}%)`)
+      el("span", { class: "text-muted-2" }, `${count} (${pct}%)`)
     ]),
-    el("div", { style: "height:6px;background:var(--border);border-radius:3px;overflow:hidden;" }, [
-      el("div", { style: `width:${pct}%;height:100%;background:${color};border-radius:3px;` })
+    el("div", { class: "progress" }, [
+      el("div", { class: "progress__fill", style: `width:${pct}%;background:${color};` })
     ])
   ]);
 }
 
-function filtersBar(state) {
-  const selectStyle = "padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:12.5px;";
-
-  const prioritySelect = el("select", {
-    style: selectStyle,
-    onchange: (e) => { filters.priority = e.target.value; render(root); }
-  }, [
-    el("option", { value: "all", selected: filters.priority === "all" ? "selected" : null }, "Toute priorité"),
-    ...PRIORITIES.map((p) => el("option", { value: p.value, selected: filters.priority === p.value ? "selected" : null }, p.label))
-  ]);
-
-  const categorySelect = el("select", {
-    style: selectStyle,
-    onchange: (e) => { filters.category = e.target.value; render(root); }
-  }, [
-    el("option", { value: "all", selected: filters.category === "all" ? "selected" : null }, "Toute catégorie"),
-    ...categoryOptions(state).map((c) => el("option", { value: c, selected: filters.category === c ? "selected" : null }, c))
-  ]);
-
-  const hideDoneLabel = el("label", { style: "display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;" }, [
-    el("input", { type: "checkbox", checked: filters.hideDone ? "checked" : null, onchange: (e) => { filters.hideDone = e.target.checked; render(root); } }),
-    "Masquer terminées"
-  ]);
-
-  const saveBtn = el("button", {
-    class: "btn btn--sm btn--ghost",
-    onclick: () => {
-      const uid = getCurrentUser()?.uid;
-      if (!uid) { toast("Connecte-toi pour enregistrer une vue.", "error"); return; }
-      const name = prompt("Nom de cette vue (ex : Tâches urgentes) :");
-      if (!name || !name.trim()) return;
-      const { query: _q, ...savedFilters } = filters;
-      createView(uid, { name: name.trim(), filters: savedFilters }).catch((e) => {
-        console.error("[Tasks] createView:", e);
-        toast(`Erreur : ${e.message || "impossible d'enregistrer la vue"}`, "error");
-      });
-    }
-  }, "💾 Enregistrer cette vue");
-
-  return el("div", {
-    style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);"
-  }, [prioritySelect, categorySelect, hideDoneLabel, saveBtn]);
-}
-
-function savedViewsBar() {
-  if (!savedViews.length) return el("div", {});
-  const wrap = el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" });
-  savedViews.forEach((v) => {
-    wrap.appendChild(el("div", { style: "display:flex;align-items:center;gap:4px;" }, [
-      el("button", {
-        class: "btn btn--sm btn--ghost",
-        onclick: () => { filters = { ...filters, ...v.filters }; render(root); }
-      }, `⭐ ${v.name}`),
-      el("button", {
-        class: "btn btn--sm btn--ghost", title: "Supprimer cette vue",
-        onclick: async () => {
-          const uid = getCurrentUser()?.uid;
-          if (!uid) return;
-          try { await deleteView(uid, v.id); }
-          catch (e) { console.error("[Tasks] deleteView:", e); toast(`Erreur : ${e.message || "impossible de supprimer la vue"}`, "error"); }
-        }
-      }, "✕")
-    ]));
-  });
-  return wrap;
-}
-
-function scopeChip(label, value) {
-  const active = filters.scope === value;
-  return el("button", {
-    class: `btn btn--sm ${active ? "btn--primary" : "btn--ghost"}`,
-    onclick: () => { filters.scope = value; render(root); }
-  }, label);
-}
-
-function formatMoney(amount) {
-  return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
-}
-
-function taskCard(task) {
-  const progress = taskProgress(task);
-  const overdue = task.date && isPast(task.date) && task.status !== "done";
-  const card = el("div", {
-    class: `task-card ${task.status === "done" ? "done" : ""}`,
-    draggable: "true",
-    ondragstart: (e) => { e.dataTransfer.setData("text/plain", task.id); card.classList.add("dragging"); },
-    ondragend: () => card.classList.remove("dragging"),
-    onclick: (e) => {
-      if (e.target.closest(".checkbox") || e.target.closest(".task-actions")) return;
-      if (task.isFacture) { toast("Gère cette facture depuis Finances → Factures.", "info"); return; }
-      openTaskForm(task);
-    }
-  });
-  card.style.borderLeftColor = task.color || "#3d72d8";
-
-  const actionBtns = [];
-  if (!task.isFacture && task.status !== "done") {
-    actionBtns.push(el("button", {
-      class: "btn btn--sm btn--ghost task-actions", title: "Focus",
-      onclick: () => startPomodoro(task)
-    }, "⏱"));
-  }
-  if (!task.isFacture) {
-    actionBtns.push(el("button", {
-      class: "btn btn--sm btn--ghost task-actions", title: task.archived ? "Désarchiver" : "Archiver",
-      onclick: async () => {
-        const uid = getCurrentUser()?.uid;
-        if (!uid) return;
-        try {
-          await archiveTask(uid, task.id, !task.archived);
-          toast(task.archived ? "Tâche désarchivée" : "Tâche archivée", "info");
-        } catch (e) { toast(`Erreur : ${e.message}`, "error"); }
-      }
-    }, task.archived ? "↩" : "📦"));
-  }
-
-  const row = el("div", { style: "display:flex;align-items:flex-start;gap:10px;" }, [
-    el("div", {
-      class: `checkbox ${task.status === "done" ? "checked" : ""}`,
-      onclick: async () => {
-        if (task.isFacture) { toast("Le statut d'une facture se gère depuis Finances.", "info"); return; }
-        const uid = getCurrentUser()?.uid;
-        if (!uid) return;
-        try {
-          await setTaskStatus(uid, task, task.status === "done" ? "todo" : "done");
-        } catch (e) {
-          console.error("[Tasks] setTaskStatus:", e);
-          toast(`Erreur : ${e.message || "impossible de mettre à jour la tâche"}`, "error");
-        }
-      }
-    }, task.status === "done" ? "✓" : ""),
-    el("div", { style: "flex:1;min-width:0;" }, [
-      el("div", { class: "task-card__title" }, task.isFacture ? `🧾 ${task.title}` : task.title),
-      el("div", { class: "task-card__meta" }, [
-        priorityBadge(task.priority),
-        task.category ? el("span", { class: "badge badge--muted" }, task.category) : null,
-        task.date ? el("span", { class: `badge ${overdue ? "badge--high" : "badge--info"}` }, formatHuman(task.date) + (task.time ? ` · ${task.time}` : "")) : null,
-        task.duration ? el("span", { class: "badge badge--muted" }, `${task.duration} min`) : null,
-        task.routineId ? el("span", { class: "badge badge--info" }, "🔁 routine") : null,
-        task.isFacture ? el("span", { class: "badge badge--muted" }, formatMoney(task.montant)) : null,
-        task.timeSpent ? el("span", { class: "badge badge--muted" }, `⏱ ${Math.round(task.timeSpent / 60)}m`) : null
-      ])
-    ]),
-    ...(actionBtns.length ? [el("div", { style: "display:flex;gap:2px;flex-shrink:0;" }, actionBtns)] : [])
-  ]);
-  card.appendChild(row);
-
-  if (task.subtasks?.length) {
-    const bar = el("div", { class: "task-card__progress" }, [el("div", { style: `width:${progress}%` })]);
-    card.appendChild(bar);
-  }
-  return card;
-}
-
-function priorityBadge(priority) {
-  const map = { low: "badge--low", medium: "badge--medium", high: "badge--high" };
-  const labels = { low: "Basse", medium: "Moyenne", high: "Haute" };
-  return el("span", { class: `badge ${map[priority] || "badge--muted"}` }, labels[priority] || priority);
-}
+/* ── Task form modal ── */
 
 function openTaskForm(existing) {
   const uid = getCurrentUser()?.uid;
   if (!uid) { toast("Connecte-toi pour gérer tes tâches.", "error"); return; }
-  if (existing?.isFacture) { toast("Gère cette facture depuis Finances → Factures.", "info"); return; }
+  if (existing?.isFacture) { toast("Gère cette facture depuis Finances.", "info"); return; }
 
   const data = existing ? { ...existing } : newTaskDefaults();
   const body = el("div", {});
 
-  // Champs essentiels — toujours visibles, pour une création rapide au quotidien.
-  const titleField = field("Titre", input("text", data.title, (v) => (data.title = v), "Ex : Préparer la réunion"));
+  const titleField = formField("Titre", formInput("text", data.title, (v) => (data.title = v), "Ex : Préparer la réunion"));
   const essentialRow = el("div", { class: "field-row" }, [
-    field("Date", input("date", data.date, (v) => (data.date = v))),
-    field("Priorité", selectField(PRIORITIES, data.priority, (v) => (data.priority = v)))
+    formField("Date", formInput("date", data.date, (v) => (data.date = v))),
+    formField("Priorité", formSelect(PRIORITIES, data.priority, (v) => (data.priority = v)))
   ]);
 
-  // Champs avancés — masqués par défaut, révélés via "+ Plus de détails".
-  const descField = field("Description", textarea(data.description, (v) => (data.description = v)));
+  const descField = formField("Description", formTextarea(data.description, (v) => (data.description = v)));
   const row1 = el("div", { class: "field-row" }, [
-    field("Catégorie", input("text", data.category, (v) => (data.category = v))),
-    field("Heure", input("time", data.time, (v) => (data.time = v)))
+    formField("Catégorie", formInput("text", data.category, (v) => (data.category = v))),
+    formField("Heure", formInput("time", data.time, (v) => (data.time = v)))
   ]);
-  const row3 = el("div", { class: "field-row" }, [
-    field("Durée estimée (min)", input("number", data.duration ?? "", (v) => (data.duration = v ? Number(v) : null))),
-    field("Statut", selectField(STATUSES, data.status, (v) => (data.status = v)))
+  const row2 = el("div", { class: "field-row" }, [
+    formField("Durée (min)", formInput("number", data.duration ?? "", (v) => (data.duration = v ? Number(v) : null))),
+    formField("Statut", formSelect(STATUSES, data.status, (v) => (data.status = v)))
   ]);
-  const colorField = field("Couleur", colorPicker(data.color, (v) => (data.color = v)));
-  const notesField = field("Notes", textarea(data.notes, (v) => (data.notes = v)));
+  const colorField = formField("Couleur", renderColorPicker(data.color, (v) => (data.color = v)));
+  const notesField = formField("Notes", formTextarea(data.notes, (v) => (data.notes = v)));
   const subtasksBlock = subtasksEditor(existing, uid);
 
-  const hasAdvancedData = !!(data.description || (data.category && data.category !== "Général") || data.time || data.duration || data.notes || (data.subtasks && data.subtasks.length));
-  let advancedOpen = !!existing && hasAdvancedData;
+  const hasAdvanced = !!(data.description || (data.category && data.category !== "Général") || data.time || data.duration || data.notes || data.subtasks?.length);
+  let advancedOpen = !!existing && hasAdvanced;
 
   const advancedWrap = el("div", { style: advancedOpen ? "" : "display:none;" }, [
-    descField, row1, row3, colorField, subtasksBlock, notesField
+    descField, row1, row2, colorField, subtasksBlock, notesField
   ]);
   const toggleBtn = el("button", {
-    type: "button",
-    class: "btn btn--sm btn--ghost",
-    style: "margin-bottom:14px;",
+    type: "button", class: "btn btn--sm btn--outline mb-md",
     onclick: () => {
       advancedOpen = !advancedOpen;
       advancedWrap.style.display = advancedOpen ? "" : "none";
@@ -579,16 +590,14 @@ function openTaskForm(existing) {
 
   body.append(titleField, essentialRow, toggleBtn, advancedWrap);
 
-  const actions = [
-    { label: "Annuler", onClick: closeModal }
-  ];
+  const actions = [{ label: "Annuler", onClick: closeModal }];
   if (existing) {
     actions.push({
       label: existing.archived ? "Désarchiver" : "Archiver",
       onClick: async () => {
         try {
           await archiveTask(uid, existing.id, !existing.archived);
-          toast(existing.archived ? "Tâche désarchivée" : "Tâche archivée", "info");
+          toast(existing.archived ? "Désarchivée" : "Archivée", "info");
           closeModal();
         } catch (e) { toast(`Erreur : ${e.message}`, "error"); }
       }
@@ -596,20 +605,14 @@ function openTaskForm(existing) {
     actions.push({
       label: "Supprimer", variant: "danger",
       onClick: async () => {
-        try {
-          await deleteTask(uid, existing.id);
-          toast("Tâche supprimée", "info");
-          closeModal();
-        } catch (e) {
-          console.error("[Tasks] deleteTask:", e);
-          toast(`Erreur : ${e.message || "impossible de supprimer la tâche"}`, "error");
-        }
+        if (!confirm("Supprimer cette tâche ?")) return;
+        try { await deleteTask(uid, existing.id); toast("Supprimée", "info"); closeModal(); }
+        catch (e) { toast(`Erreur : ${e.message}`, "error"); }
       }
     });
   }
   actions.push({
-    label: existing ? "Enregistrer" : "Créer",
-    variant: "primary",
+    label: existing ? "Enregistrer" : "Créer", variant: "primary",
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
       try {
@@ -619,99 +622,104 @@ function openTaskForm(existing) {
         } else {
           await createTask(uid, data);
         }
-        toast(existing ? "Tâche mise à jour" : "Tâche créée", "success");
+        toast(existing ? "Mise à jour" : "Tâche créée", "success");
         closeModal();
-      } catch (e) {
-        console.error("[Tasks] createTask/updateTask:", e);
-        toast(`Erreur : ${e.message || "impossible d'enregistrer la tâche"}`, "error");
-      }
+      } catch (e) { toast(`Erreur : ${e.message}`, "error"); }
     }
   });
 
   openModal(existing ? "Modifier la tâche" : "Nouvelle tâche", body, actions);
 }
 
+/* ── Subtasks editor ── */
+
 function subtasksEditor(existing, uid) {
   const wrap = el("div", { class: "field" }, [el("label", {}, "Sous-tâches")]);
-  const list = el("div", {});
+  const listNode = el("div", {});
   const subtasks = existing?.subtasks || [];
 
-  function renderList() {
-    clear(list);
+  function renderSubs() {
+    clear(listNode);
     subtasks.forEach((s) => {
-      const row = el("div", { class: `subtask-row ${s.done ? "done" : ""}` }, [
+      listNode.appendChild(el("div", { class: `subtask-row ${s.done ? "done" : ""}` }, [
         el("div", {
-          class: `checkbox ${s.done ? "checked" : ""}`,
-          style: "width:16px;height:16px;",
+          class: `check ${s.done ? "checked" : ""}`,
+          style: "width:18px;height:18px;font-size:.65rem;",
           onclick: async () => {
             if (!existing) return;
             try { await toggleSubtask(uid, existing, s.id); }
-            catch (e) { console.error("[Tasks] toggleSubtask:", e); toast(`Erreur : ${e.message || "impossible de mettre à jour la sous-tâche"}`, "error"); }
+            catch (e) { toast(`Erreur : ${e.message}`, "error"); }
           }
         }, s.done ? "✓" : ""),
         el("span", { style: "flex:1;" }, s.title),
         el("button", {
-          class: "btn btn--sm btn--ghost",
+          class: "btn btn--icon sm btn--ghost",
           onclick: async () => {
             if (!existing) return;
             try { await removeSubtask(uid, existing, s.id); }
-            catch (e) { console.error("[Tasks] removeSubtask:", e); toast(`Erreur : ${e.message || "impossible de supprimer la sous-tâche"}`, "error"); }
+            catch (e) { toast(`Erreur : ${e.message}`, "error"); }
           }
         }, "✕")
-      ]);
-      list.appendChild(row);
+      ]));
     });
   }
-  renderList();
+  renderSubs();
 
-  const addRow = el("div", { style: "display:flex;gap:8px;margin-top:8px;" });
-  const newInput = el("input", { placeholder: "Ajouter une sous-tâche...", style: "flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);" });
-  const addBtn = el("button", {
-    class: "btn btn--sm btn--ghost",
+  const addRow = el("div", { class: "flex gap-sm mt-sm" });
+  const inp = el("input", { placeholder: "Ajouter une sous-tâche..." });
+  inp.style.cssText = "flex:1;padding:8px 12px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.85rem;";
+  addRow.append(inp, el("button", {
+    class: "btn btn--sm btn--outline",
     onclick: async () => {
-      const title = newInput.value.trim();
+      const title = inp.value.trim();
       if (!title) return;
       if (existing) {
         try { await addSubtask(uid, existing, title); }
-        catch (e) { console.error("[Tasks] addSubtask:", e); toast(`Erreur : ${e.message || "impossible d'ajouter la sous-tâche"}`, "error"); return; }
+        catch (e) { toast(`Erreur : ${e.message}`, "error"); return; }
       } else {
-        toast("Enregistre d'abord la tâche pour ajouter des sous-tâches", "info");
+        toast("Enregistre d'abord la tâche", "info");
       }
-      newInput.value = "";
+      inp.value = "";
     }
-  }, "Ajouter");
-  addRow.append(newInput, addBtn);
+  }, "Ajouter"));
 
-  wrap.append(list, addRow);
+  wrap.append(listNode, addRow);
   return wrap;
 }
 
-function field(label, inputNode) {
-  return el("div", { class: "field" }, [el("label", {}, label), inputNode]);
+/* ── Form helpers ── */
+
+function formField(label, node) {
+  return el("div", { class: "field" }, [el("label", {}, label), node]);
 }
 
-function input(type, value, onChange, placeholder = "") {
+function formInput(type, value, onChange, placeholder = "") {
   return el("input", { type, value: value ?? "", placeholder, oninput: (e) => onChange(e.target.value) });
 }
 
-function textarea(value, onChange) {
+function formTextarea(value, onChange) {
   return el("textarea", { oninput: (e) => onChange(e.target.value) }, value || "");
 }
 
-function selectField(options, value, onChange) {
-  const sel = el("select", { onchange: (e) => onChange(e.target.value) },
-    options.map((o) => el("option", { value: o.value, selected: o.value === value ? "selected" : null }, o.label)));
-  return sel;
+function formSelect(options, value, onChange) {
+  return el("select", { onchange: (e) => onChange(e.target.value) },
+    options.map((o) => el("option", { value: o.value, selected: o.value === value ? "selected" : null }, o.label))
+  );
 }
 
-function colorPicker(value, onChange) {
-  const wrap = el("div", { style: "display:flex;gap:8px;" });
+function renderColorPicker(value, onChange) {
+  const wrap = el("div", { class: "color-dots" });
   DEFAULT_COLORS.forEach((c) => {
-    const swatch = el("div", {
-      style: `width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c === value ? "var(--text)" : "transparent"};`,
-      onclick: () => { onChange(c); wrap.querySelectorAll("div").forEach((n) => (n.style.borderColor = "transparent")); swatch.style.borderColor = "var(--text)"; }
+    const dot = el("div", {
+      class: `color-dot ${c === value ? "active" : ""}`,
+      style: `background:${c};`,
+      onclick: () => {
+        onChange(c);
+        wrap.querySelectorAll(".color-dot").forEach((d) => d.classList.remove("active"));
+        dot.classList.add("active");
+      }
     });
-    wrap.appendChild(swatch);
+    wrap.appendChild(dot);
   });
   return wrap;
 }

@@ -3,11 +3,12 @@ import { openModal, closeModal } from "../utils/modal.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser } from "../auth/auth.js";
 import { subscribe } from "../store.js";
-import { formatHuman, diffDays, todayStr } from "../utils/date.js";
+import { formatHuman, diffDays, todayStr, isPast } from "../utils/date.js";
 import { TERMS, PRIORITIES, newGoalDefaults, goalProgress } from "./goals.model.js";
 import { createGoal, updateGoal, deleteGoal, addStep, toggleStep, removeStep } from "./goals.service.js";
 
 let latestState = { goals: [] };
+let filter = "all";
 
 export function initGoalsView(container) {
   subscribe((state) => { latestState = state; render(container); });
@@ -15,45 +16,86 @@ export function initGoalsView(container) {
 
 function render(container) {
   clear(container);
-  container.appendChild(el("div", { class: "topbar" }, [
-    el("h1", {}, "Objectifs"),
-    el("div", { class: "actions" }, [
-      el("button", { class: "btn btn--primary", onclick: () => openGoalForm() }, "+ Nouvel objectif")
-    ])
-  ]));
-
   const goals = latestState.goals || [];
-  if (goals.length === 0) {
-    container.appendChild(el("div", { class: "empty-state" }, [
-      el("div", { class: "icon" }, "🎯"),
-      el("div", {}, "Aucun objectif pour le moment. Fixe-toi un premier objectif !")
+
+  const header = el("div", { class: "view-header" }, [
+    el("h1", {}, "Objectifs"),
+    el("button", { class: "btn btn--primary btn--sm", onclick: () => openGoalForm() }, "+ Nouveau")
+  ]);
+  container.appendChild(header);
+
+  const chips = el("div", { class: "chip-bar mb-md" });
+  [["all", "Tous"], ["active", "En cours"], ["done", "Complétés"]].forEach(([key, label]) => {
+    chips.appendChild(el("button", {
+      class: `chip ${filter === key ? "active" : ""}`, type: "button",
+      onclick: () => { filter = key; render(container); }
+    }, label));
+  });
+  container.appendChild(chips);
+
+  const filtered = goals.filter(g => {
+    if (filter === "active") return goalProgress(g) < 100;
+    if (filter === "done") return goalProgress(g) >= 100;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.appendChild(el("div", { class: "empty" }, [
+      el("div", { class: "empty__icon" }, "🎯"),
+      el("div", { class: "empty__text" }, filter === "all" ? "Aucun objectif. Définis tes ambitions !" : "Aucun objectif dans cette catégorie.")
     ]));
-    return;
+  } else {
+    const grid = el("div", { class: "grid grid--2" });
+    filtered.forEach(g => grid.appendChild(goalCard(g)));
+    container.appendChild(grid);
   }
 
-  const grid = el("div", { class: "grid grid--3" });
-  goals.forEach((g) => grid.appendChild(goalCard(g)));
-  container.appendChild(grid);
+  container.appendChild(el("button", {
+    class: "btn btn--fab", onclick: () => openGoalForm()
+  }, "+"));
 }
 
-function termLabel(term) { return TERMS.find((t) => t.value === term)?.label || term; }
-
 function goalCard(goal) {
-  const progress = goalProgress(goal);
-  const remaining = goal.deadline ? diffDays(todayStr(), goal.deadline) : null;
-  const card = el("div", { class: "card", onclick: () => openGoalForm(goal), style: "cursor:pointer;" });
-  card.append(...[
-    el("div", { style: "display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;" }, [
-      el("h3", { style: "margin:0;" }, goal.title),
-      el("span", { class: "badge badge--info" }, termLabel(goal.term))
-    ]),
-    goal.deadline ? el("div", { style: "font-size:12px;color:var(--muted2);margin-bottom:10px;" },
-      remaining >= 0 ? `${remaining} jour(s) restant(s) · ${formatHuman(goal.deadline)}` : `Échéance dépassée · ${formatHuman(goal.deadline)}`) : null,
-    el("div", { class: "progress-bar", style: "margin-bottom:6px;" }, [el("div", { style: `width:${progress}%` })]),
-    el("div", { style: "font-size:12px;color:var(--muted);" }, `${progress}% complété · ${(goal.steps || []).filter(s => s.done).length}/${(goal.steps || []).length} étapes`),
-    goal.status === "completed" ? el("span", { class: "badge badge--low", style: "margin-top:8px;" }, "🏆 Atteint") : null
+  const pct = goalProgress(goal);
+  const steps = goal.steps || [];
+  const doneSteps = steps.filter(s => s.done).length;
+  const daysLeft = goal.deadline ? diffDays(todayStr(), goal.deadline) : null;
+  const overdue = goal.deadline && isPast(goal.deadline) && pct < 100;
+
+  const card = el("div", { class: "goal-card card", onclick: () => openGoalForm(goal) });
+
+  const headerEl = el("div", { class: "goal-card__header" }, [
+    el("span", { class: "goal-card__title" }, goal.title),
+    el("span", { class: `badge badge--${priorityColor(goal.priority)}` }, goal.priority || "medium")
+  ]);
+
+  const progressBar = el("div", { class: "progress" }, [
+    el("div", { class: "progress__fill", style: `width:${pct}%` })
+  ]);
+
+  const meta = el("div", { class: "flex items-center gap-sm mt-sm", style: "flex-wrap:wrap;" }, [
+    el("span", { class: "text-xs text-muted-2" }, `${doneSteps}/${steps.length} étapes · ${pct}%`),
+    goal.term ? el("span", { class: "badge" }, termLabel(goal.term)) : null,
+    goal.deadline ? el("span", {
+      class: `goal-card__deadline ${overdue ? "overdue" : ""}`,
+    }, overdue ? `⚠️ ${formatHuman(goal.deadline)}` : `📅 ${formatHuman(goal.deadline)}`) : null,
+    daysLeft !== null && daysLeft > 0 && pct < 100 ? el("span", { class: "text-xs text-muted-2" }, `${daysLeft}j restants`) : null
   ].filter(Boolean));
+
+  card.append(headerEl, progressBar, meta);
   return card;
+}
+
+function priorityColor(p) {
+  if (p === "high") return "red";
+  if (p === "low") return "green";
+  return "yellow";
+}
+
+function termLabel(t) {
+  if (t === "short") return "Court terme";
+  if (t === "long") return "Long terme";
+  return "Moyen terme";
 }
 
 function openGoalForm(existing) {
@@ -63,39 +105,96 @@ function openGoalForm(existing) {
   const data = existing ? { ...existing } : newGoalDefaults();
   const body = el("div", {});
 
-  const titleInput = el("input", { value: data.title, placeholder: "Ex : Économiser 1000€, Apprendre Angular...", oninput: (e) => (data.title = e.target.value) });
-  const descInput = el("textarea", { oninput: (e) => (data.description = e.target.value) }, data.description || "");
+  const titleInput = el("input", { value: data.title, placeholder: "Ex : Apprendre le piano, Courir un marathon..." });
+  titleInput.addEventListener("input", (e) => { data.title = e.target.value; });
 
-  const row1 = el("div", { class: "field-row" }, [
-    fieldWrap("Terme", el("select", { onchange: (e) => (data.term = e.target.value) },
-      TERMS.map((t) => el("option", { value: t.value, selected: t.value === data.term ? "selected" : null }, t.label)))),
-    fieldWrap("Priorité", el("select", { onchange: (e) => (data.priority = e.target.value) },
-      PRIORITIES.map((p) => el("option", { value: p.value, selected: p.value === data.priority ? "selected" : null }, p.label))))
-  ]);
+  const descInput = el("textarea", { rows: "2", placeholder: "Description (optionnel)" }, data.description || "");
+  descInput.addEventListener("input", (e) => { data.description = e.target.value; });
 
-  const deadlineInput = el("input", { type: "date", value: data.deadline || "", oninput: (e) => (data.deadline = e.target.value) });
+  const deadlineInput = el("input", { type: "date", value: data.deadline || "" });
+  deadlineInput.addEventListener("input", (e) => { data.deadline = e.target.value; });
 
-  const stepsBlock = stepsEditor(existing, uid);
+  const termSelect = el("select", {}, TERMS.map(t =>
+    el("option", { value: t.value, selected: t.value === data.term ? "selected" : null }, t.label)
+  ));
+  termSelect.addEventListener("change", (e) => { data.term = e.target.value; });
+
+  const prioSelect = el("select", {}, PRIORITIES.map(p =>
+    el("option", { value: p.value, selected: p.value === data.priority ? "selected" : null }, p.label)
+  ));
+  prioSelect.addEventListener("change", (e) => { data.priority = e.target.value; });
 
   body.append(
     fieldWrap("Titre", titleInput),
     fieldWrap("Description", descInput),
-    row1,
-    fieldWrap("Date limite", deadlineInput),
-    stepsBlock
+    el("div", { class: "field-row" }, [
+      fieldWrap("Échéance", deadlineInput),
+      fieldWrap("Terme", termSelect)
+    ]),
+    fieldWrap("Priorité", prioSelect)
   );
 
-  const actions = [{ label: "Fermer", onClick: closeModal }];
   if (existing) {
-    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => {
-      if (!confirm("Supprimer cet objectif ?")) return;
-      try { await deleteGoal(uid, existing.id); toast("Objectif supprimé", "info"); closeModal(); }
-      catch (e) { console.error("[Goals] deleteGoal:", e); toast(`Erreur : ${e.message || "impossible de supprimer l'objectif"}`, "error"); }
-    } });
+    const stepsSection = el("div", { class: "field" });
+    stepsSection.appendChild(el("label", {}, "Étapes"));
+    const stepsList = el("div", { class: "flex flex-col gap-xs" });
+
+    function renderSteps() {
+      clear(stepsList);
+      (data.steps || []).forEach((step, idx) => {
+        const row = el("div", { class: "subtask-row" }, [
+          el("div", {
+            class: `check sm ${step.done ? "checked" : ""}`,
+            onclick: async () => {
+              await toggleStep(uid, existing.id, idx);
+              step.done = !step.done;
+              renderSteps();
+            }
+          }, step.done ? "✓" : ""),
+          el("span", { style: step.done ? "text-decoration:line-through;opacity:.6;" : "" }, step.text),
+          el("button", {
+            class: "btn btn--icon sm", title: "Supprimer",
+            onclick: async () => {
+              await removeStep(uid, existing.id, idx);
+              data.steps.splice(idx, 1);
+              renderSteps();
+            }
+          }, "✕")
+        ]);
+        stepsList.appendChild(row);
+      });
+    }
+    renderSteps();
+
+    const addStepInput = el("input", { placeholder: "Nouvelle étape..." });
+    const addStepBtn = el("button", {
+      class: "btn btn--sm btn--primary", type: "button",
+      onclick: async () => {
+        const text = addStepInput.value.trim();
+        if (!text) return;
+        await addStep(uid, existing.id, text);
+        if (!data.steps) data.steps = [];
+        data.steps.push({ text, done: false });
+        addStepInput.value = "";
+        renderSteps();
+      }
+    }, "+");
+
+    stepsSection.append(stepsList, el("div", { class: "flex gap-sm mt-sm" }, [addStepInput, addStepBtn]));
+    body.appendChild(stepsSection);
+  }
+
+  const actions = [{ label: "Annuler", onClick: closeModal }];
+  if (existing) {
+    actions.push({
+      label: "Supprimer", variant: "danger",
+      onClick: async () => {
+        if (confirm("Supprimer cet objectif ?")) { await deleteGoal(uid, existing.id); closeModal(); }
+      }
+    });
   }
   actions.push({
-    label: existing ? "Enregistrer" : "Créer",
-    variant: "primary",
+    label: existing ? "Enregistrer" : "Créer", variant: "primary",
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
       if (existing) {
@@ -110,43 +209,6 @@ function openGoalForm(existing) {
   });
 
   openModal(existing ? "Modifier l'objectif" : "Nouvel objectif", body, actions);
-}
-
-function stepsEditor(existing, uid) {
-  const wrap = el("div", { class: "field" }, [el("label", {}, "Étapes")]);
-  const list = el("div", {});
-  const steps = existing?.steps || [];
-
-  function renderList() {
-    clear(list);
-    steps.forEach((s) => {
-      list.appendChild(el("div", { class: `subtask-row ${s.done ? "done" : ""}` }, [
-        el("div", {
-          class: `checkbox ${s.done ? "checked" : ""}`, style: "width:16px;height:16px;",
-          onclick: async () => { if (existing) await toggleStep(uid, existing, s.id); }
-        }, s.done ? "✓" : ""),
-        el("span", { style: "flex:1;" }, s.title),
-        el("button", { class: "btn btn--sm btn--ghost", onclick: async () => { if (existing) await removeStep(uid, existing, s.id); } }, "✕")
-      ]));
-    });
-  }
-  renderList();
-
-  const addRow = el("div", { style: "display:flex;gap:8px;margin-top:8px;" });
-  const newInput = el("input", { placeholder: "Ajouter une étape...", style: "flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);" });
-  addRow.append(newInput, el("button", {
-    class: "btn btn--sm btn--ghost",
-    onclick: async () => {
-      const title = newInput.value.trim();
-      if (!title) return;
-      if (existing) await addStep(uid, existing, title);
-      else toast("Enregistre d'abord l'objectif pour ajouter des étapes", "info");
-      newInput.value = "";
-    }
-  }, "Ajouter"));
-
-  wrap.append(list, addRow);
-  return wrap;
 }
 
 function fieldWrap(label, node) {

@@ -8,6 +8,7 @@ let latestState = { tasks: [], routines: [], goals: [] };
 let financeSummary = null;
 let rootContainer = null;
 let unsubFinance = null;
+let activeTab = "tasks";
 
 export function initAnalyticsView(container) {
   rootContainer = container;
@@ -24,29 +25,28 @@ export function initAnalyticsView(container) {
 
 function render(container) {
   clear(container);
-  container.appendChild(el("div", { class: "topbar" }, [el("h1", {}, "Analyses")]));
 
-  container.appendChild(sectionTitle("📋 Tâches"));
-  container.appendChild(taskSection());
-  container.appendChild(el("div", { class: "grid grid--2", style: "margin-top:12px;" }, [weeklyBarChart(), categoryDonutChart()].filter(Boolean)));
-  container.appendChild(el("div", { style: "margin-top:12px;" }, [monthlyTrendChart()]));
+  const header = el("div", { class: "view-header" }, [el("h1", {}, "Analyses")]);
+  container.appendChild(header);
 
-  container.appendChild(sectionTitle("🔁 Routines"));
-  container.appendChild(routineSection());
-  const heatmap = routineHeatmapChart();
-  if (heatmap) container.appendChild(el("div", { style: "margin-top:12px;" }, [heatmap]));
+  const tabs = [
+    { key: "tasks", label: "Tâches" },
+    { key: "habits", label: "Habitudes" },
+    { key: "goals", label: "Objectifs" },
+    { key: "finance", label: "Finances" }
+  ];
+  const chipBar = el("div", { class: "chip-bar" },
+    tabs.map((t) => el("button", {
+      class: `chip ${activeTab === t.key ? "active" : ""}`,
+      onclick: () => { activeTab = t.key; render(container); }
+    }, t.label))
+  );
+  container.appendChild(chipBar);
 
-  container.appendChild(sectionTitle("🎯 Objectifs"));
-  container.appendChild(goalSection());
-
-  if (financeSummary) {
-    container.appendChild(sectionTitle("💰 Finances"));
-    container.appendChild(financeSection());
-  }
-}
-
-function sectionTitle(label) {
-  return el("h3", { style: "margin:22px 0 10px;" }, label);
+  if (activeTab === "tasks") renderTasksTab(container);
+  else if (activeTab === "habits") renderHabitsTab(container);
+  else if (activeTab === "goals") renderGoalsTab(container);
+  else if (activeTab === "finance") renderFinanceTab(container);
 }
 
 function statTile(label, value, sub) {
@@ -57,82 +57,108 @@ function statTile(label, value, sub) {
   ]);
 }
 
-function taskSection() {
+/* ── Tasks tab ── */
+function renderTasksTab(container) {
   const a = taskAnalytics(latestState.tasks || []);
-  return el("div", { class: "grid grid--4" }, [
-    statTile("Terminées cette semaine", a.completedThisWeek),
-    statTile("Manquées cette semaine", a.missedThisWeek),
-    statTile("Durée moyenne", a.avgDuration ? `${a.avgDuration} min` : "—"),
-    statTile("Jour le plus productif", a.mostProductiveDay, `Catégorie phare : ${a.topCategory}`)
-  ]);
+  container.appendChild(el("div", { class: "grid grid--4 mb-md" }, [
+    statTile("Terminées", a.completedThisWeek, "cette semaine"),
+    statTile("Manquées", a.missedThisWeek, "cette semaine"),
+    statTile("Durée moy.", a.avgDuration ? `${a.avgDuration} min` : "—"),
+    statTile("Top jour", a.mostProductiveDay, a.topCategory)
+  ]));
+  container.appendChild(el("div", { class: "grid grid--2 mb-md" }, [weeklyBarChart(), categoryDonutChart()].filter(Boolean)));
+  container.appendChild(monthlyTrendChart());
 }
 
-function routineSection() {
+/* ── Habits tab ── */
+function renderHabitsTab(container) {
   const routines = latestState.routines || [];
-  if (routines.length === 0) return el("div", { class: "empty-state" }, [el("div", { class: "icon" }, "🔁"), el("div", {}, "Aucune routine à analyser pour le moment.")]);
+  if (routines.length === 0) {
+    container.appendChild(el("div", { class: "empty" }, [el("div", { class: "empty__icon" }, "🔁"), el("div", { class: "empty__text" }, "Aucune habitude à analyser.")]));
+    return;
+  }
 
-  const grid = el("div", { class: "grid grid--3" });
+  const grid = el("div", { class: "grid grid--3 mb-md" });
   routines.forEach((r) => {
     const a = routineAnalytics(r, latestState.tasks || []);
     grid.appendChild(el("div", { class: "card" }, [
-      el("h3", {}, r.title),
-      el("div", { style: "display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;" }, [
-        el("span", { class: "streak-chip" }, `🔥 ${a.currentStreak}`),
-        el("span", { class: "badge badge--info" }, `Record : ${a.bestStreak}`)
+      el("h4", { class: "mb-sm" }, r.title),
+      el("div", { class: "flex gap-sm items-center mb-sm" }, [
+        el("span", { class: "badge badge--orange" }, `🔥 ${a.currentStreak}`),
+        el("span", { class: "badge badge--blue" }, `Record : ${a.bestStreak}`)
       ]),
-      el("div", { class: "progress-bar", style: "margin-bottom:6px;" }, [el("div", { style: `width:${a.successRate}%` })]),
-      el("div", { style: "font-size:12px;color:var(--muted);" }, `${a.successRate}% de réussite · ${a.success} réussi(s) / ${a.missed} manqué(s)`)
+      el("div", { class: "progress mb-sm" }, [el("div", { class: "progress__fill", style: `width:${a.successRate}%` })]),
+      el("div", { class: "text-xs text-muted" }, `${a.successRate}% · ${a.success} réussi(s) / ${a.missed} manqué(s)`)
     ]));
   });
-  return grid;
+  container.appendChild(grid);
+
+  const heatmap = routineHeatmapChart();
+  if (heatmap) container.appendChild(heatmap);
 }
 
-function goalSection() {
+/* ── Goals tab ── */
+function renderGoalsTab(container) {
   const goals = latestState.goals || [];
-  if (goals.length === 0) return el("div", { class: "empty-state" }, [el("div", { class: "icon" }, "🎯"), el("div", {}, "Aucun objectif à analyser pour le moment.")]);
+  if (goals.length === 0) {
+    container.appendChild(el("div", { class: "empty" }, [el("div", { class: "empty__icon" }, "🎯"), el("div", { class: "empty__text" }, "Aucun objectif à analyser.")]));
+    return;
+  }
 
   const rows = goalAnalytics(goals);
   const grid = el("div", { class: "grid grid--3" });
   rows.forEach(({ goal, progress, remainingDays, stepsDone, stepsTotal }) => {
+    const overdue = remainingDays !== null && remainingDays < 0;
     grid.appendChild(el("div", { class: "card" }, [
-      el("h3", {}, goal.title),
-      el("div", { class: "progress-bar", style: "margin-bottom:6px;" }, [el("div", { style: `width:${progress}%` })]),
-      el("div", { style: "font-size:12px;color:var(--muted);" },
-        `${progress}% · ${stepsDone}/${stepsTotal} étapes` + (remainingDays !== null ? ` · ${remainingDays >= 0 ? remainingDays + " j restants" : "échéance dépassée"}` : ""))
+      el("div", { class: "flex justify-between items-center mb-sm" }, [
+        el("h4", {}, goal.title),
+        el("span", { class: `badge ${overdue ? "badge--red" : "badge--primary"}` }, `${progress}%`)
+      ]),
+      el("div", { class: "progress mb-sm" }, [el("div", { class: "progress__fill", style: `width:${progress}%` })]),
+      el("div", { class: "text-xs text-muted" },
+        `${stepsDone}/${stepsTotal} étapes` + (remainingDays !== null ? ` · ${overdue ? "échéance dépassée" : remainingDays + " j restants"}` : ""))
     ]));
   });
-  return grid;
+  container.appendChild(grid);
 }
 
-function financeSection() {
+/* ── Finance tab ── */
+function renderFinanceTab(container) {
+  if (!financeSummary) {
+    container.appendChild(el("div", { class: "empty" }, [el("div", { class: "empty__icon" }, "💰"), el("div", { class: "empty__text" }, "Données financières non disponibles.")]));
+    return;
+  }
   const f = financeSummary;
-  const grid = el("div", { class: "grid grid--3", style: "margin-bottom:14px;" }, [
-    statTile("Dépenses mensuelles", formatMoney(f.totalDepensesMois)),
+  container.appendChild(el("div", { class: "grid grid--3 mb-md" }, [
+    statTile("Dépenses", formatMoney(f.totalDepensesMois), "ce mois"),
     statTile("Budget restant", f.budgetRestant !== null ? formatMoney(f.budgetRestant) : "—"),
-    statTile("Solde actuel", formatMoney(f.soldeTotal))
-  ]);
-  const catCard = el("div", { class: "card" }, [el("h3", {}, "Dépenses par catégorie (ce mois)")]);
+    statTile("Solde", formatMoney(f.soldeTotal))
+  ]));
+
+  const catCard = el("div", { class: "card" }, [el("h4", { class: "mb-md" }, "Dépenses par catégorie")]);
   if (f.topCategories.length === 0) {
-    catCard.appendChild(el("div", { style: "color:var(--muted);font-size:13px;" }, "Aucune dépense ce mois-ci."));
+    catCard.appendChild(el("div", { class: "text-sm text-muted" }, "Aucune dépense ce mois-ci."));
   } else {
     const max = Math.max(...f.topCategories.map((c) => c.total));
     f.topCategories.forEach((c) => {
-      catCard.appendChild(el("div", { style: "margin-bottom:10px;" }, [
-        el("div", { style: "display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;" }, [
-          el("span", {}, c.nom), el("span", { style: "color:var(--muted);" }, formatMoney(c.total))
+      const pct = Math.round((c.total / max) * 100);
+      catCard.appendChild(el("div", { class: "mb-sm" }, [
+        el("div", { class: "flex justify-between text-sm mb-sm" }, [
+          el("span", {}, c.nom),
+          el("span", { class: "text-muted" }, formatMoney(c.total))
         ]),
-        el("div", { class: "progress-bar" }, [el("div", { style: `width:${Math.round((c.total / max) * 100)}%;background:var(--blue);` })])
+        el("div", { class: "progress" }, [el("div", { class: "progress__fill", style: `width:${pct}%;background:var(--blue);` })])
       ]));
     });
   }
-  const wrap = el("div", {});
-  wrap.append(grid, catCard);
-  return wrap;
+  container.appendChild(catCard);
 }
 
 function formatMoney(amount) {
   return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
 }
+
+/* ═══ SVG Charts (preserved) ═══ */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 function svgEl(tag, attrs, children) {
@@ -167,11 +193,11 @@ function weeklyBarChart() {
   });
 
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", style: "max-width:360px;" }, bars);
-  const card = el("div", { class: "card" }, [el("h4", { style: "margin-bottom:12px;" }, "Tâches cette semaine")]);
+  const card = el("div", { class: "card" }, [el("h4", { class: "mb-sm" }, "Tâches cette semaine")]);
   card.appendChild(svg);
-  const legend = el("div", { style: "display:flex;gap:14px;margin-top:8px;font-size:11px;" }, [
-    el("span", { style: "display:flex;align-items:center;gap:4px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--blue);display:inline-block;" }), "Terminées"]),
-    el("span", { style: "display:flex;align-items:center;gap:4px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--border);display:inline-block;" }), "Total"])
+  const legend = el("div", { class: "flex gap-md mt-sm", style: "font-size:11px;" }, [
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--blue);display:inline-block;" }), "Terminées"]),
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--border);display:inline-block;" }), "Total"])
   ]);
   card.appendChild(legend);
   return card;
@@ -206,15 +232,15 @@ function categoryDonutChart() {
   ]);
 
   const legendItems = data.map((d, i) =>
-    el("div", { style: "display:flex;align-items:center;gap:6px;font-size:12px;" }, [
+    el("div", { class: "flex items-center gap-xs text-xs" }, [
       el("span", { style: `width:10px;height:10px;border-radius:2px;background:${CHART_COLORS[i % CHART_COLORS.length]};flex-shrink:0;display:inline-block;` }),
       el("span", {}, `${d.category} (${d.count})`)
     ])
   );
 
   const card = el("div", { class: "card" }, [
-    el("h4", { style: "margin-bottom:12px;" }, "Répartition par catégorie"),
-    el("div", { style: "display:flex;align-items:center;gap:20px;flex-wrap:wrap;" }, [svg, el("div", { style: "display:flex;flex-direction:column;gap:6px;" }, legendItems)])
+    el("h4", { class: "mb-sm" }, "Par catégorie"),
+    el("div", { class: "flex items-center gap-lg", style: "flex-wrap:wrap;" }, [svg, el("div", { class: "flex flex-col gap-xs" }, legendItems)])
   ]);
   return card;
 }
@@ -256,7 +282,7 @@ function monthlyTrendChart() {
     ...labels
   ]);
 
-  const card = el("div", { class: "card" }, [el("h4", { style: "margin-bottom:12px;" }, "Tendance mensuelle (terminées)"), svg]);
+  const card = el("div", { class: "card" }, [el("h4", { class: "mb-sm" }, "Tendance mensuelle (terminées)"), svg]);
   return card;
 }
 
@@ -279,20 +305,20 @@ function routineHeatmapChart() {
     });
 
     const svg = svgEl("svg", { viewBox: `0 0 ${totalW} ${size}`, width: "100%", style: `max-width:${totalW}px;` }, squares);
-    const row = el("div", { style: "margin-bottom:10px;" }, [
-      el("div", { style: "font-size:12px;font-weight:700;margin-bottom:4px;color:var(--text);" }, r.title),
+    const row = el("div", { class: "mb-sm" }, [
+      el("div", { class: "text-xs", style: "font-weight:700;margin-bottom:4px;" }, r.title),
       el("div", { style: "overflow-x:auto;" }, [svg])
     ]);
     container.appendChild(row);
   });
 
-  const legend = el("div", { style: "display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--muted);" }, [
-    el("span", { style: "display:flex;align-items:center;gap:3px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;" }), "Fait"]),
-    el("span", { style: "display:flex;align-items:center;gap:3px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;" }), "Manqué"]),
-    el("span", { style: "display:flex;align-items:center;gap:3px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--orange);display:inline-block;" }), "En attente"]),
-    el("span", { style: "display:flex;align-items:center;gap:3px;" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--border);display:inline-block;" }), "Non prévu"])
+  const legend = el("div", { class: "flex gap-md mt-sm", style: "font-size:10px;color:var(--muted);" }, [
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;" }), "Fait"]),
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;" }), "Manqué"]),
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--orange);display:inline-block;" }), "En attente"]),
+    el("span", { class: "flex items-center gap-xs" }, [el("span", { style: "width:10px;height:10px;border-radius:2px;background:var(--border);display:inline-block;" }), "—"])
   ]);
 
-  const card = el("div", { class: "card" }, [el("h4", { style: "margin-bottom:12px;" }, "Heatmap routines (30 jours)"), container, legend]);
+  const card = el("div", { class: "card" }, [el("h4", { class: "mb-sm" }, "Heatmap routines (30 jours)"), container, legend]);
   return card;
 }

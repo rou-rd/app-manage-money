@@ -3,110 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LifeHub — Tâches</title>
+<title>LifeHub</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/layout.css">
-<link rel="stylesheet" href="css/components.css">
-<link rel="stylesheet" href="css/tasks-pro.css">
-<style>
-  body.app-hidden .app-shell { display: none; }
-  body:not(.app-hidden) #login-gate { display: none; }
-  #notif-banner {
-    display: none; align-items: center; justify-content: space-between; gap: 12px;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
-    padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
-  }
-  #notif-banner.show { display: flex; }
-  #login-gate {
-    position: fixed; inset: 0; z-index: 998; background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #login-gate .box {
-    text-align: center; padding: 40px 32px; background: var(--surface); border-radius: 20px;
-    border: 1px solid var(--border); box-shadow: var(--shadow); max-width: 340px; width: 90%;
-  }
-  #login-gate .logo {
-    width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 16px;
-    background: linear-gradient(135deg, var(--blue-dark), var(--blue));
-    display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff;
-  }
-  #login-gate h1 { font-size: 20px; margin: 0 0 6px; }
-  #login-gate p { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
-  .google-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
-    padding: 12px 20px; background: #fff; color: #3c3c3c; border: 1px solid #dadce0; border-radius: 12px;
-    cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit;
-  }
-  #user-block { display: none; align-items: center; gap: 8px; }
-  #user-photo { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
 </head>
-<body class="app-hidden">
+<body>
 
+<!-- ═══ Login Gate ═══ -->
 <div id="login-gate">
-  <div class="box">
-    <div class="logo">LH</div>
-    <h1>LifeHub — Tâches</h1>
-    <p>Connecte-toi avec le même compte que Finances pour accéder à tes tâches, routines et objectifs.</p>
-    <button class="google-btn" id="login-btn">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.84-1.6 2.4v2h2.6c1.52-1.4 2.4-3.47 2.4-5.92 0-.57-.05-1.12-.17-1.64z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2c-.71.48-1.63.76-2.7.76-2.07 0-3.83-1.4-4.46-3.27H1.86v2.07C3.18 15.06 5.89 17 8.98 17z"/><path fill="#FBBC05" d="M4.52 10.55c-.16-.48-.25-.99-.25-1.55s.09-1.07.25-1.55V5.38H1.86A8.01 8.01 0 0 0 1 9c0 1.29.31 2.51.86 3.62l2.66-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.22.4 3.04 1.2l2.27-2.27C12.95 1.89 11.14 1 8.98 1 5.89 1 3.18 2.94 1.86 5.38l2.66 2.07c.63-1.87 2.39-3.27 4.46-3.27z"/></svg>
-      Continuer avec Google
-    </button>
-  </div>
+  <div class="brand">Life<span>Hub</span></div>
+  <p class="tagline">Organise ta vie. Atteins tes objectifs.</p>
+  <button id="login-btn" class="btn btn--primary btn--lg">Se connecter avec Google</button>
 </div>
 
-<div class="app-shell">
-  <aside class="sidebar">
-    <div class="sidebar__brand"><div class="logo">LH</div><span>LifeHub</span></div>
-    <ul class="nav-list">
-      <li><button class="nav-item active" data-view="dashboard"><span class="icon">🏠</span> Dashboard</button></li>
-      <li><button class="nav-item" data-view="tasks"><span class="icon">✅</span> Tâches</button></li>
-      <li><button class="nav-item" data-view="routines"><span class="icon">🔁</span> Routines</button></li>
-      <li><button class="nav-item" data-view="goals"><span class="icon">🎯</span> Objectifs</button></li>
-      <li><button class="nav-item" data-view="calendar"><span class="icon">📅</span> Calendrier</button></li>
-      <li><button class="nav-item" data-view="analytics"><span class="icon">📊</span> Analyses</button></li>
-      <li><button class="nav-item" data-view="gamification"><span class="icon">🏅</span> Progression</button></li>
-      <li><button class="nav-item" data-view="data"><span class="icon">📦</span> Import/Export</button></li>
-      <li><a class="nav-item" href="index.html"><span class="icon">↩️</span> Accueil</a></li>
-      <li><a class="nav-item" href="finance.html"><span class="icon">💰</span> Finances</a></li>
-    </ul>
-    <div class="sidebar__footer">
-      <div id="user-block">
-        <img id="user-photo" src="" alt="">
-        <span id="user-name" style="font-size:12.5px;font-weight:700;"></span>
-      </div>
-      <button class="btn btn--sm btn--ghost" id="logout-btn">Déconnexion</button>
+<!-- ═══ App Shell ═══ -->
+<div id="app" class="app-hidden">
+
+  <!-- Sidebar — desktop -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">Life<span>Hub</span></div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="today">
+        <span class="icon">📅</span><span class="label">Aujourd'hui</span>
+      </button>
+      <button class="nav-item" data-view="tasks">
+        <span class="icon">✅</span><span class="label">Tâches</span>
+      </button>
+      <button class="nav-item" data-view="habits">
+        <span class="icon">🔁</span><span class="label">Habitudes</span>
+      </button>
+      <button class="nav-item" data-view="goals">
+        <span class="icon">🎯</span><span class="label">Objectifs</span>
+      </button>
+      <button class="nav-item" data-view="calendar">
+        <span class="icon">🗓️</span><span class="label">Calendrier</span>
+      </button>
+      <button class="nav-item" data-view="analytics">
+        <span class="icon">📊</span><span class="label">Analyses</span>
+      </button>
+      <button class="nav-item" data-view="finance">
+        <span class="icon">💰</span><span class="label">Finances</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="icon">⚙️</span><span class="label">Réglages</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <img id="user-photo" src="" alt="">
+      <span class="name" id="user-name"></span>
+      <button id="theme-toggle" class="btn btn--icon sm" title="Thème">🌙</button>
+      <button id="logout-btn" class="btn btn--icon sm" title="Déconnexion">🚪</button>
     </div>
   </aside>
 
-  <main class="main">
-    <div id="notif-banner">
-      <span>🔔 Active les notifications pour recevoir des rappels de tâches et routines.</span>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn--sm btn--primary" id="notif-enable-btn">Activer</button>
-        <button class="btn btn--sm btn--ghost" id="notif-dismiss-btn">Plus tard</button>
+  <!-- Main area -->
+  <main id="main">
+    <!-- Topbar — mobile -->
+    <header id="topbar">
+      <div class="brand">Life<span>Hub</span></div>
+      <div class="flex gap-sm items-center">
+        <button id="theme-toggle-m" class="btn btn--icon sm">🌙</button>
+        <img id="user-photo-m" src="" alt="" style="width:28px;height:28px;border-radius:50%;">
       </div>
+    </header>
+
+    <!-- Notification banner -->
+    <div id="notif-banner">
+      <span style="flex:1;">Activer les notifications pour ne rien manquer ?</span>
+      <button id="notif-enable-btn" class="btn btn--sm btn--primary">Activer</button>
+      <button id="notif-dismiss-btn" class="btn btn--sm btn--ghost">✕</button>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-      <button class="theme-toggle" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">🌙</button>
+    <!-- Views container -->
+    <div id="views">
+      <div id="view-today" class="view active"></div>
+      <div id="view-tasks" class="view"></div>
+      <div id="view-habits" class="view"></div>
+      <div id="view-goals" class="view"></div>
+      <div id="view-calendar" class="view"></div>
+      <div id="view-analytics" class="view"></div>
+      <div id="view-finance" class="view"></div>
+      <div id="view-settings" class="view"></div>
     </div>
 
-    <div id="view-dashboard" class="view active"></div>
-    <div id="view-tasks" class="view"></div>
-    <div id="view-routines" class="view"></div>
-    <div id="view-goals" class="view"></div>
-    <div id="view-calendar" class="view"></div>
-    <div id="view-analytics" class="view"></div>
-    <div id="view-gamification" class="view"></div>
-    <div id="view-data" class="view"></div>
+    <!-- Bottom nav — mobile -->
+    <nav id="bottomnav">
+      <div class="bottomnav-inner">
+        <button class="bnav-item active" data-view="today">
+          <span class="icon">📅</span><span>Aujourd'hui</span>
+        </button>
+        <button class="bnav-item" data-view="tasks">
+          <span class="icon">✅</span><span>Tâches</span>
+        </button>
+        <button class="bnav-item" data-view="habits">
+          <span class="icon">🔁</span><span>Habitudes</span>
+        </button>
+        <button class="bnav-item" data-view="goals">
+          <span class="icon">🎯</span><span>Objectifs</span>
+        </button>
+        <button class="bnav-item" data-view="analytics">
+          <span class="icon">📊</span><span>Analyses</span>
+        </button>
+      </div>
+    </nav>
   </main>
 </div>
 
+<!-- ═══ Modal container ═══ -->
+<div id="modal-root"></div>
+
+<!-- ═══ Toast container ═══ -->
+<div class="toast-container" id="toast-root"></div>
+
+<!-- ═══ App script ═══ -->
 <script type="module" src="js/app.js"></script>
+
 </body>
 </html>

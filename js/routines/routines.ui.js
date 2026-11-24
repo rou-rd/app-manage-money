@@ -3,142 +3,196 @@ import { openModal, closeModal } from "../utils/modal.js";
 import { toast } from "../utils/toast.js";
 import { getCurrentUser } from "../auth/auth.js";
 import { subscribe } from "../store.js";
-import { dayOfWeek, todayStr, formatHuman } from "../utils/date.js";
+import { todayStr, addDays, formatHuman, dayOfWeek, isPast } from "../utils/date.js";
 import { FREQUENCIES, WEEKDAY_LABELS, newRoutineDefaults } from "./routines.model.js";
 import { createRoutine, updateRoutine, deleteRoutine } from "./routines.service.js";
+import { setTaskStatus } from "../tasks/tasks.service.js";
+import { occursOn } from "./routines.generator.js";
 import { DEFAULT_COLORS } from "../tasks/tasks.model.js";
 
 let latestState = { routines: [], tasks: [] };
+let root = null;
 
-export function initRoutinesView(container) {
+export function initHabitsView(container) {
+  root = container;
   subscribe((state) => { latestState = state; render(container); });
+}
+
+export const initRoutinesView = initHabitsView;
+
+function computeStreak(routine, tasks) {
+  const today = todayStr();
+  let streak = 0;
+  let d = today;
+  for (let i = 0; i < 90; i++) {
+    if (!occursOn(routine, d)) { d = addDays(d, -1); continue; }
+    const inst = tasks.find(t => t.routineId === routine.id && t.date === d);
+    if (inst && inst.status === "done") { streak++; d = addDays(d, -1); }
+    else if (d === today) { d = addDays(d, -1); }
+    else break;
+  }
+  return streak;
+}
+
+function computeSuccessRate(routine, tasks, days = 30) {
+  const today = todayStr();
+  let scheduled = 0, done = 0;
+  for (let i = 0; i < days; i++) {
+    const d = addDays(today, -i);
+    if (!occursOn(routine, d)) continue;
+    scheduled++;
+    const inst = tasks.find(t => t.routineId === routine.id && t.date === d);
+    if (inst && inst.status === "done") done++;
+  }
+  return scheduled ? Math.round((done / scheduled) * 100) : 0;
 }
 
 function render(container) {
   clear(container);
-  const toolbar = el("div", { class: "topbar" }, [
-    el("h1", {}, "Routines"),
-    el("div", { class: "actions" }, [
-      el("button", { class: "btn btn--primary", onclick: () => openRoutineForm() }, "+ Nouvelle routine")
-    ])
-  ]);
-  container.appendChild(toolbar);
-
   const routines = latestState.routines || [];
+  const tasks = latestState.tasks || [];
+
+  const header = el("div", { class: "view-header" }, [
+    el("h1", {}, "Habitudes"),
+    el("button", { class: "btn btn--primary btn--sm", onclick: () => openRoutineForm() }, "+ Nouvelle")
+  ]);
+  container.appendChild(header);
+
+  if (routines.length > 0) container.appendChild(statsSection(routines, tasks));
+
   if (routines.length === 0) {
-    container.appendChild(el("div", { class: "empty-state" }, [
-      el("div", { class: "icon" }, "🔁"),
-      el("div", {}, "Aucune routine. Crée une routine (sport, lecture, méditation...) et les tâches se génèrent automatiquement chaque jour.")
+    container.appendChild(el("div", { class: "empty" }, [
+      el("div", { class: "empty__icon" }, "🔁"),
+      el("div", { class: "empty__text" }, "Aucune habitude. Crée ta première routine !")
     ]));
-    return;
+  } else {
+    const list = el("div", { class: "flex flex-col gap-sm" });
+    routines.forEach(r => list.appendChild(habitRow(r, tasks)));
+    container.appendChild(list);
   }
 
-  const grid = el("div", { class: "grid grid--3" });
-  routines.forEach((r) => grid.appendChild(routineCard(r)));
-  container.appendChild(grid);
+  container.appendChild(el("button", {
+    class: "btn btn--fab", onclick: () => openRoutineForm()
+  }, "+"));
+}
+
+function statsSection(routines, tasks) {
+  const active = routines.filter(r => r.active);
+  const streaks = active.map(r => computeStreak(r, tasks));
+  const bestStreak = Math.max(0, ...streaks);
+  const rates = active.map(r => computeSuccessRate(r, tasks));
+  const avgRate = rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+
+  return el("div", { class: "grid grid--3 mb-md" }, [
+    el("div", { class: "card stat-card" }, [
+      el("div", { class: "stat-label" }, "Actives"),
+      el("div", { class: "stat-value" }, String(active.length)),
+    ]),
+    el("div", { class: "card stat-card" }, [
+      el("div", { class: "stat-label" }, "Meilleur streak"),
+      el("div", { class: "stat-value" }, `🔥 ${bestStreak}`),
+    ]),
+    el("div", { class: "card stat-card" }, [
+      el("div", { class: "stat-label" }, "Taux moyen"),
+      el("div", { class: "stat-value" }, `${avgRate}%`),
+    ])
+  ]);
+}
+
+function habitRow(routine, tasks) {
+  const uid = getCurrentUser()?.uid;
+  const today = todayStr();
+  const streak = computeStreak(routine, tasks);
+  const rate = computeSuccessRate(routine, tasks);
+  const todayInstance = tasks.find(t => t.routineId === routine.id && t.date === today);
+  const todayDone = todayInstance && todayInstance.status === "done";
+  const todayScheduled = occursOn(routine, today);
+
+  const row = el("div", { class: "habit-row", style: `border-left:3px solid ${routine.color};${!routine.active ? "opacity:.5;" : ""}` });
+
+  const checkEl = todayScheduled
+    ? el("div", {
+        class: `check ${todayDone ? "checked" : ""}`,
+        onclick: async (e) => {
+          e.stopPropagation();
+          if (!uid || !todayInstance) return;
+          await setTaskStatus(uid, todayInstance, todayDone ? "todo" : "done");
+        }
+      }, todayDone ? "✓" : "")
+    : el("div", { style: "width:22px;" });
+
+  const info = el("div", { class: "habit-row__info", onclick: () => openRoutineForm(routine) }, [
+    el("div", { class: "flex items-center gap-sm" }, [
+      el("span", { class: "habit-row__title" }, routine.title),
+      el("span", { class: "badge" }, frequencyLabel(routine)),
+      routine.category ? el("span", { class: "badge badge--purple" }, routine.category) : null
+    ].filter(Boolean)),
+    el("div", { class: "flex items-center gap-sm mt-sm" }, [
+      streak > 0 ? el("span", { class: "habit-row__streak" }, `🔥 ${streak} jours`) : null,
+      el("span", { class: "text-xs text-muted-2" }, `${rate}% · ${routine.time || "--:--"}${routine.duration ? " · " + routine.duration + "min" : ""}`)
+    ].filter(Boolean))
+  ]);
+
+  const heatmap = buildHeatmap(routine, tasks);
+
+  row.append(checkEl, info, heatmap);
+  return row;
+}
+
+function buildHeatmap(routine, tasks) {
+  const today = todayStr();
+  const grid = el("div", { class: "habit-grid" });
+
+  for (let i = 13; i >= 0; i--) {
+    const d = addDays(today, -i);
+    const scheduled = occursOn(routine, d);
+    const inst = tasks.find(t => t.routineId === routine.id && t.date === d);
+    let cls = "habit-cell";
+    if (d === today) cls += " habit-cell--today";
+    if (scheduled) {
+      if (inst && inst.status === "done") cls += " habit-cell--done";
+      else if (isPast(d)) cls += " habit-cell--missed";
+    }
+    grid.appendChild(el("div", { class: cls, title: formatHuman(d) }));
+  }
+  return grid;
 }
 
 function frequencyLabel(routine) {
-  if (routine.frequency === "daily") return "Tous les jours";
-  if (routine.frequency === "weekly") return "Chaque " + (routine.daysOfWeek || []).map((d) => WEEKDAY_LABELS[d]).join(", ");
-  if (routine.frequency === "monthly") return `Le ${routine.dayOfMonth} du mois`;
+  if (routine.frequency === "daily") return "Quotidien";
+  if (routine.frequency === "weekly") return "Hebdo";
+  if (routine.frequency === "monthly") return "Mensuel";
   return "";
-}
-
-function latestInstance(routine, tasks) {
-  const instances = tasks.filter((t) => t.routineId === routine.id).sort((a, b) => b.date.localeCompare(a.date));
-  return instances[0] || null;
-}
-
-function instanceStatusBadge(task) {
-  const map = { done: ["badge--low", "✓ Faite"], doing: ["badge--medium", "En cours"] };
-  const [cls, label] = map[task.status] || ["badge--muted", "À faire"];
-  return el("span", { class: `badge ${cls}` }, label);
-}
-
-function routineCard(routine) {
-  const uid = getCurrentUser()?.uid;
-  const tasks = latestState.tasks || [];
-  const latest = latestInstance(routine, tasks);
-  const card = el("div", { class: "card", style: `border-left:4px solid ${routine.color};` });
-  card.append(
-    el("h3", {}, routine.title),
-    el("div", { class: "badge badge--info", style: "margin-bottom:8px;" }, frequencyLabel(routine)),
-    el("div", { style: "font-size:12.5px;color:var(--muted);margin-bottom:10px;" },
-      `${routine.category} · ${routine.time || "--:--"}${routine.duration ? " · " + routine.duration + " min" : ""}`),
-    latest
-      ? el("div", { style: "display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12.5px;" }, [
-          el("span", { style: "color:var(--muted2);" }, "Dernière : " + formatHuman(latest.date)),
-          instanceStatusBadge(latest)
-        ])
-      : el("div", { style: "font-size:12.5px;color:var(--muted2);margin-bottom:10px;" }, "Aucune occurrence pour l'instant."),
-    el("button", { class: "btn btn--sm btn--ghost", style: "margin-bottom:10px;", onclick: () => openHistoryModal(routine) }, "🕘 Voir l'historique"),
-    el("div", { style: "display:flex;gap:8px;" }, [
-      el("button", { class: "btn btn--sm btn--ghost", onclick: () => openRoutineForm(routine) }, "Modifier"),
-      el("button", {
-        class: `btn btn--sm ${routine.active ? "btn--ghost" : "btn--primary"}`,
-        onclick: async () => { await updateRoutine(uid, routine.id, { active: !routine.active }); }
-      }, routine.active ? "Mettre en pause" : "Réactiver"),
-      el("button", {
-        class: "btn btn--sm btn--danger",
-        onclick: async () => {
-          const linked = (latestState.tasks || []).filter(t => t.routineId === routine.id);
-          const msg = linked.length
-            ? `Supprimer cette routine et ses ${linked.length} tâche(s) liée(s) ?`
-            : "Supprimer cette routine ?";
-          if (confirm(msg)) await deleteRoutine(uid, routine.id, linked);
-        }
-      }, "✕")
-    ])
-  );
-  if (!routine.active) card.style.opacity = "0.55";
-  return card;
-}
-
-function openHistoryModal(routine) {
-  const instances = (latestState.tasks || [])
-    .filter((t) => t.routineId === routine.id)
-    .sort((a, b) => b.date.localeCompare(a.date));
-
-  const body = el("div", {});
-  if (!instances.length) {
-    body.appendChild(el("div", { style: "color:var(--muted);font-size:13px;" }, "Aucune occurrence enregistrée."));
-  } else {
-    instances.forEach((t) => {
-      body.appendChild(el("div", {
-        style: "display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;"
-      }, [
-        el("span", {}, formatHuman(t.date)),
-        instanceStatusBadge(t)
-      ]));
-    });
-  }
-  openModal(`Historique — ${routine.title}`, body, [{ label: "Fermer", onClick: closeModal }]);
 }
 
 function openRoutineForm(existing) {
   const uid = getCurrentUser()?.uid;
-  if (!uid) { toast("Connecte-toi pour gérer tes routines.", "error"); return; }
+  if (!uid) { toast("Connecte-toi pour gérer tes habitudes.", "error"); return; }
 
   const data = existing ? { ...existing } : newRoutineDefaults(dayOfWeek(todayStr()));
   const body = el("div", {});
 
-  const titleInput = el("input", { value: data.title, placeholder: "Ex : Sport, Lecture, Méditation...", oninput: (e) => (data.title = e.target.value) });
-  const categoryInput = el("input", { value: data.category, oninput: (e) => (data.category = e.target.value) });
+  const titleInput = el("input", { value: data.title, placeholder: "Ex : Sport, Lecture, Méditation..." });
+  titleInput.addEventListener("input", (e) => { data.title = e.target.value; });
 
-  const freqSelect = el("select", {}, FREQUENCIES.map((f) => el("option", { value: f.value, selected: f.value === data.frequency ? "selected" : null }, f.label)));
+  const categoryInput = el("input", { value: data.category });
+  categoryInput.addEventListener("input", (e) => { data.category = e.target.value; });
+
+  const freqSelect = el("select", {}, FREQUENCIES.map(f =>
+    el("option", { value: f.value, selected: f.value === data.frequency ? "selected" : null }, f.label)
+  ));
 
   const weeklyBlock = el("div", { class: "field", style: data.frequency === "weekly" ? "" : "display:none;" }, [
-    el("label", {}, "Jours de la semaine"),
-    el("div", { style: "display:flex;gap:6px;flex-wrap:wrap;" }, WEEKDAY_LABELS.map((label, idx) => {
+    el("label", {}, "Jours"),
+    el("div", { class: "chip-bar" }, WEEKDAY_LABELS.map((label, idx) => {
       const active = (data.daysOfWeek || []).includes(idx);
       const chip = el("button", {
-        class: `btn btn--sm ${active ? "btn--primary" : "btn--ghost"}`, type: "button",
+        class: `chip ${active ? "active" : ""}`, type: "button",
         onclick: () => {
           const set = new Set(data.daysOfWeek || []);
           if (set.has(idx)) set.delete(idx); else set.add(idx);
           data.daysOfWeek = Array.from(set).sort();
-          chip.className = `btn btn--sm ${set.has(idx) ? "btn--primary" : "btn--ghost"}`;
+          chip.className = `chip ${set.has(idx) ? "active" : ""}`;
         }
       }, label);
       return chip;
@@ -147,7 +201,7 @@ function openRoutineForm(existing) {
 
   const monthlyBlock = el("div", { class: "field", style: data.frequency === "monthly" ? "" : "display:none;" }, [
     el("label", {}, "Jour du mois"),
-    el("input", { type: "number", min: "1", max: "31", value: data.dayOfMonth, oninput: (e) => (data.dayOfMonth = Number(e.target.value)) })
+    el("input", { type: "number", min: "1", max: "31", value: data.dayOfMonth, oninput: (e) => { data.dayOfMonth = Number(e.target.value); } })
   ]);
 
   freqSelect.addEventListener("change", (e) => {
@@ -156,55 +210,69 @@ function openRoutineForm(existing) {
     monthlyBlock.style.display = data.frequency === "monthly" ? "" : "none";
   });
 
-  const timeInput = el("input", { type: "time", value: data.time, oninput: (e) => (data.time = e.target.value) });
-  const durationInput = el("input", { type: "number", value: data.duration ?? "", oninput: (e) => (data.duration = e.target.value ? Number(e.target.value) : null) });
+  const timeInput = el("input", { type: "time", value: data.time });
+  timeInput.addEventListener("input", (e) => { data.time = e.target.value; });
 
-  const colorWrap = el("div", { style: "display:flex;gap:8px;" });
-  DEFAULT_COLORS.forEach((c) => {
-    const swatch = el("div", {
-      style: `width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c === data.color ? "var(--text)" : "transparent"};`,
-      onclick: () => { data.color = c; colorWrap.querySelectorAll("div").forEach((n) => (n.style.borderColor = "transparent")); swatch.style.borderColor = "var(--text)"; }
+  const durationInput = el("input", { type: "number", value: data.duration ?? "", placeholder: "Minutes" });
+  durationInput.addEventListener("input", (e) => { data.duration = e.target.value ? Number(e.target.value) : null; });
+
+  const colorWrap = el("div", { class: "color-dots" });
+  DEFAULT_COLORS.forEach(c => {
+    const dot = el("div", {
+      class: `color-dot ${c === data.color ? "active" : ""}`,
+      style: `background:${c};`,
+      onclick: () => { data.color = c; colorWrap.querySelectorAll(".color-dot").forEach(n => n.classList.remove("active")); dot.classList.add("active"); }
     });
-    colorWrap.appendChild(swatch);
+    colorWrap.appendChild(dot);
   });
+
+  const activeToggle = el("label", { class: "flex items-center gap-sm", style: "cursor:pointer;font-size:.88rem;" }, [
+    el("input", { type: "checkbox", checked: data.active ? "checked" : null, onchange: (e) => { data.active = e.target.checked; } }),
+    "Active"
+  ]);
 
   body.append(
     fieldWrap("Titre", titleInput),
     fieldWrap("Catégorie", categoryInput),
-    fieldWrap("Fréquence", freqSelect),
+    el("div", { class: "field-row" }, [
+      fieldWrap("Fréquence", freqSelect),
+      fieldWrap("Heure", timeInput)
+    ]),
     weeklyBlock,
     monthlyBlock,
-    fieldWrap("Heure", timeInput),
     fieldWrap("Durée (min)", durationInput),
-    fieldWrap("Couleur", colorWrap)
+    fieldWrap("Couleur", colorWrap),
+    el("div", { class: "field" }, [activeToggle])
   );
 
   const actions = [{ label: "Annuler", onClick: closeModal }];
   if (existing) {
-    actions.push({ label: "Supprimer", variant: "danger", onClick: async () => {
-      const linked = (latestState.tasks || []).filter(t => t.routineId === existing.id);
-      const msg = linked.length
-        ? `Supprimer cette routine et ses ${linked.length} tâche(s) liée(s) ?`
-        : "Supprimer cette routine ?";
-      if (confirm(msg)) { await deleteRoutine(uid, existing.id, linked); closeModal(); }
-    } });
+    actions.push({
+      label: "Supprimer", variant: "danger",
+      onClick: async () => {
+        const linked = (latestState.tasks || []).filter(t => t.routineId === existing.id);
+        const msg = linked.length
+          ? `Supprimer cette habitude et ses ${linked.length} tâche(s) liée(s) ?`
+          : "Supprimer cette habitude ?";
+        if (confirm(msg)) { await deleteRoutine(uid, existing.id, linked); closeModal(); }
+      }
+    });
   }
   actions.push({
-    label: existing ? "Enregistrer" : "Créer",
-    variant: "primary",
+    label: existing ? "Enregistrer" : "Créer", variant: "primary",
     onClick: async () => {
       if (!data.title.trim()) { toast("Le titre est obligatoire", "error"); return; }
       if (data.frequency === "weekly" && (!data.daysOfWeek || data.daysOfWeek.length === 0)) {
-        toast("Sélectionne au moins un jour de la semaine", "error"); return;
+        toast("Sélectionne au moins un jour", "error"); return;
       }
       if (existing) await updateRoutine(uid, existing.id, data);
       else await createRoutine(uid, data);
-      toast(existing ? "Routine mise à jour" : "Routine créée", "success");
+      toast(existing ? "Habitude mise à jour" : "Habitude créée", "success");
       closeModal();
     }
   });
 
-  openModal(existing ? "Modifier la routine" : "Nouvelle routine", body, actions);
+  openModal(existing ? "Modifier l'habitude" : "Nouvelle habitude", body, actions);
 }
 
 function fieldWrap(label, node) {
