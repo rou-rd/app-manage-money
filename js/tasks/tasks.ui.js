@@ -9,6 +9,7 @@ import { watchViews, createView, deleteView } from "./views.service.js";
 import {
   PRIORITIES, STATUSES, DEFAULT_COLORS, newTaskDefaults, taskProgress
 } from "./tasks.model.js";
+import { goalProgress } from "../goals/goals.model.js";
 import {
   createTask, updateTask, deleteTask, setTaskStatus,
   addSubtask, toggleSubtask, removeSubtask, archiveTask
@@ -346,6 +347,7 @@ function taskCard(task) {
         formatHuman(task.date) + (task.time ? ` · ${task.time}` : "")) : null,
       task.duration ? el("span", { class: "badge" }, `${task.duration} min`) : null,
       task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null,
+      task.goalId ? el("span", { class: "badge badge--teal" }, `🎯 ${goalName(task.goalId)}`) : null,
       task.isFacture ? el("span", { class: "badge" }, formatMoney(task.montant)) : null,
       task.timeSpent ? el("span", { class: "badge badge--blue" }, `⏱ ${Math.round(task.timeSpent / 60)}m`) : null
     ].filter(Boolean))
@@ -390,6 +392,11 @@ function priorityBadge(priority) {
 
 function formatMoney(amount) {
   return new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND", maximumFractionDigits: 0 }).format(amount || 0);
+}
+
+function goalName(goalId) {
+  const goal = (latestState.goals || []).find((g) => g.id === goalId);
+  return goal ? goal.title : "Objectif";
 }
 
 /* ── Kanban view ── */
@@ -455,7 +462,8 @@ function kanbanCard(task) {
     priorityBadge(task.priority),
     task.category ? el("span", { class: "badge" }, task.category) : null,
     task.date ? el("span", { class: `badge ${overdue ? "badge--red" : "badge--blue"}` }, formatHuman(task.date)) : null,
-    task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null
+    task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null,
+    task.goalId ? el("span", { class: "badge badge--teal" }, `🎯 ${goalName(task.goalId)}`) : null
   ].filter(Boolean)));
 
   if (task.subtasks?.length) {
@@ -560,6 +568,11 @@ function openTaskForm(existing) {
     formField("Priorité", formSelect(PRIORITIES, data.priority, (v) => (data.priority = v)))
   ]);
 
+  const goalOptions = [{ value: "", label: "— Aucun objectif —" },
+    ...(latestState.goals || []).filter((g) => goalProgress(g) < 100).map((g) => ({ value: g.id, label: g.title }))
+  ];
+  const goalField = formField("Objectif lié", formSelect(goalOptions, data.goalId || "", (v) => (data.goalId = v || null)));
+
   const descField = formField("Description", formTextarea(data.description, (v) => (data.description = v)));
   const row1 = el("div", { class: "field-row" }, [
     formField("Catégorie", formInput("text", data.category, (v) => (data.category = v))),
@@ -588,7 +601,7 @@ function openTaskForm(existing) {
     }
   }, advancedOpen ? "− Moins de détails" : "+ Plus de détails");
 
-  body.append(titleField, essentialRow, toggleBtn, advancedWrap);
+  body.append(titleField, essentialRow, goalField, toggleBtn, advancedWrap);
 
   const actions = [{ label: "Annuler", onClick: closeModal }];
   if (existing) {

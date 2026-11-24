@@ -7,7 +7,7 @@ import { formatHuman, diffDays, todayStr, isPast } from "../utils/date.js";
 import { TERMS, PRIORITIES, newGoalDefaults, goalProgress } from "./goals.model.js";
 import { createGoal, updateGoal, deleteGoal, addStep, toggleStep, removeStep } from "./goals.service.js";
 
-let latestState = { goals: [] };
+let latestState = { goals: [], tasks: [] };
 let filter = "all";
 
 export function initGoalsView(container) {
@@ -73,8 +73,12 @@ function goalCard(goal) {
     el("div", { class: "progress__fill", style: `width:${pct}%` })
   ]);
 
+  const linkedCount = (latestState.tasks || []).filter((t) => t.goalId === goal.id).length;
+  const linkedDone = (latestState.tasks || []).filter((t) => t.goalId === goal.id && t.status === "done").length;
+
   const meta = el("div", { class: "flex items-center gap-sm mt-sm", style: "flex-wrap:wrap;" }, [
     el("span", { class: "text-xs text-muted-2" }, `${doneSteps}/${steps.length} étapes · ${pct}%`),
+    linkedCount > 0 ? el("span", { class: "badge badge--teal", style: "font-size:.65rem;" }, `${linkedDone}/${linkedCount} tâches`) : null,
     goal.term ? el("span", { class: "badge" }, termLabel(goal.term)) : null,
     goal.deadline ? el("span", {
       class: `goal-card__deadline ${overdue ? "overdue" : ""}`,
@@ -182,6 +186,26 @@ function openGoalForm(existing) {
 
     stepsSection.append(stepsList, el("div", { class: "flex gap-sm mt-sm" }, [addStepInput, addStepBtn]));
     body.appendChild(stepsSection);
+
+    const linkedTasks = (latestState.tasks || []).filter((t) => t.goalId === existing.id);
+    if (linkedTasks.length) {
+      const tasksSection = el("div", { class: "field" }, [el("label", {}, `Tâches liées (${linkedTasks.length})`)]);
+      const tasksList = el("div", { class: "flex flex-col gap-xs" });
+      linkedTasks.forEach((t) => {
+        tasksList.appendChild(el("div", { class: "subtask-row" }, [
+          el("div", {
+            class: `check sm ${t.status === "done" ? "checked" : ""}`,
+            style: "pointer-events:none;"
+          }, t.status === "done" ? "✓" : ""),
+          el("span", { style: t.status === "done" ? "text-decoration:line-through;opacity:.6;" : "" }, t.title),
+          t.date ? el("span", { class: "badge badge--blue", style: "font-size:.65rem;" }, formatHuman(t.date)) : null
+        ].filter(Boolean)));
+      });
+      tasksSection.appendChild(tasksList);
+      const doneCount = linkedTasks.filter((t) => t.status === "done").length;
+      tasksSection.appendChild(el("div", { class: "text-xs text-muted mt-sm" }, `${doneCount}/${linkedTasks.length} terminées`));
+      body.appendChild(tasksSection);
+    }
   }
 
   const actions = [{ label: "Annuler", onClick: closeModal }];

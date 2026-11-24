@@ -50,7 +50,7 @@ function render() {
   const today = todayStr();
   const tasks = allTasks();
 
-  const todayTasks = tasks.filter((t) => t.date === today && !t.archived);
+  const todayTasks = tasks.filter((t) => t.date === today && !t.archived && !t.routineId);
   const routines = (latestState.routines || []).filter((r) => r.active && occursOn(r, today));
   const activeGoals = (latestState.goals || []).filter((g) => g.status !== "completed");
   const upcoming = tasks
@@ -165,6 +165,7 @@ function taskItem(task) {
         task.time ? el("span", { class: "badge badge--blue" }, task.time) : null,
         task.duration ? el("span", { class: "badge" }, `${task.duration} min`) : null,
         task.routineId ? el("span", { class: "badge badge--purple" }, "🔁") : null,
+        task.goalId ? el("span", { class: "badge badge--teal" }, `🎯 ${goalNameById(task.goalId)}`) : null,
         task.isFacture ? el("span", { class: "badge" }, `${task.montant} DT`) : null,
       ].filter(Boolean))
     ]),
@@ -216,6 +217,11 @@ function habitItem({ routine, instance, done }) {
     ]),
     streak > 0 ? el("div", { class: "habit-row__streak" }, `🔥 ${streak}j`) : null
   ].filter(Boolean));
+}
+
+function goalNameById(goalId) {
+  const goal = (latestState.goals || []).find((g) => g.id === goalId);
+  return goal ? goal.title : "Objectif";
 }
 
 function computeStreak(routine) {
